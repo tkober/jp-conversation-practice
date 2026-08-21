@@ -1,14 +1,10 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../core/api.service';
 import { RealtimeSessionService } from '../core/realtime-session.service';
-import {
-  HealthResponse,
-  JlptLevel,
-  ScenarioPreset,
-  VoiceOption,
-} from '../core/models';
+import { HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
 const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
   { level: 'N5', label: 'Anfänger — einfache Sätze, langsames Tempo' },
@@ -18,7 +14,11 @@ const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
 ];
 
 export interface SessionSetup {
+  /** The prompt the tutor runs with. */
   scenario: string;
+  /** Row id, so the stored session can point back at the scenario. */
+  scenarioId: number | null;
+  scenarioTitle: string;
   jlptLevel: JlptLevel;
   voice: string;
   speed: number;
@@ -26,7 +26,7 @@ export interface SessionSetup {
 
 @Component({
   selector: 'app-setup',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './setup.html',
   styleUrl: './setup.scss',
 })
@@ -37,7 +37,7 @@ export class Setup {
   readonly start = output<SessionSetup>();
 
   readonly levels = JLPT_LEVELS;
-  readonly presets = signal<ScenarioPreset[]>([]);
+  readonly scenarios = signal<Scenario[]>([]);
   readonly health = signal<HealthResponse | null>(null);
   readonly backendUnreachable = signal(false);
 
@@ -53,18 +53,21 @@ export class Setup {
 
   private sampleAudio: HTMLAudioElement | null = null;
 
-  readonly selectedPresetId = signal<string | null>(null);
+  readonly selectedScenarioId = signal<number | null>(null);
   readonly customScenario = signal('');
   readonly jlptLevel = signal<JlptLevel>('N5');
 
+  readonly selectedScenario = computed(() =>
+    this.scenarios().find((item) => item.id === this.selectedScenarioId()) ?? null,
+  );
+
   readonly effectiveScenario = computed(() => {
     const custom = this.customScenario().trim();
-    if (custom) {
-      return custom;
-    }
-    const preset = this.presets().find((item) => item.id === this.selectedPresetId());
-    return preset?.prompt ?? '';
+    return custom || this.selectedScenario()?.prompt || '';
   });
+
+  /** True when the free-text field overrides the picked scenario. */
+  readonly usingCustomText = computed(() => this.customScenario().trim().length > 0);
 
   readonly canStart = computed(
     () => this.effectiveScenario().length > 0 && this.health()?.openai_configured === true,
@@ -72,9 +75,9 @@ export class Setup {
 
   constructor() {
     this.api.scenarios().subscribe({
-      next: (response) => {
-        this.presets.set(response.scenarios);
-        this.selectedPresetId.set(response.scenarios[0]?.id ?? null);
+      next: (scenarios) => {
+        this.scenarios.set(scenarios);
+        this.selectedScenarioId.set(scenarios[0]?.id ?? null);
       },
       error: () => this.backendUnreachable.set(true),
     });
@@ -141,9 +144,9 @@ export class Setup {
     }
   }
 
-  selectPreset(preset: ScenarioPreset): void {
-    this.selectedPresetId.set(preset.id);
-    // A preset click replaces whatever free text was there before.
+  selectScenario(scenario: Scenario): void {
+    this.selectedScenarioId.set(scenario.id);
+    // Picking a scenario replaces whatever free text was there before.
     this.customScenario.set('');
   }
 
@@ -152,8 +155,11 @@ export class Setup {
       return;
     }
     this.stopSample();
+    const picked = this.usingCustomText() ? null : this.selectedScenario();
     this.start.emit({
       scenario: this.effectiveScenario(),
+      scenarioId: picked?.id ?? null,
+      scenarioTitle: picked?.title ?? 'Eigenes Szenario',
       jlptLevel: this.jlptLevel(),
       voice: this.selectedVoice(),
       speed: this.speed(),

@@ -1,26 +1,22 @@
-<main class="shell">
-  @switch (phase()) {
-    @case ('setup') {
-      <app-setup (start)="onStart($event)" />
+<div class="shell">
+  <nav class="nav">
+    <a class="brand jp" routerLink="/">会話</a>
+
+    <div class="links" [class.locked]="conversationRunning()">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        Üben
+      </a>
+      <a routerLink="/scenarios" routerLinkActive="active">Szenarien</a>
+      <a routerLink="/history" routerLinkActive="active">Verlauf</a>
+      <a routerLink="/settings" routerLinkActive="active">Einstellungen</a>
+    </div>
+
+    @if (conversationRunning()) {
+      <span class="running" title="Beende die Session, bevor du wegnavigierst">
+        Session läuft
+      </span>
     }
-    @case ('connecting') {
-      <app-conversation (finish)="onFinish()" />
-    }
-    @case ('live') {
-      <app-conversation (finish)="onFinish()" />
-    }
-    @default {
-      <app-review
-        [analysis]="analysis()"
-        [analysisError]="analysisError()"
-        [loading]="phase() === 'analysing'"
-        [usage]="session.usage()"
-        [transcript]="session.transcript()"
-        [elapsedSeconds]="finalElapsed()"
-        [sessionInfo]="session.sessionInfo()"
-        (restart)="onRestart()"
-        (retryAnalysis)="runAnalysis()"
-      />
-    }
-  }
-</main>
+  </nav>
+
+  <router-outlet />
+</div>

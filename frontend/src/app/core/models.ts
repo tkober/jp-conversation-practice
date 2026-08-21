@@ -4,10 +4,92 @@ export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2';
 
 export type SessionPhase = 'setup' | 'connecting' | 'live' | 'analysing' | 'review';
 
-export interface ScenarioPreset {
-  id: string;
+export interface Scenario {
+  id: number;
+  slug: string;
   title: string;
+  summary: string;
   prompt: string;
+  is_builtin: boolean;
+  is_customized: boolean;
+}
+
+export interface ScenarioDraft {
+  title: string;
+  summary: string;
+  prompt: string;
+}
+
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssistantReply {
+  reply: string;
+  suggested_prompt: string | null;
+}
+
+export interface AppSettingsView {
+  realtime_model: string;
+  analysis_model: string;
+  scenario_assistant_model: string;
+  transcription_model: string;
+  tts_model: string;
+  realtime_voice: string;
+  realtime_speed: number;
+  ankiconnect_url: string;
+  anki_deck_name: string;
+  openai_api_key_set: boolean;
+  openai_api_key_hint: string | null;
+  openai_api_key_from_env: boolean;
+  wanikani_api_token_set: boolean;
+  wanikani_api_token_hint: string | null;
+  wanikani_api_token_from_env: boolean;
+  speed_min: number;
+  speed_max: number;
+}
+
+export type AppSettingsPatch = Partial<{
+  openai_api_key: string;
+  realtime_model: string;
+  analysis_model: string;
+  scenario_assistant_model: string;
+  transcription_model: string;
+  tts_model: string;
+  realtime_voice: string;
+  realtime_speed: number;
+  wanikani_api_token: string;
+  ankiconnect_url: string;
+  anki_deck_name: string;
+}>;
+
+export interface SessionSummary {
+  id: number;
+  scenario_title: string;
+  jlpt_level: string;
+  model: string;
+  voice: string;
+  started_at: string;
+  duration_seconds: number;
+  cost_usd: number;
+  turn_count: number;
+  has_analysis: boolean;
+}
+
+export interface SessionDetail extends SessionSummary {
+  scenario_prompt: string;
+  speed: number;
+  instructions: string;
+  usage: UsageSnapshot;
+  transcript: TranscriptTurn[];
+  analysis: AnalysisResponse | null;
+}
+
+export interface SessionStats {
+  session_count: number;
+  total_cost_usd: number;
+  total_seconds: number;
 }
 
 export interface TranscriptTurn {

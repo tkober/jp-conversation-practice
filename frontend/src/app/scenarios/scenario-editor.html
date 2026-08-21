@@ -1,0 +1,138 @@
+<div class="editor">
+  <header>
+    <a class="back" routerLink="/scenarios">← Alle Szenarien</a>
+    @if (scenario(); as current) {
+      @if (current.is_builtin) {
+        <span class="tag" [class.edited]="current.is_customized">
+          {{ current.is_customized ? 'angepasst' : 'mitgeliefert' }}
+        </span>
+      }
+    }
+  </header>
+
+  @if (loadError(); as error) {
+    <div class="banner banner-error"><span>{{ error }}</span></div>
+  }
+
+  @if (scenario()) {
+    <div class="columns">
+      <section class="form card">
+        <label class="field">
+          <span class="field-label">Titel</span>
+          <input type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" />
+        </label>
+
+        <label class="field">
+          <span class="field-label">Kurzbeschreibung <em>(erscheint in der Auswahl)</em></span>
+          <input type="text" [ngModel]="summary()" (ngModelChange)="summary.set($event)" />
+        </label>
+
+        <label class="field grow">
+          <span class="field-label">
+            Prompt <em>(englisch — das liest das Modell)</em>
+          </span>
+          <textarea
+            spellcheck="false"
+            [ngModel]="prompt()"
+            (ngModelChange)="prompt.set($event)"
+          ></textarea>
+          <span class="field-hint">
+            Beschreibe <strong>wer</strong> das Modell ist und <strong>wo</strong> es
+            ist — nicht, was es nacheinander fragen soll. Eine Checkliste wird
+            wörtlich abgearbeitet, egal was du sagst.
+          </span>
+        </label>
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="!dirty() || saveState() === 'saving'"
+            (click)="save()"
+          >
+            {{ saveState() === 'saving' ? 'Speichere …' : 'Speichern' }}
+          </button>
+
+          @if (canReset()) {
+            <button type="button" class="btn btn-secondary" (click)="resetToFile()">
+              Auf Original zurücksetzen
+            </button>
+          }
+
+          @if (saveMessage(); as message) {
+            <span
+              class="save-message"
+              [class.ok]="saveState() === 'saved'"
+              [class.fail]="saveState() === 'error'"
+              >{{ message }}</span
+            >
+          }
+        </div>
+      </section>
+
+      <section class="assistant card">
+        <div class="assistant-head">
+          <h2>Assistent</h2>
+          @if (chat().length > 0) {
+            <button type="button" class="btn btn-ghost" (click)="clearChat()">Neu beginnen</button>
+          }
+        </div>
+
+        <div class="chat">
+          @for (entry of chat(); track $index) {
+            <div class="bubble" [class.from-user]="entry.role === 'user'">
+              <p class="bubble-text">{{ entry.content }}</p>
+              @if (entry.suggestion) {
+                <div class="suggestion">
+                  <pre>{{ entry.suggestion }}</pre>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    (click)="applySuggestion(entry.suggestion!)"
+                  >
+                    In den Editor übernehmen
+                  </button>
+                </div>
+              }
+            </div>
+          } @empty {
+            <div class="chat-empty">
+              <p>Frag den Assistenten nach Feedback zum Prompt, zum Beispiel:</p>
+              <ul>
+                <li>„Ist das zu sehr Checkliste?"</li>
+                <li>„Mach das Szenario etwas fordernder."</li>
+                <li>„Schreib mir eine Variante für einen Bäckerei-Besuch."</li>
+              </ul>
+            </div>
+          }
+
+          @if (chatBusy()) {
+            <div class="bubble thinking"><span class="dots">denkt nach …</span></div>
+          }
+        </div>
+
+        @if (chatError(); as error) {
+          <div class="banner banner-error"><span>{{ error }}</span></div>
+        }
+
+        <div class="composer">
+          <textarea
+            rows="2"
+            placeholder="Frage oder Wunsch … (Enter sendet, Shift+Enter für neue Zeile)"
+            [ngModel]="chatInput()"
+            (ngModelChange)="chatInput.set($event)"
+            (keydown)="onChatKeydown($event)"
+          ></textarea>
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="chatBusy() || !chatInput().trim()"
+            (click)="ask()"
+          >
+            Senden
+          </button>
+        </div>
+      </section>
+    </div>
+  }
+</div>

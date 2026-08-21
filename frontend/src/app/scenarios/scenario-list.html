@@ -1,0 +1,51 @@
+<div class="list">
+  <header>
+    <div>
+      <h1>Szenarien</h1>
+      <p>
+        Ein Szenario beschreibt eine Rolle und eine Situation — keine Abfolge von
+        Fragen. Das ist der Unterschied zwischen einem Gespräch und einem Formular.
+      </p>
+    </div>
+    <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="createScenario()">
+      Neues Szenario
+    </button>
+  </header>
+
+  @if (error(); as message) {
+    <div class="banner banner-error"><span>{{ message }}</span></div>
+  }
+
+  <ul class="scenarios">
+    @for (scenario of scenarios(); track scenario.id) {
+      <li class="scenario">
+        <a class="body" [routerLink]="['/scenarios', scenario.id]">
+          <div class="head">
+            <span class="title">{{ scenario.title }}</span>
+            @if (scenario.is_builtin) {
+              <span class="tag" [class.edited]="scenario.is_customized">
+                {{ scenario.is_customized ? 'angepasst' : 'mitgeliefert' }}
+              </span>
+            }
+          </div>
+          <p class="summary">{{ scenario.summary || scenario.prompt }}</p>
+        </a>
+
+        <div class="tools">
+          @if (confirmingDelete() === scenario.id) {
+            <span class="confirm">Wirklich löschen?</span>
+            <button type="button" class="btn btn-ghost danger" (click)="confirmDelete(scenario)">
+              Ja, löschen
+            </button>
+            <button type="button" class="btn btn-ghost" (click)="cancelDelete()">Abbrechen</button>
+          } @else {
+            <a class="btn btn-ghost" [routerLink]="['/scenarios', scenario.id]">Bearbeiten</a>
+            <button type="button" class="btn btn-ghost" (click)="askDelete(scenario)">Löschen</button>
+          }
+        </div>
+      </li>
+    } @empty {
+      <li class="empty">Noch keine Szenarien vorhanden.</li>
+    }
+  </ul>
+</div>
