@@ -1,0 +1,39 @@
+# docker-compose.yml
+services:
+
+  jp-conversation-practice-backend:
+    image: ghcr.io/tkober/jp-conversation-practice-backend:latest
+    container_name: jp-conversation-practice-backend
+    restart: unless-stopped
+    env_file:
+      - ./env/jp-conversation-practice-backend/.env
+    networks:
+      - jp-conversation-practice-net
+      - postgres-core-net # external: reach the postgres-core container by name
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    # No published port: the frontend's nginx proxies /api and /ws over the
+    # internal network, so the API is reachable under whatever address serves
+    # the UI.
+
+  jp-conversation-practice-frontend:
+    image: ghcr.io/tkober/jp-conversation-practice-frontend:latest
+    container_name: jp-conversation-practice-frontend
+    restart: unless-stopped
+    depends_on:
+      jp-conversation-practice-backend:
+        condition: service_healthy
+    ports:
+      - "8085:80" # only published port: nginx serves the SPA and proxies /api + /ws
+    networks:
+      - jp-conversation-practice-net
+
+networks:
+  jp-conversation-practice-net:
+    name: jp-conversation-practice-net
+
+  postgres-core-net:
+    external: true

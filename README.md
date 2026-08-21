@@ -17,23 +17,29 @@ backend.
 
 ## Requirements
 
-- [uv](https://docs.astral.sh/uv/) and Python 3.12+
-- Node.js 20+
+- Docker (the quickest way to run everything, and how it is deployed)
+- For working on the code: [uv](https://docs.astral.sh/uv/) with Python 3.12+, Node.js 20+
 - An OpenAI API key with access to `gpt-realtime-2.1-mini`
 - Optional: a WaniKani personal access token
 - Optional: Anki desktop with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on
 
-## Setup
+## Run the whole stack
 
 ```bash
-cp backend/.env.example backend/.env   # then add your OPENAI_API_KEY
-cd backend && uv sync && cd ..
-cd frontend && npm install && cd ..
+OPENAI_API_KEY=sk-... docker compose up --build
 ```
 
-## Run
+Opens on <http://localhost:8085>. This brings up Postgres, the backend and the
+nginx-served frontend, creating the two database roles on first start — the
+same owner/app split the deployment uses. The API key can also be left out here
+and entered in the app's Settings screen instead.
+
+## Run for development
 
 ```bash
+cp backend/.env.example backend/.env   # fill in DB_* and OPENAI_API_KEY
+cd backend && uv sync && cd ..
+cd frontend && npm install && cd ..
 ./dev.sh
 ```
 
@@ -41,12 +47,42 @@ Backend on <http://localhost:8000> (docs at `/docs`), frontend on
 <http://localhost:4200>. The Angular dev server proxies `/api` and `/ws` to the
 backend, so both origins are the same from the browser's point of view.
 
-Or start the two halves separately:
+This needs a Postgres with the two roles. The quickest way is to borrow the
+compose one:
 
 ```bash
-cd backend  && uv run uvicorn app.main:app --reload --port 8000
-cd frontend && npm start
+docker compose up -d postgres
+# then in backend/.env:
+#   DB_URL=postgresql://localhost:5432/jp_conversation
+#   DB_USER=jp_conversation_app       DB_PASSWORD=jp_conversation
+#   DB_OWNER_USER=jp_conversation_owner  DB_OWNER_PASSWORD=jp_conversation
 ```
+
+## Data
+
+Postgres holds three things, all of which survive an image update:
+
+| Table | Contents |
+|---|---|
+| `app_settings` | One row. API keys and model choices from the Settings screen. Every column is nullable — a NULL falls back to the environment variable, so the app boots from its `.env` alone. |
+| `scenarios` | Seeded on first start from `backend/scenarios/*.md`. Editing one in the UI marks it `is_customized`, which stops the next boot from seeding the file version back over it. |
+| `sessions` | Finished conversations: transcript, exact cost, the analysis, and the prompt the tutor actually ran with. |
+
+Scenarios ship as Markdown with YAML front matter so they can be reviewed and
+diffed as prose:
+
+```markdown
+---
+slug: konbini
+title: Einkaufen im Kombini
+summary: Abendschicht an der Kasse ...
+---
+
+You are the clerk at a Japanese convenience store ...
+```
+
+The body is the model-facing prompt and is English; `title` and `summary` are
+user-facing and German.
 
 ## How it works
 
@@ -136,7 +172,19 @@ Ending the session posts the transcript to `/api/analysis`, which:
 
 A WaniKani outage degrades to an unfiltered analysis instead of failing.
 
-### 6. Session export
+### 6. Scenario editor
+
+Scenarios are edited in the app, with a writing assistant beside the editor.
+It answers in German, proposes complete English prompts as one-click
+replacements, and its system prompt encodes the role-not-checklist rule — so it
+argues against the failure mode described above rather than helping you
+reproduce it. It runs on its own model (`SCENARIO_ASSISTANT_MODEL`), separate
+from the live tutor, because it writes prose rather than driving a conversation.
+
+Editing a built-in scenario marks it as customised; a redeploy will not
+overwrite it, and "Auf Original zurücksetzen" restores the Markdown version.
+
+### 7. Session export
 
 The review screen offers the session as JSON, either to the clipboard or as a
 download. It contains the transcript, exact usage and cost, the analysis result
@@ -145,22 +193,66 @@ transcript alone rarely explains why a conversation went sideways; the prompt
 usually does, which makes the export directly useful as input for a coding
 agent working on the prompts.
 
-### 7. Anki export
+### 8. Anki export
 
 Tick the cards you want and hit export. `/api/anki/export` talks to AnkiConnect
 on `localhost:8765`, creates the deck and a four-field note type
 (`Expression`, `Reading`, `Meaning`, `ContextSentence`) on first use, and reports
 how many notes were added and how many Anki rejected as duplicates.
 
+## Deployment
+
+Two images are published to GHCR by GitHub Actions on every push to `main`:
+`jp-conversation-practice-backend` and `-frontend`. The stack itself lives in
+`deploy/jp_conversation_practice/` — copy that directory into the
+`compose-stacks-unraid` repo.
+
+The backend joins the external `postgres-core-net` and reaches the shared
+Postgres by container name. Only the frontend publishes a port (**8085**);
+nginx serves the SPA and reverse-proxies `/api` and `/ws` internally, so the
+browser talks to a single origin and no CORS is involved.
+
+First-time setup, once per deployment:
+
+```bash
+# 1. Fill in the passwords
+cp env/jp-conversation-practice-backend/.env.example \
+   env/jp-conversation-practice-backend/.env
+
+# 2. Create the roles and the database on postgres-core
+#    (substitute the ${...} placeholders with the passwords from step 1)
+docker exec -i postgres-core psql -U postgres < bootstrap/create_users_and_db.sql
+docker exec -i postgres-core psql -U postgres -d jp_conversation \
+  < bootstrap/grant_privileges.sql
+```
+
+The tables are created by the backend on startup as the owner role; the app
+role never runs DDL and gets its access from `ALTER DEFAULT PRIVILEGES`.
+
+**AnkiConnect note:** Anki runs on your desktop, not on the server, so the
+default `localhost:8765` cannot work from inside the container. Point
+`ANKICONNECT_URL` at the machine running Anki and add that origin to
+AnkiConnect's `webCorsOriginList`.
+
 ## Configuration
 
-All settings live in `backend/.env` (see `.env.example`):
+Everything below can be set in `backend/.env` **and** in the app's Settings
+screen. The database value wins; clearing it in the UI falls back to the
+environment. Infrastructure settings (`DB_*`, `CORS_ORIGINS`, `HOST`, `PORT`)
+are environment-only.
+
+
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `OPENAI_API_KEY` | — | **Required.** |
+| `DB_URL` | `postgresql://localhost:5432/jp_conversation` | **Required.** Host/port/database only. |
+| `DB_USER` / `DB_PASSWORD` | `jp_conversation_app` | **Required.** Serves requests. |
+| `DB_OWNER_USER` / `DB_OWNER_PASSWORD` | `jp_conversation_owner` | **Required.** Runs DDL at startup. |
+| `OPENAI_API_KEY` | — | Required unless set in Settings. |
 | `REALTIME_MODEL` | `gpt-realtime-2.1-mini` | Live conversation model. |
 | `ANALYSIS_MODEL` | `gpt-4o-mini` | Post-session analysis model. |
+| `SCENARIO_ASSISTANT_MODEL` | `gpt-4o` | Writing assistant in the scenario editor. |
+| `SCENARIOS_DIR` | `scenarios` | Markdown scenarios seeded on first start. |
 | `REALTIME_VOICE` | `marin` | Default voice. |
 | `REALTIME_SPEED` | `1.0` | Default speaking rate. |
 | `REALTIME_SPEED_MIN` / `_MAX` | `0.6` / `1.4` | Slider bounds. |
@@ -185,14 +277,14 @@ binary-to-base64 audio conversion, event allow-listing, cost accounting and
 transcript normalisation end to end.
 
 
-## PoC limitations
+## Limitations
 
 - **Barge-in does not truncate the model's context.** Interrupting stops playback
   and generation, but the full response stays in the conversation history, so the
   tutor may refer to sentences you never heard. Fixing this means sending
   `conversation.item.truncate` with the actually-played position.
-- Session state lives in memory; there is no persistence and no multi-user auth.
-- The relay holds one upstream socket per browser connection — fine for a PoC,
-  not for many concurrent users.
+- Single user: there is no authentication, and `app_settings` is one row.
+- The relay holds one upstream socket per browser connection — fine for one
+  person, not for many concurrent users.
 - Pricing is hard-coded and must be updated when OpenAI changes its rates.
 - The WaniKani vocabulary list is cached in process for 15 minutes.
