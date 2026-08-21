@@ -13,6 +13,25 @@ parts of the prompts in `backend/app/prompts.py` that instruct the model to
 write feedback in German. Backend `HTTPException` details stay English and the
 frontend prefixes them with a German sentence.
 
+## Working in this repository
+
+Every change goes on a feature branch and reaches `main` through a pull
+request. Do not merge locally and push `main` — a branch that is already an
+ancestor of `main` cannot be turned into a PR afterwards, and the review never
+happens.
+
+```bash
+git checkout -b feature/<topic>
+# ... commit ...
+git push -u origin feature/<topic>
+# then open a PR against main and leave the merge to the repository owner
+```
+
+Push the branch as soon as there is something to look at; do not push to `main`
+directly. If a PR was already merged, its branch is gone — start a new branch
+rather than pushing to the old name, which would recreate it outside any PR and
+leave the commits invisible.
+
 ## Commands
 
 ```bash
