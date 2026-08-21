@@ -146,12 +146,56 @@ analysis rather than failing the request.
 
 ## Prompt design
 
-`scenarios.py` presets describe a role and a setting, never a list of things to
-ask. This is load-bearing: an early version of the konbini preset spelled out
-the steps of a checkout, and the model executed that list literally — offering
-to heat an iced coffee and handing out chopsticks with a drink, in the same
-order every session. If conversations start feeling canned or nonsensical, look
-for imperative sequences that crept into a preset before blaming the model.
+### The scenario is one block, not the whole prompt
+
+`build_realtime_instructions()` in `prompts.py` builds the tutor's entire system
+prompt and drops the scenario into a fixed frame that every session gets,
+whatever the scenario says:
+
+```
+role line             a warm conversation partner running a spoken role-play
+# Scenario            the scenario text verbatim, plus the reminder that it is
+                      a role and a setting and not a list of steps
+# Learner level       JLPT_GUIDANCE[level] — vocabulary, grammar, speaking pace
+# Language policy     Japanese only, no romaji, 1-3 sentences, ONE question/turn
+# Stay coherent       the anti-nonsense rules (below)
+# Scaffolding policy  four escalation steps, German/English only when asked for
+# Correction policy   recast silently, never lecture; feedback comes afterwards
+# Tone                patient, interested, short affirmations
+```
+
+So a scenario cannot switch the language, lift the level cap or turn the tutor
+into a grammar drill — it fills in who the model is and where it is, and nothing
+else. When a conversation goes wrong, the frame is usually not the suspect.
+
+Around the prompt, the harness is deliberately thin: no tools are declared (the
+tutor can only talk), the level comes from the setup screen, and the only other
+levers are `REALTIME_MODEL`, the voice, the speaking rate and the semantic VAD's
+`eagerness: "low"`, which exists so a learner's thinking pause is not read as the
+end of their turn.
+
+### Where the scenario text comes from
+
+`backend/scenarios/*.md` — YAML front matter (`slug`, German `title` and
+`summary`) plus an English body that is the model-facing prompt — seeds the
+`scenarios` table at startup. After that the database is the source of truth:
+`seed_scenarios()` refreshes untouched rows from the files but leaves anything
+flagged `is_customized`, so an edit made in the UI survives a redeploy. The
+setup screen sends the picked row's `prompt`, or the free-text field which
+overrides it, as `scenario` in the `app.session.start` handshake. The relay
+never treats that text as instructions of its own — it only ever reaches the
+model interpolated into the frame above.
+
+### Roles generalise, checklists fossilise
+
+Scenario prompts describe a role and a setting, never a list of things to ask.
+This is load-bearing: an early version of the konbini preset spelled out the
+steps of a checkout, and the model executed that list literally — offering to
+heat an iced coffee and handing out chopsticks with a drink, in the same order
+every session. If conversations start feeling canned or nonsensical, look for
+imperative sequences that crept into a scenario before blaming the model. The
+scenario editor's writing assistant (`scenario_assistant.py`) is built around
+the same warning and is told to call such sequences out in a user's draft.
 
 The `# Stay coherent` block in `prompts.py` backs this up: one question per
 turn, only ask what applies to the current situation, never contradict yourself,
