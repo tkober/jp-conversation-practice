@@ -28,13 +28,27 @@ class WaniKaniError(RuntimeError):
 class WaniKaniClient:
     """Minimal async WaniKani v2 client with a short-lived in-process cache."""
 
-    def __init__(self, token: str, api_base: str, known_srs_stage: int = 5) -> None:
+    def __init__(self, token: str = "", api_base: str = "", known_srs_stage: int = 5) -> None:
         self.token = token
         self.api_base = api_base.rstrip("/")
         self.known_srs_stage = known_srs_stage
         self._cache: set[str] | None = None
         self._cache_time = 0.0
         self._lock = asyncio.Lock()
+
+    def configure(self, token: str, api_base: str, known_srs_stage: int) -> None:
+        """Point the client at the current settings.
+
+        Changing the token drops the cached vocabulary: it belongs to whoever
+        the old token identified, so serving it to a new account would filter
+        against a stranger's progress.
+        """
+        if token != self.token:
+            self._cache = None
+            self._cache_time = 0.0
+        self.token = token
+        self.api_base = api_base.rstrip("/")
+        self.known_srs_stage = known_srs_stage
 
     @property
     def enabled(self) -> bool:

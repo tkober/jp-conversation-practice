@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL, make_url
 
 
 class Settings(BaseSettings):
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
     openai_realtime_url: str = "wss://api.openai.com/v1/realtime"
     realtime_model: str = "gpt-realtime-2.1-mini"
     analysis_model: str = "gpt-4o-mini"
+    # Assists in the scenario editor; separate because it writes prose rather
+    # than driving a live conversation, so a stronger model can be worth it.
+    scenario_assistant_model: str = "gpt-4o"
     openai_api_base: str = "https://api.openai.com/v1"
 
     # --- Realtime audio ---
@@ -50,12 +54,45 @@ class Settings(BaseSettings):
     anki_deck_name: str = "Japanese::AI Conversation"
     anki_model_name: str = "JP Conversation PoC"
 
+    # --- Content ---
+    # Directory holding the built-in scenario Markdown files. The image sets an
+    # absolute path; relative values resolve against the backend directory.
+    scenarios_dir: str = "scenarios"
+
+    # --- Database ---
+    # DB_URL carries only host/port/database; credentials come per role, the
+    # same split the other stacks on postgres-core use. The owner role runs DDL
+    # at startup, the app role serves every request.
+    db_url: str = "postgresql://localhost:5432/jp_conversation"
+    db_user: str = "jp_conversation_app"
+    db_password: str = ""
+    db_owner_user: str = "jp_conversation_owner"
+    db_owner_password: str = ""
+
     # --- Server ---
     cors_origins: str = "http://localhost:4200"
 
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    def _role_url(self, user: str, password: str) -> URL:
+        """Build an async SQLAlchemy URL for one role from the base DB_URL."""
+        return make_url(self.db_url).set(
+            drivername="postgresql+asyncpg",
+            username=user or None,
+            password=password or None,
+        )
+
+    @property
+    def app_database_url(self) -> URL:
+        """The role serving requests -- CRUD only, no DDL."""
+        return self._role_url(self.db_user, self.db_password)
+
+    @property
+    def owner_database_url(self) -> URL:
+        """The role used at startup for DDL and seeding."""
+        return self._role_url(self.db_owner_user, self.db_owner_password)
 
 
 @lru_cache

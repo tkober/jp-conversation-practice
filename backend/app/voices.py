@@ -15,6 +15,8 @@ from pathlib import Path
 
 import httpx
 
+from .runtime_config import RuntimeConfig
+
 logger = logging.getLogger(__name__)
 
 # Sentence used for every preview. Short, natural, and typical of what the tutor
@@ -75,6 +77,21 @@ class VoiceSampleService:
         self.api_base = api_base
         self.api_key = api_key
         self.model = model
+
+    @classmethod
+    def from_config(cls, config: RuntimeConfig) -> VoiceSampleService:
+        """Build a service from the effective settings.
+
+        Cheap to construct per request: the cache that matters is on disk, so
+        nothing is lost by not keeping the instance around. The cache path is
+        per TTS model, because the same voice sounds different across models.
+        """
+        return cls(
+            Path(config.voice_sample_cache_dir) / config.tts_model,
+            config.openai_api_base,
+            config.openai_api_key,
+            config.tts_model,
+        )
 
     def cached_path(self, voice: str) -> Path:
         return self.cache_dir / f"{voice}.wav"

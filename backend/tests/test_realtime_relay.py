@@ -16,8 +16,10 @@ import pytest
 from fastapi.testclient import TestClient
 from websockets.asyncio.server import serve
 
-from app import main
+from app.api import practice
+from app.config import get_settings
 from app.pricing import MODEL_RATES
+from app.runtime_config import build_runtime_config
 
 
 class FakeRealtimeServer:
@@ -97,13 +99,31 @@ def upstream() -> Any:
 
 
 @pytest.fixture
-def client(upstream: FakeRealtimeServer, monkeypatch: pytest.MonkeyPatch) -> Any:
-    monkeypatch.setattr(main.settings, "openai_api_key", "test-key")
-    monkeypatch.setattr(
-        main.settings, "openai_realtime_url", f"ws://127.0.0.1:{upstream.port}"
-    )
-    with TestClient(main.app) as test_client:
+def config(upstream: FakeRealtimeServer, monkeypatch: pytest.MonkeyPatch) -> Any:
+    """Point the relay at the fake upstream instead of api.openai.com."""
+    env = get_settings()
+    monkeypatch.setattr(env, "openai_api_key", "test-key")
+    monkeypatch.setattr(env, "openai_realtime_url", f"ws://127.0.0.1:{upstream.port}")
+    return build_runtime_config(None, env)
+
+
+@pytest.fixture
+def client(config: Any, monkeypatch: pytest.MonkeyPatch) -> Any:
+    async def fixed_config() -> Any:
+        return config
+
+    monkeypatch.setattr(practice, "session_config", fixed_config)
+    with TestClient(practice_app()) as test_client:
         yield test_client
+
+
+def practice_app() -> Any:
+    """A bare app carrying only the relay route, so no database is needed."""
+    from fastapi import FastAPI
+
+    app = FastAPI()
+    app.add_api_websocket_route("/ws/realtime", practice.realtime_endpoint)
+    return app
 
 
 def start_session(websocket: Any, upstream: FakeRealtimeServer) -> dict[str, Any]:
@@ -149,7 +169,7 @@ def test_session_started_echoes_the_instructions(
 
 
 def test_voice_and_speed_from_the_handshake_reach_the_session(
-    client: TestClient, upstream: FakeRealtimeServer
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
 ) -> None:
     with client.websocket_connect("/ws/realtime") as websocket:
         websocket.send_text(
@@ -175,7 +195,7 @@ def test_voice_and_speed_from_the_handshake_reach_the_session(
 
 
 def test_unknown_voice_falls_back_to_the_configured_default(
-    client: TestClient, upstream: FakeRealtimeServer
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
 ) -> None:
     with client.websocket_connect("/ws/realtime") as websocket:
         websocket.send_text(
@@ -189,12 +209,12 @@ def test_unknown_voice_falls_back_to_the_configured_default(
 
         assert (
             upstream.received[0]["session"]["audio"]["output"]["voice"]
-            == main.settings.realtime_voice
+            == config.realtime_voice
         )
 
 
 def test_speed_is_clamped_to_the_supported_range(
-    client: TestClient, upstream: FakeRealtimeServer
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
 ) -> None:
     with client.websocket_connect("/ws/realtime") as websocket:
         websocket.send_text(
@@ -206,7 +226,7 @@ def test_speed_is_clamped_to_the_supported_range(
 
         assert (
             upstream.received[0]["session"]["audio"]["output"]["speed"]
-            == main.settings.realtime_speed_max
+            == config.realtime_speed_max
         )
 
 
@@ -274,7 +294,7 @@ def test_disallowed_client_events_are_not_forwarded(
 
 
 def test_response_done_produces_a_cost_update(
-    client: TestClient, upstream: FakeRealtimeServer
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
 ) -> None:
     with client.websocket_connect("/ws/realtime") as websocket:
         start_session(websocket, upstream)
@@ -295,7 +315,7 @@ def test_response_done_produces_a_cost_update(
         cost_update = websocket.receive_json()
         assert cost_update["type"] == "app.cost.update"
 
-        rates = MODEL_RATES[main.settings.realtime_model]
+        rates = MODEL_RATES[config.realtime_model]
         expected = (1000 * rates.audio_input + 2000 * rates.audio_output) / 1_000_000
         assert cost_update["usage"]["cost_usd"] == round(expected, 6)
 
@@ -375,9 +395,15 @@ def test_session_end_reports_transcript_and_totals(
 def test_missing_api_key_is_reported_to_the_client(
     upstream: FakeRealtimeServer, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(main.settings, "openai_api_key", "")
+    env = get_settings()
+    monkeypatch.setattr(env, "openai_api_key", "")
 
-    with TestClient(main.app) as test_client:
+    async def keyless_config() -> Any:
+        return build_runtime_config(None, env)
+
+    monkeypatch.setattr(practice, "session_config", keyless_config)
+
+    with TestClient(practice_app()) as test_client:
         with test_client.websocket_connect("/ws/realtime") as websocket:
             error = websocket.receive_json()
 
