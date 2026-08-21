@@ -8,6 +8,12 @@ on:
       - ".github/workflows/publish-backend.yml"
     tags: ["v*.*.*"]
 
+  # Lets the image be rebuilt without a code change — useful after a base
+  # image update, and the way to recover when a push carried no usable diff
+  # (a force push with unrelated history leaves the paths filter unmatched,
+  # so no run is queued at all).
+  workflow_dispatch:
+
 permissions:
   contents: read
   packages: write
