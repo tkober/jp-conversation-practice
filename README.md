@@ -224,8 +224,11 @@ cp env/jp-conversation-practice-backend/.env.example \
 ```
 
 `bootstrap.sh` reads the passwords from that `.env` and passes them to psql
-through stdin, so they never reach a command line or the shell history. It is
-idempotent — running it again after rotating a password updates the roles
+through stdin, so they never reach a command line or the shell history. It
+parses the file the way docker compose does — including stripping surrounding
+quotes — so the role's password matches exactly what the container later
+sends, and it finishes by logging in as both roles to prove it. It is
+idempotent: running it again after rotating a password updates the roles
 rather than failing.
 
 The tables are created by the backend on startup as the owner role; the app
