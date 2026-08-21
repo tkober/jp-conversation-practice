@@ -24,18 +24,23 @@
   <section class="card">
     <h2>1 · Szenario</h2>
     <div class="presets">
-      @for (preset of presets(); track preset.id) {
+      @for (scenario of scenarios(); track scenario.id) {
         <button
           type="button"
           class="preset"
-          [class.active]="selectedPresetId() === preset.id && !customScenario().trim()"
-          (click)="selectPreset(preset)"
+          [class.active]="selectedScenarioId() === scenario.id && !usingCustomText()"
+          (click)="selectScenario(scenario)"
         >
-          <span class="preset-title">{{ preset.title }}</span>
-          <span class="preset-prompt">{{ preset.prompt }}</span>
+          <span class="preset-title">{{ scenario.title }}</span>
+          <span class="preset-prompt">{{ scenario.summary || scenario.prompt }}</span>
         </button>
       }
     </div>
+
+    <p class="hint">
+      Szenarien lassen sich unter <a routerLink="/scenarios">Szenarien</a> bearbeiten
+      und neu anlegen.
+    </p>
 
     <label class="field">
       <span class="field-label">Oder eigenes Szenario beschreiben</span>

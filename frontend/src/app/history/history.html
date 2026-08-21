@@ -1,0 +1,86 @@
+<div class="history">
+  <header>
+    <h1>Verlauf</h1>
+    @if (stats(); as totals) {
+      <div class="totals">
+        <span><strong>{{ totals.session_count }}</strong> Sessions</span>
+        <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> gesamt</span>
+        <span><strong>{{ totalMinutes() }}</strong> Minuten geübt</span>
+      </div>
+    }
+  </header>
+
+  @if (error(); as message) {
+    <div class="banner banner-error"><span>{{ message }}</span></div>
+  }
+
+  <ul class="sessions">
+    @for (session of sessions(); track session.id) {
+      <li class="session" [class.open]="openId() === session.id">
+        <button type="button" class="row" (click)="toggle(session)">
+          <span class="when">{{ session.started_at | date: 'dd.MM.yy HH:mm' }}</span>
+          <span class="title">{{ session.scenario_title }}</span>
+          <span class="level">{{ session.jlpt_level }}</span>
+          <span class="turns">{{ session.turn_count }} Beiträge</span>
+          <span class="time">{{ duration(session.duration_seconds) }}</span>
+          <span class="cost">${{ session.cost_usd | number: '1.4-4' }}</span>
+
+          <span class="tools">
+            @if (confirmingDelete() === session.id) {
+              <span class="confirm" (click)="$event.stopPropagation()">Löschen?</span>
+              <span class="btn btn-ghost danger" (click)="confirmDelete(session, $event)">Ja</span>
+              <span class="btn btn-ghost" (click)="cancelDelete($event)">Nein</span>
+            } @else {
+              <span class="btn btn-ghost" (click)="askDelete(session, $event)">Löschen</span>
+            }
+          </span>
+        </button>
+
+        @if (openId() === session.id) {
+          <div class="detail">
+            @if (detailLoading()) {
+              <p class="muted">Lade …</p>
+            } @else if (detail(); as full) {
+              @if (full.analysis; as analysis) {
+                <p class="summary">{{ analysis.summary }}</p>
+
+                @if (analysis.anki_cards.length > 0) {
+                  <div class="cards">
+                    @for (card of analysis.anki_cards; track card.expression) {
+                      <span class="vocab jp">
+                        {{ card.expression }}
+                        <em>{{ card.meaning }}</em>
+                      </span>
+                    }
+                  </div>
+                }
+              } @else {
+                <p class="muted">Für diese Session gibt es keine Auswertung.</p>
+              }
+
+              <div class="transcript">
+                @for (turn of full.transcript; track $index) {
+                  <p class="line">
+                    <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+                    <span class="jp">{{ turn.text }}</span>
+                  </p>
+                }
+              </div>
+
+              <div class="meta">
+                <span>{{ full.model }}</span>
+                <span>Stimme {{ full.voice }}</span>
+                <span>Tempo {{ full.speed }}×</span>
+                <button type="button" class="btn btn-ghost" (click)="downloadJson(full, $event)">
+                  JSON herunterladen
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </li>
+    } @empty {
+      <li class="empty">Noch keine Sessions aufgezeichnet.</li>
+    }
+  </ul>
+</div>
