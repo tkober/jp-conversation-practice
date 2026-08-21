@@ -52,18 +52,23 @@ SETTINGS_ROW_ID = 1
 # Errors that will never resolve by waiting: the roles, the password or the
 # database itself are wrong, so retrying only delays a clear failure.
 FATAL_SQLSTATES = {
+    # Postgres deliberately reports a missing role and a wrong password with
+    # the same code, so that an attacker cannot enumerate users. The message
+    # has to name both causes -- claiming only "wrong password" sends someone
+    # looking for a role that was never created.
     "28P01": (
-        "the password for role {user} is wrong. Check DB_OWNER_PASSWORD in the "
-        "backend's .env against the role on the server, then re-run the stack's "
-        "bootstrap script"
+        "authentication as {user} failed. Either the role does not exist, or its "
+        "password differs from DB_OWNER_PASSWORD -- Postgres reports both the "
+        "same way. Check with dbeaver/verify.sql; if the roles are missing, run "
+        "dbeaver/create_users_and_db.sql and grant_privileges.sql"
     ),
     "28000": (
-        "role {user} does not exist. Run the stack's bootstrap script to create "
-        "the roles and the database"
+        "role {user} does not exist. Run dbeaver/create_users_and_db.sql "
+        "followed by dbeaver/grant_privileges.sql"
     ),
     "3D000": (
-        "database {database} does not exist. Run the stack's bootstrap script to "
-        "create it"
+        "database {database} does not exist. Run dbeaver/create_users_and_db.sql "
+        "followed by dbeaver/grant_privileges.sql"
     ),
 }
 

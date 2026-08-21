@@ -77,7 +77,9 @@ async def test_gives_up_after_the_configured_attempts(
 @pytest.mark.parametrize(
     ("sqlstate", "expected"),
     [
-        ("28P01", "password"),
+        # Postgres uses one code for "no such role" and "wrong password", so
+        # the message must not commit to either.
+        ("28P01", "does not exist, or its password"),
         ("28000", "does not exist"),
         ("3D000", "does not exist"),
     ],
@@ -108,7 +110,8 @@ async def test_misconfiguration_fails_immediately_with_a_reason(
     assert attempts == 1, "a fatal error must not be retried"
     assert expected in str(caught.value)
     # The message has to name what to change, not just what failed.
-    assert "bootstrap" in str(caught.value) or "DB_OWNER_PASSWORD" in str(caught.value)
+    message = str(caught.value)
+    assert "dbeaver/" in message, "the message must name the file that fixes it"
 
 
 async def test_wrapped_driver_errors_are_recognised(

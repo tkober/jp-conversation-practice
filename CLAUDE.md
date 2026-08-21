@@ -199,6 +199,13 @@ learner can listen for minutes without sending anything, and nginx's default
 60s read timeout would tear the conversation down mid-sentence. If realtime
 sessions start dying after about a minute in the deployment, look here first.
 
+Database bootstrap is manual, like the other projects: `dbeaver/` holds the SQL
+to create the roles and database, run by hand against postgres-core with the
+`${...}` password placeholders substituted. `dbeaver/verify.sql` exists because
+the failure mode is silent — Postgres answers a missing role with the same
+`28P01` it uses for a wrong password, so "authentication failed" does not tell
+you which of the two happened.
+
 The stack directory (`deploy/jp_conversation_practice/`) is meant to be copied
 into the `compose-stacks-unraid` repo. `compose.yaml` at the repo root is the
 local mirror of it, down to creating both Postgres roles via `dev/initdb`.
