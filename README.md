@@ -220,11 +220,13 @@ cp env/jp-conversation-practice-backend/.env.example \
    env/jp-conversation-practice-backend/.env
 
 # 2. Create the roles and the database on postgres-core
-#    (substitute the ${...} placeholders with the passwords from step 1)
-docker exec -i postgres-core psql -U postgres < bootstrap/create_users_and_db.sql
-docker exec -i postgres-core psql -U postgres -d jp_conversation \
-  < bootstrap/grant_privileges.sql
+./bootstrap/bootstrap.sh
 ```
+
+`bootstrap.sh` reads the passwords from that `.env` and passes them to psql
+through stdin, so they never reach a command line or the shell history. It is
+idempotent — running it again after rotating a password updates the roles
+rather than failing.
 
 The tables are created by the backend on startup as the owner role; the app
 role never runs DDL and gets its access from `ALTER DEFAULT PRIVILEGES`.
