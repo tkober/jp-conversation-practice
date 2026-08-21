@@ -212,24 +212,27 @@ Postgres by container name. Only the frontend publishes a port (**8085**);
 nginx serves the SPA and reverse-proxies `/api` and `/ws` internally, so the
 browser talks to a single origin and no CORS is involved.
 
-First-time setup, once per deployment:
+First-time setup, once per deployment. The SQL lives in `dbeaver/` and is run
+by hand against the shared Postgres — in DBeaver, or piped through `psql`:
 
 ```bash
 # 1. Fill in the passwords
 cp env/jp-conversation-practice-backend/.env.example \
    env/jp-conversation-practice-backend/.env
 
-# 2. Create the roles and the database on postgres-core
-./bootstrap/bootstrap.sh
+# 2. Substitute the ${...} placeholders in the SQL with those passwords,
+#    WITHOUT the surrounding quotes, then run both files:
+docker exec -i postgres-core psql -U postgres < dbeaver/create_users_and_db.sql
+docker exec -i postgres-core psql -U postgres -d jp_conversation \
+  < dbeaver/grant_privileges.sql
+
+# 3. Confirm it took effect — both roles and the database must be listed
+docker exec -i postgres-core psql -U postgres < dbeaver/verify.sql
 ```
 
-`bootstrap.sh` reads the passwords from that `.env` and passes them to psql
-through stdin, so they never reach a command line or the shell history. It
-parses the file the way docker compose does — including stripping surrounding
-quotes — so the role's password matches exactly what the container later
-sends, and it finishes by logging in as both roles to prove it. It is
-idempotent: running it again after rotating a password updates the roles
-rather than failing.
+If a value in the `.env` is written as `DB_PASSWORD="…"`, paste it into the SQL
+**without** the quotes: Docker Compose strips them before the container sees
+the value, so a role created with them can never be logged into.
 
 The tables are created by the backend on startup as the owner role; the app
 role never runs DDL and gets its access from `ALTER DEFAULT PRIVILEGES`.
