@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.angular/
+
+# Secrets
+.env
+!.env.example
+
+# Editors / OS
+.DS_Store
+*.swp
+.voice-samples/

@@ -1,0 +1,113 @@
+<div class="conversation">
+  <div class="hud">
+    <div class="hud-metric">
+      <span class="hud-label">Kosten</span>
+      <span class="hud-value cost">{{ formattedCost() }}<small>USD</small></span>
+      @if (costPerMinute(); as rate) {
+        <span class="hud-sub">≈ ${{ rate.toFixed(3) }} / Min.</span>
+      }
+    </div>
+
+    <div class="hud-metric">
+      <span class="hud-label">Dauer</span>
+      <span class="hud-value">{{ formattedTime() }}</span>
+      <span class="hud-sub">{{ usage().response_count }} Antworten</span>
+    </div>
+
+    <div class="hud-status" [class.speaking]="tutorSpeaking()" [class.listening]="userSpeaking()">
+      <span class="pulse"></span>
+      <span>{{ statusLabel() }}</span>
+    </div>
+  </div>
+
+  @if (!usage().rates_known && usage().model) {
+    <div class="banner banner-warning">
+      <span>
+        Für <code>{{ usage().model }}</code> sind keine Preise hinterlegt — die Kosten werden
+        mit den Raten von <code>gpt-realtime-2.1-mini</code> geschätzt.
+      </span>
+    </div>
+  }
+
+  @if (errorMessage(); as error) {
+    <div class="banner banner-error"><span>{{ error }}</span></div>
+  }
+
+  <div class="transcript" #scrollBox>
+    @if (transcript().length === 0) {
+      <div class="empty">
+        <p class="jp">はじめまして！</p>
+        <p>Sprich einfach los — die Lehrkraft beginnt gleich das Gespräch.</p>
+      </div>
+    }
+    @for (turn of transcript(); track $index) {
+      <div class="turn" [class.turn-user]="turn.role === 'user'">
+        <span class="turn-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+        <p class="turn-text jp">{{ turn.text }}</p>
+      </div>
+    }
+  </div>
+
+  <div class="speed">
+    <label for="speed-slider">
+      Tempo <strong>{{ speed().toFixed(2) }}×</strong>
+      <span class="speed-note">wirkt ab der nächsten Antwort</span>
+    </label>
+    <input
+      id="speed-slider"
+      type="range"
+      [min]="speedMin()"
+      [max]="speedMax()"
+      step="0.05"
+      [value]="speed()"
+      (input)="onSpeedChange($any($event.target).value)"
+    />
+  </div>
+
+  <div class="controls">
+    <div class="mic">
+      <div class="mic-bar">
+        <div class="mic-fill" [style.width]="micBarWidth()" [class.muted]="muted()"></div>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-secondary" (click)="toggleMute()">
+      {{ muted() ? 'Mikrofon an' : 'Mikrofon stumm' }}
+    </button>
+
+    <button type="button" class="btn btn-primary" (click)="onFinish()">
+      Session beenden &amp; auswerten
+    </button>
+  </div>
+
+  <button type="button" class="btn btn-ghost token-toggle" (click)="showTokenDetails.set(!showTokenDetails())">
+    {{ showTokenDetails() ? 'Token-Details ausblenden' : 'Token-Details anzeigen' }}
+  </button>
+
+  @if (showTokenDetails()) {
+    <table class="tokens">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Audio</th>
+          <th>Text</th>
+          <th>Cached</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Input</th>
+          <td>{{ usage().input.audio_tokens | number }}</td>
+          <td>{{ usage().input.text_tokens | number }}</td>
+          <td>{{ usage().input.cached_audio_tokens + usage().input.cached_text_tokens | number }}</td>
+        </tr>
+        <tr>
+          <th>Output</th>
+          <td>{{ usage().output.audio_tokens | number }}</td>
+          <td>{{ usage().output.text_tokens | number }}</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  }
+</div>

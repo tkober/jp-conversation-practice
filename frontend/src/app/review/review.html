@@ -1,0 +1,163 @@
+<div class="review">
+  <div class="summary-bar">
+    <div>
+      <span class="bar-label">Session-Kosten</span>
+      <span class="bar-value cost">{{ formattedCost() }} <small>USD</small></span>
+    </div>
+    <div>
+      <span class="bar-label">Dauer</span>
+      <span class="bar-value">{{ formattedTime() }}</span>
+    </div>
+    <div>
+      <span class="bar-label">Redebeiträge</span>
+      <span class="bar-value">{{ transcript().length }}</span>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card loading">
+      <span class="spinner"></span>
+      <p>Die Session wird ausgewertet — Feedback, Grammatik und Vokabeln werden erstellt …</p>
+    </div>
+  } @else if (analysisError(); as error) {
+    <div class="banner banner-error"><span>{{ error }}</span></div>
+    <div class="footer-actions">
+      <button type="button" class="btn btn-secondary" (click)="retryAnalysis.emit()">
+        Auswertung erneut versuchen
+      </button>
+      <button type="button" class="btn btn-primary" (click)="restart.emit()">
+        Neue Session
+      </button>
+    </div>
+  } @else if (analysis(); as result) {
+    <section class="card">
+      <h2>Feedback</h2>
+      <p class="summary-text">{{ result.summary }}</p>
+    </section>
+
+    @if (result.grammar_notes.length > 0) {
+      <section class="card">
+        <h2>Grammatik-Hinweise</h2>
+        <ul class="notes">
+          @for (note of result.grammar_notes; track $index) {
+            <li class="note">
+              <div class="note-line">
+                <span class="tag tag-wrong">✗</span>
+                <span class="jp">{{ note.original }}</span>
+              </div>
+              <div class="note-line">
+                <span class="tag tag-right">✓</span>
+                <span class="jp">{{ note.correction }}</span>
+              </div>
+              <p class="note-explanation">{{ note.explanation }}</p>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Anki-Karten</h2>
+        <span class="counter">{{ selectedCards().length }} / {{ result.anki_cards.length }} ausgewählt</span>
+      </div>
+
+      @if (result.wanikani_status === 'ok' && result.filtered_out.length > 0) {
+        <div class="banner banner-info">
+          <span>
+            {{ result.filtered_out.length }} Wort(e) über WaniKani gefiltert (Guru oder höher):
+            <span class="jp">{{ result.filtered_out.join('、') }}</span>
+          </span>
+        </div>
+      } @else if (result.wanikani_status === 'error') {
+        <div class="banner banner-warning">
+          <span>WaniKani-Filter nicht verfügbar: {{ result.wanikani_message }}</span>
+        </div>
+      }
+
+      @if (result.anki_cards.length === 0) {
+        <p class="muted">Keine neuen Vokabeln gefunden — entweder war das Gespräch sehr kurz
+          oder du kennst bereits alles, was vorkam.</p>
+      } @else {
+        <ul class="cards">
+          @for (card of result.anki_cards; track card.expression) {
+            <li class="vocab" [class.off]="!isSelected(card.expression)">
+              <label class="vocab-check">
+                <input
+                  type="checkbox"
+                  [checked]="isSelected(card.expression)"
+                  (change)="toggleCard(card.expression)"
+                />
+              </label>
+              <div class="vocab-body">
+                <div class="vocab-head">
+                  <span class="expression jp">{{ card.expression }}</span>
+                  <span class="reading jp">{{ card.reading }}</span>
+                </div>
+                <p class="meaning">{{ card.meaning }}</p>
+                <p class="context jp">{{ card.context_sentence }}</p>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <div class="export">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="selectedCards().length === 0 || exportState() === 'running'"
+            (click)="exportToAnki()"
+          >
+            {{ exportState() === 'running' ? 'Exportiere …' : 'Nach Anki exportieren' }}
+          </button>
+          @if (exportMessage(); as message) {
+            <span
+              class="export-message"
+              [class.ok]="exportState() === 'done'"
+              [class.fail]="exportState() === 'error'"
+              >{{ message }}</span
+            >
+          }
+        </div>
+      }
+    </section>
+
+    <div class="session-tools">
+      <button type="button" class="btn btn-ghost" (click)="showTranscript.set(!showTranscript())">
+        {{ showTranscript() ? 'Transkript ausblenden' : 'Transkript anzeigen' }}
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-ghost"
+        title="Transkript, Kosten, Auswertung und der verwendete System-Prompt als JSON"
+        (click)="copyJson()"
+      >
+        @switch (copyState()) {
+          @case ('done') { JSON kopiert ✓ }
+          @case ('error') { Kopieren fehlgeschlagen }
+          @default { JSON kopieren }
+        }
+      </button>
+
+      <button type="button" class="btn btn-ghost" (click)="downloadJson()">
+        JSON herunterladen
+      </button>
+    </div>
+
+    @if (showTranscript()) {
+      <section class="card transcript">
+        @for (turn of transcript(); track $index) {
+          <p class="line">
+            <span class="line-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+            <span class="jp">{{ turn.text }}</span>
+          </p>
+        }
+      </section>
+    }
+
+    <div class="footer-actions">
+      <button type="button" class="btn btn-primary" (click)="restart.emit()">Neue Session</button>
+    </div>
+  }
+</div>

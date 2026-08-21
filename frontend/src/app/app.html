@@ -1,0 +1,26 @@
+<main class="shell">
+  @switch (phase()) {
+    @case ('setup') {
+      <app-setup (start)="onStart($event)" />
+    }
+    @case ('connecting') {
+      <app-conversation (finish)="onFinish()" />
+    }
+    @case ('live') {
+      <app-conversation (finish)="onFinish()" />
+    }
+    @default {
+      <app-review
+        [analysis]="analysis()"
+        [analysisError]="analysisError()"
+        [loading]="phase() === 'analysing'"
+        [usage]="session.usage()"
+        [transcript]="session.transcript()"
+        [elapsedSeconds]="finalElapsed()"
+        [sessionInfo]="session.sessionInfo()"
+        (restart)="onRestart()"
+        (retryAnalysis)="runAnalysis()"
+      />
+    }
+  }
+</main>

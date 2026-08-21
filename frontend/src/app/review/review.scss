@@ -1,0 +1,300 @@
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 32px;
+}
+
+h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Summary bar ----------------------------------------------------------- */
+
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 15px 18px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+.bar-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.bar-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+
+  small {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+}
+
+.cost {
+  color: var(--accent);
+}
+
+/* Loading --------------------------------------------------------------- */
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+}
+
+.spinner {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.summary-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+/* Grammar notes --------------------------------------------------------- */
+
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.note {
+  padding: 13px 15px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.note-line {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.tag {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  width: 16px;
+}
+
+.tag-wrong {
+  color: var(--accent);
+}
+
+.tag-right {
+  color: var(--success);
+}
+
+.note-explanation {
+  margin: 9px 0 0;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+/* Vocabulary cards ------------------------------------------------------ */
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.counter {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.cards {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vocab {
+  display: flex;
+  gap: 12px;
+  padding: 13px 15px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+
+  &.off {
+    opacity: 0.42;
+  }
+}
+
+.vocab-check {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 3px;
+
+  input {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+}
+
+.vocab-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vocab-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.expression {
+  font-size: 21px;
+  font-weight: 600;
+}
+
+.reading {
+  font-size: 14px;
+  color: var(--info);
+}
+
+.meaning {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.context {
+  margin: 7px 0 0;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* Export ---------------------------------------------------------------- */
+
+.export {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.export-message {
+  font-size: 13px;
+  color: var(--text-muted);
+
+  &.ok {
+    color: var(--success);
+  }
+
+  &.fail {
+    color: var(--accent);
+  }
+}
+
+/* Transcript ------------------------------------------------------------ */
+
+.transcript {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.line {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+
+.line-role {
+  display: inline-block;
+  min-width: 34px;
+  margin-right: 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.session-tools {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.footer-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding-top: 4px;
+}
+
+@media (max-width: 560px) {
+  .summary-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+}

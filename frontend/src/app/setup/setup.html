@@ -1,0 +1,126 @@
+<div class="setup">
+  <header class="hero">
+    <div class="hero-mark jp">会話</div>
+    <h1>Japanisch-Konversation üben</h1>
+    <p>
+      Sprich mit einer KI-Lehrkraft in Echtzeit, verfolge die exakten API-Kosten live und
+      erzeuge danach Anki-Karten für alles, was du noch nicht kennst.
+    </p>
+  </header>
+
+  @if (backendUnreachable()) {
+    <div class="banner banner-error">
+      <span>Backend nicht erreichbar. Läuft <code>uvicorn</code> auf Port 8000?</span>
+    </div>
+  } @else if (health() && !health()!.openai_configured) {
+    <div class="banner banner-error">
+      <span>
+        Auf dem Server ist kein <code>OPENAI_API_KEY</code> gesetzt. Trage ihn in
+        <code>backend/.env</code> ein und starte das Backend neu.
+      </span>
+    </div>
+  }
+
+  <section class="card">
+    <h2>1 · Szenario</h2>
+    <div class="presets">
+      @for (preset of presets(); track preset.id) {
+        <button
+          type="button"
+          class="preset"
+          [class.active]="selectedPresetId() === preset.id && !customScenario().trim()"
+          (click)="selectPreset(preset)"
+        >
+          <span class="preset-title">{{ preset.title }}</span>
+          <span class="preset-prompt">{{ preset.prompt }}</span>
+        </button>
+      }
+    </div>
+
+    <label class="field">
+      <span class="field-label">Oder eigenes Szenario beschreiben</span>
+      <textarea
+        rows="3"
+        placeholder="z. B. Ein Zimmer im Ryokan reservieren und nach dem Abendessen fragen"
+        [ngModel]="customScenario()"
+        (ngModelChange)="customScenario.set($event)"
+      ></textarea>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>2 · Dein Niveau</h2>
+    <div class="levels">
+      @for (item of levels; track item.level) {
+        <button
+          type="button"
+          class="level"
+          [class.active]="jlptLevel() === item.level"
+          (click)="jlptLevel.set(item.level)"
+        >
+          <span class="level-badge">{{ item.level }}</span>
+          <span class="level-label">{{ item.label }}</span>
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3 · Stimme</h2>
+    <div class="voices">
+      @for (voice of voices(); track voice.id) {
+        <div class="voice" [class.active]="selectedVoice() === voice.id">
+          <button type="button" class="voice-pick" (click)="selectedVoice.set(voice.id)">
+            <span class="voice-label">{{ voice.label }}</span>
+            <span class="voice-description">{{ voice.description }}</span>
+          </button>
+          <button
+            type="button"
+            class="voice-play"
+            [disabled]="samplePlaying() === voice.id"
+            [title]="'Hörprobe für ' + voice.label"
+            (click)="playSample(voice)"
+          >
+            {{ samplePlaying() === voice.id ? '♪' : '▶' }}
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (sampleError(); as error) {
+      <div class="banner banner-warning"><span>{{ error }}</span></div>
+    } @else {
+      <p class="hint">
+        Die erste Hörprobe je Stimme wird auf dem Server erzeugt und dauert einen
+        Moment — danach ist sie sofort da.
+      </p>
+    }
+
+    <label class="field">
+      <span class="field-label">
+        Sprechgeschwindigkeit — {{ speed().toFixed(2) }}×
+        <em>(auch während der Session änderbar)</em>
+      </span>
+      <input
+        type="range"
+        [min]="speedMin()"
+        [max]="speedMax()"
+        step="0.05"
+        [value]="speed()"
+        (input)="speed.set(+$any($event.target).value)"
+      />
+    </label>
+  </section>
+
+  <div class="actions">
+    <button type="button" class="btn btn-primary btn-start" [disabled]="!canStart()" (click)="onStart()">
+      Konversation starten
+    </button>
+    @if (health(); as info) {
+      <p class="meta">
+        Modell <code>{{ info.realtime_model }}</code> ·
+        WaniKani-Filter {{ info.wanikani_configured ? 'aktiv' : 'nicht konfiguriert' }}
+      </p>
+    }
+  </div>
+</div>
