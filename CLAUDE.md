@@ -218,6 +218,13 @@ learner can listen for minutes without sending anything, and nginx's default
 60s read timeout would tear the conversation down mid-sentence. If realtime
 sessions start dying after about a minute in the deployment, look here first.
 
+**The UI needs a secure context.** `navigator.mediaDevices` and
+`BaseAudioContext.audioWorklet` are `[SecureContext]`, so over plain HTTP to a
+LAN address (`http://<host>:8085/`) they are undefined rather than merely
+denied and no session can start — the relay itself is fine. Serve the stack
+behind TLS, or reach it through `localhost` (an SSH tunnel counts). The setup
+screen names this via `microphoneBlockedReason()` instead of failing silently.
+
 Database bootstrap is manual, like the other projects: `dbeaver/` holds the SQL
 to create the roles and database, run by hand against postgres-core with the
 `${...}` password placeholders substituted. `dbeaver/verify.sql` exists because

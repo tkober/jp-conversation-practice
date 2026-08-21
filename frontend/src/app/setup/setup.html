@@ -21,6 +21,14 @@
     </div>
   }
 
+  @if (microphoneBlocked(); as reason) {
+    <div class="banner banner-error"><span>{{ reason }}</span></div>
+  } @else if (startError(); as error) {
+    <div class="banner banner-error">
+      <span>Die Session konnte nicht gestartet werden: {{ error }}</span>
+    </div>
+  }
+
   <section class="card">
     <h2>1 · Szenario</h2>
     <div class="presets">

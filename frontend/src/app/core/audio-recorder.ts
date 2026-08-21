@@ -8,6 +8,29 @@
  */
 const WORKLET_URL = 'audio/pcm-recorder-worklet.js';
 
+/**
+ * Why the microphone cannot be used in this browsing context, or null if it
+ * can.
+ *
+ * Both `navigator.mediaDevices` and `BaseAudioContext.audioWorklet` are marked
+ * `[SecureContext]`, so over plain HTTP to a LAN address they are not merely
+ * denied but absent, and `start()` would fail with a bare TypeError naming
+ * neither the cause nor the fix. Checking up front turns that into a sentence
+ * the setup screen can show before the user even presses start.
+ */
+export function microphoneBlockedReason(): string | null {
+  if (!window.isSecureContext) {
+    return (
+      `Der Browser gibt das Mikrofon nur über eine sichere Verbindung frei, diese Seite ` +
+      `läuft aber über ${location.origin}. Rufe sie über HTTPS oder über localhost auf.`
+    );
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return 'Dieser Browser stellt keinen Zugriff auf das Mikrofon bereit.';
+  }
+  return null;
+}
+
 export class AudioRecorder {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
@@ -22,6 +45,11 @@ export class AudioRecorder {
   ) {}
 
   async start(): Promise<void> {
+    const blocked = microphoneBlockedReason();
+    if (blocked) {
+      throw new Error(blocked);
+    }
+
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         channelCount: 1,
