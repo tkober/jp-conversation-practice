@@ -19,9 +19,22 @@ if [ ! -f "$env_file" ]; then
   exit 1
 fi
 
+# Read one value the way docker compose reads an env_file, because the value
+# this sets in Postgres has to match exactly what the container later sends.
+# Compose strips one surrounding pair of quotes; taking the raw text instead
+# would store a password *with* quotes and fail authentication at startup.
 read_var() {
+  local raw
   # Last occurrence wins, matching how the file would be sourced.
-  grep -E "^$1=" "$env_file" | tail -n1 | cut -d= -f2-
+  raw="$(grep -E "^$1=" "$env_file" | tail -n1 | cut -d= -f2-)"
+
+  if [ ${#raw} -ge 2 ]; then
+    case "$raw" in
+      \"*\"|\'*\') printf '%s' "${raw:1:${#raw}-2}"; return ;;
+    esac
+  fi
+  # Unquoted values lose trailing whitespace, again matching compose.
+  printf '%s' "${raw%"${raw##*[![:space:]]}"}"
 }
 
 app_password="$(read_var DB_PASSWORD)"
@@ -51,6 +64,34 @@ echo "Creating roles and database on '$container' ..."
 echo "Granting privileges in jp_conversation ..."
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -q -U postgres -d jp_conversation \
   < "$here/grant_privileges.sql"
+
+# Prove the credentials actually work rather than assuming they do. This is
+# the check that would have caught the quoting bug above: the roles existed and
+# the SQL succeeded, but the passwords did not match what the container sends.
+verify_login() {
+  local user="$1" password="$2"
+  docker exec -i -e PGPASSWORD="$password" "$container" \
+    psql -h 127.0.0.1 -U "$user" -d jp_conversation -tAc "SELECT 1" >/dev/null 2>&1
+}
+
+echo "Verifying both roles can log in ..."
+failed=0
+for role in "jp_conversation_owner:$owner_password" "jp_conversation_app:$app_password"; do
+  user="${role%%:*}"
+  password="${role#*:}"
+  if verify_login "$user" "$password"; then
+    echo "  ok   $user"
+  else
+    echo "  FAIL $user — the password in $env_file does not match the role" >&2
+    failed=1
+  fi
+done
+
+if [ "$failed" -ne 0 ]; then
+  echo >&2
+  echo "The backend would fail to start with InvalidPasswordError." >&2
+  exit 1
+fi
 
 echo
 echo "Done. The backend creates its tables on first start."
