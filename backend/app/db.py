@@ -10,6 +10,7 @@ the owner-created tables comes from server-side ``ALTER DEFAULT PRIVILEGES``
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
@@ -27,6 +28,7 @@ from sqlalchemy import (
     Text,
     func,
     select,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, insert
 from sqlalchemy.ext.asyncio import (
@@ -38,12 +40,49 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from sqlalchemy.engine import make_url
+
 from .config import get_settings
 from .scenario_files import load_scenario_files
 
 log = logging.getLogger(__name__)
 
 SETTINGS_ROW_ID = 1
+
+# Errors that will never resolve by waiting: the roles, the password or the
+# database itself are wrong, so retrying only delays a clear failure.
+FATAL_SQLSTATES = {
+    "28P01": (
+        "the password for role {user} is wrong. Check DB_OWNER_PASSWORD in the "
+        "backend's .env against the role on the server, then re-run the stack's "
+        "bootstrap script"
+    ),
+    "28000": (
+        "role {user} does not exist. Run the stack's bootstrap script to create "
+        "the roles and the database"
+    ),
+    "3D000": (
+        "database {database} does not exist. Run the stack's bootstrap script to "
+        "create it"
+    ),
+}
+
+
+class DatabaseUnavailable(RuntimeError):
+    """The database could not be used, with a reason worth reading."""
+
+
+def _fatal_reason(exc: BaseException) -> str | None:
+    """Return a human explanation when the error cannot be fixed by waiting."""
+    seen: list[BaseException | None] = [exc, getattr(exc, "orig", None), exc.__cause__]
+    for candidate in seen:
+        code = getattr(candidate, "sqlstate", None)
+        if code in FATAL_SQLSTATES:
+            settings = get_settings()
+            return FATAL_SQLSTATES[code].format(
+                user=settings.db_owner_user, database=make_url(settings.db_url).database
+            )
+    return None
 
 
 class Base(DeclarativeBase):
@@ -205,6 +244,7 @@ async def init_db() -> None:
     settings = get_settings()
     owner_engine = create_async_engine(settings.owner_database_url, future=True)
     try:
+        await _wait_for_database(owner_engine)
         async with owner_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             await migrate_schema(conn)
@@ -214,6 +254,46 @@ async def init_db() -> None:
             await session.commit()
     finally:
         await owner_engine.dispose()
+
+
+async def _wait_for_database(engine: AsyncEngine) -> None:
+    """Block until the database accepts a connection, or fail with a reason.
+
+    Waiting is right for a database that is merely not up yet, and wrong for
+    one that will never let us in: a bad password or a missing role stays bad,
+    so those raise immediately with an explanation instead of a stack trace
+    repeated once per restart.
+    """
+    settings = get_settings()
+    attempts = max(1, settings.db_connect_attempts)
+
+    for attempt in range(1, attempts + 1):
+        try:
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            if attempt > 1:
+                log.info("Database reachable after %d attempts", attempt)
+            return
+        except Exception as exc:  # noqa: BLE001 - re-raised below unless retryable
+            reason = _fatal_reason(exc)
+            if reason is not None:
+                log.error("Cannot use the database: %s.", reason)
+                # `from None`: the driver traceback adds nothing to a message
+                # that already says exactly what to change.
+                raise DatabaseUnavailable(reason) from None
+
+            if attempt == attempts:
+                log.error(
+                    "Database still unreachable after %d attempts (%.0fs)",
+                    attempts,
+                    attempts * settings.db_connect_delay_seconds,
+                )
+                raise
+
+            log.warning(
+                "Database not reachable yet (attempt %d/%d): %s", attempt, attempts, exc
+            )
+            await asyncio.sleep(settings.db_connect_delay_seconds)
 
 
 async def migrate_schema(conn: AsyncConnection) -> None:

@@ -172,6 +172,20 @@ back to the browser so the review screen's JSON export can include them. That ex
 way to hand a bad conversation to another agent for analysis: the transcript
 shows the symptom, the prompt usually contains the cause.
 
+## Startup
+
+`init_db()` waits for the database before touching it, because postgres-core
+lives in a *different* compose stack: `depends_on` cannot order this one after
+it, so on a host reboot both come up at once. Retrying is right for a database
+that is merely not up yet.
+
+It is wrong for one that will never let us in, so `_wait_for_database()` splits
+the two: SQLSTATEs 28P01 (bad password), 28000 (missing role) and 3D000
+(missing database) raise immediately with a sentence naming what to change,
+`raise ... from None` so the driver traceback does not bury it. Everything else
+retries. Add a new fatal case to `FATAL_SQLSTATES` rather than broadening the
+retry.
+
 ## Deployment
 
 Two GHCR images, built by GitHub Actions on push to `main`. Only the frontend

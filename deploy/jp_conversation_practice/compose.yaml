@@ -15,6 +15,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 5
+      # The backend waits for postgres-core, which is a separate stack and may
+      # still be starting. Failed checks should not count during that window.
+      start_period: 60s
     # No published port: the frontend's nginx proxies /api and /ws over the
     # internal network, so the API is reachable under whatever address serves
     # the UI.

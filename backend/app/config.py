@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     db_password: str = ""
     db_owner_user: str = "jp_conversation_owner"
     db_owner_password: str = ""
+    # postgres-core lives in its own compose stack, so `depends_on` cannot
+    # order this one after it. On a host reboot both come up at once and the
+    # database may not accept connections for a while yet.
+    db_connect_attempts: int = 30
+    db_connect_delay_seconds: float = 2.0
 
     # --- Server ---
     cors_origins: str = "http://localhost:4200"
