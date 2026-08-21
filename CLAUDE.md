@@ -16,12 +16,13 @@ frontend prefixes them with a German sentence.
 ## Commands
 
 ```bash
-./dev.sh                    # both servers; frontend proxies /api and /ws to :8000
+docker compose up --build   # whole stack incl. Postgres on :8085
+./dev.sh                    # dev servers; frontend proxies /api and /ws to :8000
 
 cd backend
 uv sync                     # install
 uv run uvicorn app.main:app --reload --port 8000
-uv run pytest
+uv run pytest               # needs Docker: testcontainers starts a Postgres
 uv run pytest tests/test_pricing.py::test_cached_tokens_are_billed_at_the_cached_rate
 
 cd frontend
@@ -34,6 +35,33 @@ found" — the vitest runner is configured but unused. `ng build` is the
 correctness gate: it type-checks templates, so run it after touching any
 component. Add specs as `src/**/*.spec.ts` and `ng test` picks them up
 (`--filter "<regex>"` by test name, `--include <path>` by file).
+
+## Persistence
+
+Postgres on the shared `postgres-core` instance, using the same two-role split
+as the other stacks: an **owner** role runs DDL and seeding in `init_db()` at
+startup, an **app** role serves every request. The app role's access comes from
+server-side `ALTER DEFAULT PRIVILEGES` (bootstrap SQL in
+`deploy/jp_conversation_practice/bootstrap/`), so no GRANT is issued from code.
+`migrate_schema()` is the hook for column additions — `create_all` only creates
+missing *tables*, so anything else has to go there, idempotent and append-only.
+
+`RuntimeConfig` (`runtime_config.py`) is what services take, not raw settings:
+environment defaults with the `app_settings` row layered on top. A NULL column
+means "not set here", so clearing a field in the Settings UI falls back to the
+environment rather than blanking it. It is loaded per request — the table has
+one row, and a stale API key after a settings change would be worse than the
+lookup.
+
+Secrets never leave the backend in full: `/api/settings` returns only whether
+one is set, a masked hint, and whether it came from the environment (which the
+UI needs in order to explain why an env key cannot be cleared).
+
+Tests run against a throwaway Postgres via testcontainers, reproducing the
+owner/app split, so a stray DDL statement in a request path fails there rather
+than at deploy time. HTTP tests use `httpx.ASGITransport` rather than
+`TestClient`: the latter runs the app on its own event loop in a worker thread,
+which the shared SQLAlchemy engine cannot be used from.
 
 ## Architecture
 
@@ -143,6 +171,23 @@ to *both* the Realtime and TTS APIs, so a preview is representative.
 back to the browser so the review screen's JSON export can include them. That export is the intended
 way to hand a bad conversation to another agent for analysis: the transcript
 shows the symptom, the prompt usually contains the cause.
+
+## Deployment
+
+Two GHCR images, built by GitHub Actions on push to `main`. Only the frontend
+publishes a port (8085); its nginx serves the SPA and reverse-proxies `/api`
+and `/ws` to the backend over the internal network, which is why no CORS is
+involved and the backend port stays unpublished.
+
+**The `/ws/` location is not a copy of `/api/`.** It carries the `Upgrade`
+handshake and sets `proxy_read_timeout 3600s` with `proxy_buffering off` — a
+learner can listen for minutes without sending anything, and nginx's default
+60s read timeout would tear the conversation down mid-sentence. If realtime
+sessions start dying after about a minute in the deployment, look here first.
+
+The stack directory (`deploy/jp_conversation_practice/`) is meant to be copied
+into the `compose-stacks-unraid` repo. `compose.yaml` at the repo root is the
+local mirror of it, down to creating both Postgres roles via `dev/initdb`.
 
 ## Known gaps
 
