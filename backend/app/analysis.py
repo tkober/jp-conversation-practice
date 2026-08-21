@@ -13,9 +13,9 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .config import Settings
 from .models import SessionAnalysis, TranscriptTurn
 from .prompts import ANALYSIS_SYSTEM_PROMPT, build_analysis_user_prompt
+from .runtime_config import RuntimeConfig
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ def _strict_schema(model: type[SessionAnalysis]) -> dict[str, Any]:
 class AnalysisService:
     """Calls the analysis model and validates its structured response."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: RuntimeConfig) -> None:
         self.settings = settings
 
     async def analyse(

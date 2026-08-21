@@ -27,10 +27,10 @@ from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 from websockets.asyncio.client import connect as ws_connect
 
-from .config import Settings
 from .models import TranscriptTurn
 from .pricing import CostTracker
 from .prompts import DEFAULT_JLPT_LEVEL, JLPT_GUIDANCE, build_realtime_instructions
+from .runtime_config import RuntimeConfig
 from .voices import is_valid_voice
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ NOISY_EVENTS = frozenset(
 class RealtimeSession:
     """One browser <-> backend <-> OpenAI conversation."""
 
-    def __init__(self, client_ws: WebSocket, settings: Settings) -> None:
+    def __init__(self, client_ws: WebSocket, settings: RuntimeConfig) -> None:
         self.client_ws = client_ws
         self.settings = settings
         self.model = settings.realtime_model
