@@ -58,11 +58,17 @@
                 <p class="muted">Für diese Session gibt es keine Auswertung.</p>
               }
 
+              <div class="transcript-tools">
+                <app-furigana-toggle />
+              </div>
+
               <div class="transcript">
                 @for (turn of full.transcript; track $index) {
                   <p class="line">
                     <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-                    <span class="jp">{{ turn.text }}</span>
+                    <span class="jp">
+                      <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+                    </span>
                   </p>
                 }
               </div>

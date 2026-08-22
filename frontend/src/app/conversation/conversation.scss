@@ -107,6 +107,12 @@
 
 /* Transcript ------------------------------------------------------------ */
 
+.transcript-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -6px;
+}
+
 .transcript {
   flex: 1;
   min-height: 260px;

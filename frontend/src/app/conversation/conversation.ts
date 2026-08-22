@@ -12,10 +12,12 @@ import {
 
 import { EAGERNESS_OPTIONS, VadEagerness } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
+import { FuriganaText } from '../shared/furigana-text';
+import { FuriganaToggle } from '../shared/furigana-toggle';
 
 @Component({
   selector: 'app-conversation',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, FuriganaText, FuriganaToggle],
   templateUrl: './conversation.html',
   styleUrl: './conversation.scss',
 })

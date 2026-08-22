@@ -7,13 +7,16 @@ import {
   SessionInfo,
   TranscriptTurn,
   UsageSnapshot,
+  withoutFurigana,
 } from '../core/models';
+import { FuriganaText } from '../shared/furigana-text';
+import { FuriganaToggle } from '../shared/furigana-toggle';
 
 type ExportState = 'idle' | 'running' | 'done' | 'error';
 
 @Component({
   selector: 'app-review',
-  imports: [],
+  imports: [FuriganaText, FuriganaToggle],
   templateUrl: './review.html',
   styleUrl: './review.scss',
 })
@@ -118,7 +121,7 @@ export class Review {
       system_instructions: info?.instructions ?? '',
       duration_seconds: this.elapsedSeconds(),
       usage: this.usage(),
-      transcript: this.transcript(),
+      transcript: withoutFurigana(this.transcript()),
       analysis: this.analysis(),
     };
   }

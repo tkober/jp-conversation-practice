@@ -413,16 +413,20 @@ def test_transcripts_are_normalised_into_app_events(
             "role": "user",
             "text": "これください",
             "timestamp": pytest.approx(0, abs=10),
+            # Kana only, so there is no reading to put anywhere.
+            "ruby": None,
         }
 
         websocket.receive_json()  # the relayed raw event
 
         upstream.send_event(
-            {"type": "response.output_audio_transcript.done", "transcript": "はい、どうぞ"}
+            {"type": "response.output_audio_transcript.done", "transcript": "はい、お水をどうぞ"}
         )
         assistant_turn = websocket.receive_json()
         assert assistant_turn["turn"]["role"] == "assistant"
-        assert assistant_turn["turn"]["text"] == "はい、どうぞ"
+        assert assistant_turn["turn"]["text"] == "はい、お水をどうぞ"
+        # Furigana rides along with the turn, so the UI needs no second call.
+        assert {"text": "水", "reading": "みず"} in assistant_turn["turn"]["ruby"]
 
 
 def test_session_end_reports_transcript_and_totals(
