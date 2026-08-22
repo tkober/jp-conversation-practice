@@ -74,3 +74,18 @@ async def test_speed_is_clamped_into_the_supported_range(api: AsyncClient) -> No
     body = await patch(api, realtime_speed=99)
 
     assert body["realtime_speed"] == body["speed_max"]
+
+
+async def test_eagerness_override_and_fallback(api: AsyncClient) -> None:
+    assert (await patch(api, realtime_vad_eagerness="high"))["realtime_vad_eagerness"] == "high"
+
+    # Clearing it hands the setting back to the environment.
+    body = await patch(api, realtime_vad_eagerness="")
+
+    assert body["realtime_vad_eagerness"] == get_settings().realtime_vad_eagerness
+
+
+async def test_unknown_eagerness_is_rejected(api: AsyncClient) -> None:
+    body = await patch(api, realtime_vad_eagerness="very")
+
+    assert body["realtime_vad_eagerness"] == get_settings().realtime_vad_eagerness

@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # above ~1.4 it is no longer useful for a learner.
     realtime_speed_min: float = 0.6
     realtime_speed_max: float = 1.4
+    # How readily the semantic VAD treats a pause as the end of the learner's
+    # turn -- see turn_detection.py for why "low" is the default. The Settings
+    # screen overrides this, and the session screen can change it live.
+    realtime_vad_eagerness: str = "low"
     tts_model: str = "gpt-4o-mini-tts"
     voice_sample_cache_dir: str = ".voice-samples"
     transcription_model: str = "gpt-4o-mini-transcribe"

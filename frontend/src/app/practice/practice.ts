@@ -78,6 +78,7 @@ export class Practice {
         model: info?.model ?? '',
         voice: info?.voice ?? '',
         speed: info?.speed ?? 1,
+        vad_eagerness: info?.vad_eagerness ?? '',
         instructions: info?.instructions ?? '',
         duration_seconds: this.finalElapsed(),
         cost_usd: this.session.usage().cost_usd,

@@ -9,6 +9,7 @@ import {
   SessionPhase,
   TranscriptTurn,
   UsageSnapshot,
+  VadEagerness,
 } from './models';
 
 const SAMPLE_RATE = 24000;
@@ -41,6 +42,8 @@ export class RealtimeSessionService {
   // Filled from /api/voices by the setup screen; the backend clamps regardless.
   readonly speedMin = signal(0.6);
   readonly speedMax = signal(1.4);
+  /** Overwritten from `app.session.started` with whatever the backend is using. */
+  readonly eagerness = signal<VadEagerness>('low');
 
   readonly costUsd = computed(() => this.usage().cost_usd);
   readonly isLive = computed(() => this.phase() === 'live');
@@ -122,6 +125,17 @@ export class RealtimeSessionService {
     }
   }
 
+  /**
+   * Change how long a pause may last before the tutor answers. Takes effect on
+   * the next silence -- a reply already being generated is unaffected.
+   */
+  setEagerness(eagerness: VadEagerness): void {
+    this.eagerness.set(eagerness);
+    if (this.socket?.readyState === WebSocket.OPEN) {
+      this.socket.send(JSON.stringify({ type: 'app.session.eagerness', eagerness }));
+    }
+  }
+
   /** Clear everything so a new session can start from the setup screen. */
   reset(): void {
     this.usage.set(EMPTY_USAGE);
@@ -198,21 +212,29 @@ export class RealtimeSessionService {
     switch (message['type']) {
       case 'app.session.started': {
         const speed = Number(message['speed'] ?? 1);
+        const eagerness = (message['vad_eagerness'] ?? 'low') as VadEagerness;
         this.sessionInfo.set({
           model: String(message['model'] ?? ''),
           scenario: String(message['scenario'] ?? ''),
           jlpt_level: String(message['jlpt_level'] ?? ''),
           voice: String(message['voice'] ?? ''),
           speed,
+          vad_eagerness: eagerness,
           instructions: String(message['instructions'] ?? ''),
         });
         this.speed.set(speed);
+        this.eagerness.set(eagerness);
         break;
       }
 
       case 'app.speed.changed':
         // The server clamps to its supported range, so trust its value.
         this.speed.set(Number(message['speed'] ?? this.speed()));
+        break;
+
+      case 'app.eagerness.changed':
+        // Same as the speed: the server validates, so its value is the truth.
+        this.eagerness.set((message['eagerness'] ?? this.eagerness()) as VadEagerness);
         break;
 
       case 'app.cost.update':

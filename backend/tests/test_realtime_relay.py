@@ -248,6 +248,61 @@ def test_live_speed_change_sends_a_narrow_session_update(
         assert websocket.receive_json() == {"type": "app.speed.changed", "speed": 1.25}
 
 
+def test_configured_eagerness_reaches_the_turn_detection(
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream)
+
+        turn_detection = upstream.received[0]["session"]["audio"]["input"]["turn_detection"]
+        assert turn_detection["eagerness"] == config.realtime_vad_eagerness
+        assert started["vad_eagerness"] == config.realtime_vad_eagerness
+
+
+def test_live_eagerness_change_resends_the_whole_turn_detection(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.eagerness", "eagerness": "high"}))
+        upstream.wait_for_messages(2)
+
+        update = upstream.received[1]
+        assert update["type"] == "session.update"
+        # The whole block, not just the changed field: a partial turn_detection
+        # would drop interrupt_response and silently break barge-in.
+        assert update["session"]["audio"] == {
+            "input": {
+                "turn_detection": {
+                    "type": "semantic_vad",
+                    "eagerness": "high",
+                    "create_response": True,
+                    "interrupt_response": True,
+                }
+            }
+        }
+        assert "instructions" not in update["session"]
+
+        assert websocket.receive_json() == {
+            "type": "app.eagerness.changed",
+            "eagerness": "high",
+        }
+
+
+def test_unknown_eagerness_falls_back_to_the_configured_default(
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.eagerness", "eagerness": "yes"}))
+        upstream.wait_for_messages(2)
+
+        turn_detection = upstream.received[1]["session"]["audio"]["input"]["turn_detection"]
+        assert turn_detection["eagerness"] == config.realtime_vad_eagerness
+
+
 def test_upstream_receives_the_api_key(
     client: TestClient, upstream: FakeRealtimeServer
 ) -> None:

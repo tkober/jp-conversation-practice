@@ -83,6 +83,7 @@ class SettingsUpdate(BaseModel):
     tts_model: str | None = None
     realtime_voice: str | None = None
     realtime_speed: float | None = None
+    realtime_vad_eagerness: str | None = None
     wanikani_api_token: str | None = None
     ankiconnect_url: str | None = None
     anki_deck_name: str | None = None
@@ -102,6 +103,7 @@ class SettingsView(BaseModel):
     tts_model: str
     realtime_voice: str
     realtime_speed: float
+    realtime_vad_eagerness: str
     ankiconnect_url: str
     anki_deck_name: str
 
@@ -178,6 +180,7 @@ class SessionCreate(BaseModel):
     model: str = ""
     voice: str = ""
     speed: float = 1.0
+    vad_eagerness: str = ""
     instructions: str = ""
     duration_seconds: float = 0
     cost_usd: float = 0
@@ -204,6 +207,7 @@ class SessionSummary(BaseModel):
 class SessionDetail(SessionSummary):
     scenario_prompt: str
     speed: float
+    vad_eagerness: str
     instructions: str
     usage: dict
     transcript: list[TranscriptTurn]

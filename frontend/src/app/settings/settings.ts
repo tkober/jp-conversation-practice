@@ -2,7 +2,12 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ApiService } from '../core/api.service';
-import { AppSettingsPatch, AppSettingsView, VoiceOption } from '../core/models';
+import {
+  AppSettingsPatch,
+  AppSettingsView,
+  EAGERNESS_OPTIONS,
+  VoiceOption,
+} from '../core/models';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -51,6 +56,7 @@ export class SettingsPage {
   private readonly api = inject(ApiService);
 
   readonly modelFields = MODEL_FIELDS;
+  readonly eagernessOptions = EAGERNESS_OPTIONS;
 
   readonly current = signal<AppSettingsView | null>(null);
   readonly voices = signal<VoiceOption[]>([]);

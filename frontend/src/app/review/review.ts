@@ -114,6 +114,7 @@ export class Review {
       model: info?.model ?? this.usage().model,
       voice: info?.voice ?? '',
       speed: info?.speed ?? 1,
+      vad_eagerness: info?.vad_eagerness ?? '',
       system_instructions: info?.instructions ?? '',
       duration_seconds: this.elapsedSeconds(),
       usage: this.usage(),

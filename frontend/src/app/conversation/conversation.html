@@ -64,6 +64,22 @@
     />
   </div>
 
+  <div class="speed">
+    <label for="eagerness-select">
+      Geduld
+      <span class="speed-note">wie lange du überlegen darfst, bevor geantwortet wird</span>
+    </label>
+    <select
+      id="eagerness-select"
+      [value]="eagerness()"
+      (change)="onEagernessChange($any($event.target).value)"
+    >
+      @for (option of eagernessOptions; track option.id) {
+        <option [value]="option.id">{{ option.label }}</option>
+      }
+    </select>
+  </div>
+
   <div class="controls">
     <div class="mic">
       <div class="mic-bar">
