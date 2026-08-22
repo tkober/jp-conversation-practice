@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     # above ~1.4 it is no longer useful for a learner.
     realtime_speed_min: float = 0.6
     realtime_speed_max: float = 1.4
+    # How much the tutor slows down for a わからない turn, as a factor on the
+    # current speed. Help that arrives at conversational pace is not much help;
+    # 0.8 is noticeably slower without tipping into the drawn-out delivery that
+    # makes a sentence harder to parse, not easier. 1.0 switches it off.
+    realtime_help_speed_factor: float = 0.8
+    realtime_help_speed_factor_min: float = 0.5
+    realtime_help_speed_factor_max: float = 1.0
     # How readily the semantic VAD treats a pause as the end of the learner's
     # turn -- see turn_detection.py for why "low" is the default. The Settings
     # screen overrides this, and the session screen can change it live.

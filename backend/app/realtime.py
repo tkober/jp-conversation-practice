@@ -6,7 +6,9 @@ directions. On the way through, the relay
   * injects the scenario/level system prompt into ``session.update``,
   * accounts exact token cost from every ``response.done`` event,
   * normalises the various transcript events into a single ``transcript.turn``
-    event and annotates it with furigana, and
+    event and annotates it with furigana,
+  * turns a わからない press into one scaffolded response, escalating with
+    every press until the learner speaks again, and
   * forwards audio deltas as raw binary frames so the browser does not have to
     base64-decode on the hot path.
 """
@@ -30,7 +32,13 @@ from websockets.asyncio.client import connect as ws_connect
 from .furigana import annotate
 from .models import TranscriptTurn
 from .pricing import CostTracker
-from .prompts import DEFAULT_JLPT_LEVEL, JLPT_GUIDANCE, build_realtime_instructions
+from .prompts import (
+    DEFAULT_JLPT_LEVEL,
+    JLPT_GUIDANCE,
+    MAX_HELP_STAGE,
+    build_help_instructions,
+    build_realtime_instructions,
+)
 from .runtime_config import RuntimeConfig
 from .turn_detection import normalise_eagerness
 from .voices import is_valid_voice
@@ -91,6 +99,15 @@ class RealtimeSession:
         self.eagerness = settings.realtime_vad_eagerness
         self.started_at = time.time()
         self._dropped_event_types: set[str] = set()
+        # わからない: how often the learner has asked for help in this same
+        # spot. Reset as soon as they manage to say something again.
+        self.help_stage = 0
+        self._response_active = False
+        self._help_pending = False
+        self._help_speed_active = False
+        # Set while the response to a press is being generated, so the turn it
+        # produces can be told apart from an ordinary one afterwards.
+        self._help_turn_stage: int | None = None
 
     # --- helpers ---------------------------------------------------------
 
@@ -123,6 +140,10 @@ class RealtimeSession:
             text=text,
             timestamp=time.time() - self.started_at,
             ruby=annotate(text),
+            # Which わからない press this answers, if any. Without it an export
+            # cannot tell a help turn from an ordinary one -- which is exactly
+            # what you need to know when the help was not helpful.
+            help_stage=self._help_turn_stage if role == "assistant" else None,
         )
         self.transcript.append(turn)
         return turn
@@ -165,6 +186,34 @@ class RealtimeSession:
         return max(
             self.settings.realtime_speed_min,
             min(self.settings.realtime_speed_max, speed),
+        )
+
+    def _help_speed(self) -> float:
+        """The rate a わからない turn is spoken at.
+
+        Help delivered at conversational pace is not much help -- the learner
+        pressed the button because they could not follow. Clamped into the same
+        range the slider offers: at the slowest setting there is nothing left
+        to give, and below it the speech smears rather than clarifies.
+        """
+        return self._clamp_speed(self.speed * self.settings.realtime_help_speed_factor)
+
+    async def _set_output_speed(self, upstream: Any, speed: float) -> None:
+        """Change the tutor's speaking rate and nothing else.
+
+        The one narrow translation into ``session.update`` that both the
+        slider and the help turn go through, so neither can widen it.
+        """
+        await upstream.send(
+            json.dumps(
+                {
+                    "type": "session.update",
+                    "session": {
+                        "type": "realtime",
+                        "audio": {"output": {"speed": speed}},
+                    },
+                }
+            )
         )
 
     def _turn_detection(self) -> dict[str, Any]:
@@ -259,18 +308,17 @@ class RealtimeSession:
                 # Translated here rather than allow-listing `session.update`:
                 # the browser may change the speed and nothing else.
                 self.speed = self._clamp_speed(event.get("speed"))
-                await upstream.send(
-                    json.dumps(
-                        {
-                            "type": "session.update",
-                            "session": {
-                                "type": "realtime",
-                                "audio": {"output": {"speed": self.speed}},
-                            },
-                        }
-                    )
-                )
+                if not self._help_speed_active:
+                    # While a わからない turn is running the tutor is on the
+                    # help rate; restoring afterwards picks up the new value.
+                    await self._set_output_speed(upstream, self.speed)
                 await self.send_json({"type": "app.speed.changed", "speed": self.speed})
+                continue
+
+            if event_type == "app.session.help":
+                # わからない. Built here from the trusted session prompt, never
+                # from anything the browser sent.
+                await self._request_help(upstream)
                 continue
 
             if event_type == "app.session.eagerness":
@@ -303,6 +351,76 @@ class RealtimeSession:
 
             await upstream.send(json.dumps(event))
 
+    async def _request_help(self, upstream: Any) -> None:
+        """Answer a わからない press with one deliberately scaffolded response.
+
+        The stage advances with every press and only resets once the learner
+        speaks again, so pressing twice in a row really does get more help
+        rather than the same help worded differently.
+
+        A response that is still being generated is cancelled first: the
+        learner pressed the button *because* of what they are hearing, and the
+        API refuses a second response while one is active anyway. The actual
+        ``response.create`` then rides on the ``response.done`` that the
+        cancellation produces.
+        """
+        self.help_stage = min(MAX_HELP_STAGE, self.help_stage + 1)
+        await self.send_json(
+            {
+                "type": "app.help.stage",
+                "stage": self.help_stage,
+                "max_stage": MAX_HELP_STAGE,
+            }
+        )
+
+        if self._response_active:
+            self._help_pending = True
+            await upstream.send(json.dumps({"type": "response.cancel"}))
+            return
+
+        await self._send_help_response(upstream)
+
+    async def _send_help_response(self, upstream: Any) -> None:
+        """Ask for the one response that carries the scaffolding instructions.
+
+        Slowed down first. There is no per-response speed in the Realtime API,
+        so it goes through ``session.update`` and is put back on the
+        ``response.done`` this response produces -- the next ordinary turn is
+        at the learner's own rate again.
+        """
+        self._help_pending = False
+        await self._set_output_speed(upstream, self._help_speed())
+        self._help_speed_active = True
+        self._help_turn_stage = self.help_stage
+        await upstream.send(
+            json.dumps(
+                {
+                    "type": "response.create",
+                    "response": {
+                        # `instructions` replaces the session prompt for this
+                        # response only, so the whole frame is rebuilt here.
+                        "instructions": build_help_instructions(
+                            self.scenario, self.jlpt_level, self.help_stage
+                        )
+                    },
+                }
+            )
+        )
+
+    async def _restore_speed(self, upstream: Any) -> None:
+        """Put the tutor back on the learner's own rate after a help turn."""
+        self._help_speed_active = False
+        await self._set_output_speed(upstream, self.speed)
+
+    async def _reset_help(self) -> None:
+        """Forget the escalation: the learner is talking again."""
+        if self.help_stage == 0:
+            return
+        self.help_stage = 0
+        await self.send_json(
+            {"type": "app.help.stage", "stage": 0, "max_stage": MAX_HELP_STAGE}
+        )
+
     async def _pump_openai_to_client(self, upstream: Any) -> None:
         """Forward upstream events to the browser, accounting cost on the way."""
         async for raw in upstream:
@@ -325,8 +443,18 @@ class RealtimeSession:
             if event_type in NOISY_EVENTS:
                 continue
 
-            if event_type == "response.done":
+            if event_type == "response.created":
+                self._response_active = True
+            elif event_type == "response.done":
+                self._response_active = False
+                # The transcript for this response has already been through
+                # `_emit_turn`, so the marker has done its job.
+                self._help_turn_stage = None
                 await self._handle_response_done(event)
+                if self._help_pending:
+                    await self._send_help_response(upstream)
+                elif self._help_speed_active:
+                    await self._restore_speed(upstream)
             elif event_type == USER_TRANSCRIPT_EVENT:
                 await self._emit_turn("user", event.get("transcript", ""))
             elif event_type in ASSISTANT_TRANSCRIPT_EVENTS:
@@ -334,6 +462,13 @@ class RealtimeSession:
             elif event_type == "error":
                 error = event.get("error") or {}
                 logger.error("Realtime API error: %s", error)
+                if self._help_pending:
+                    # The cancellation we were waiting on failed, so the
+                    # `response.done` that would have carried the help request
+                    # is never coming. Ask for it now rather than leaving the
+                    # button dead for the rest of the session.
+                    self._response_active = False
+                    await self._send_help_response(upstream)
 
             await self.send_json(event)
 
@@ -350,6 +485,12 @@ class RealtimeSession:
         turn = self._record_turn(role, text)
         if turn is None:
             return
+        if role == "user":
+            # Only a turn that carried words counts as getting past the spot.
+            # The VAD commits background noise as a turn too, and those
+            # transcribe to nothing -- resetting on one would silently undo the
+            # escalation while the learner sits there pressing the button.
+            await self._reset_help()
         await self.send_json({"type": "app.transcript.turn", "turn": turn.model_dump()})
 
     async def _handle_response_done(self, event: dict[str, Any]) -> None:
@@ -401,6 +542,8 @@ class RealtimeSession:
                         "voice": self.voice,
                         "speed": self.speed,
                         "vad_eagerness": self.eagerness,
+                        "help_stages": MAX_HELP_STAGE,
+                        "help_speed_factor": self.settings.realtime_help_speed_factor,
                         # Echoed back so a session export can show exactly what
                         # the tutor was told -- without it, debugging an odd
                         # conversation means guessing at the prompt.

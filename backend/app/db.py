@@ -175,6 +175,7 @@ class AppSettings(Base):
 
     realtime_voice: Mapped[str | None] = mapped_column(String, nullable=True)
     realtime_speed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    realtime_help_speed_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
     realtime_vad_eagerness: Mapped[str | None] = mapped_column(String, nullable=True)
 
     wanikani_api_token: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -435,6 +436,10 @@ async def _wait_for_database(engine: AsyncEngine) -> None:
 ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("app_settings", "realtime_vad_eagerness", "VARCHAR"),
     ("sessions", "vad_eagerness", "VARCHAR NOT NULL DEFAULT ''"),
+    # "DOUBLE PRECISION" is Postgres' spelling; SQLite takes any type name and
+    # gives anything containing "DOUB" REAL affinity, so it lands right there
+    # too.
+    ("app_settings", "realtime_help_speed_factor", "DOUBLE PRECISION"),
 )
 
 

@@ -146,19 +146,27 @@ async def test_a_session_row_round_trips_its_json_and_its_timestamp(
 async def test_migrate_schema_adds_a_missing_column_and_repeats_cleanly(
     sqlite_db: async_sessionmaker,
 ) -> None:
-    """SQLite has no ADD COLUMN IF NOT EXISTS, so the check is a reflection."""
+    """SQLite has no ADD COLUMN IF NOT EXISTS, so the check is a reflection.
+
+    Every row of ADDED_COLUMNS is dropped and restored, so a row added later
+    is covered here without anyone remembering to extend this test -- including
+    whether its Postgres type spelling is one SQLite will accept.
+    """
     settings = get_settings()
     engine = db._new_engine(settings.owner_database_url)
+    tables = {table for table, _, _ in db.ADDED_COLUMNS}
     try:
         async with engine.begin() as conn:
-            await conn.execute(text("ALTER TABLE sessions DROP COLUMN vad_eagerness"))
+            for table, column, _ in db.ADDED_COLUMNS:
+                await conn.execute(text(f"ALTER TABLE {table} DROP COLUMN {column}"))
             await db.migrate_schema(conn)
             # Running it twice must not raise: it is a boot-time step.
             await db.migrate_schema(conn)
 
         async with engine.connect() as conn:
-            columns = await conn.run_sync(db._existing_columns, {"sessions"})
+            columns = await conn.run_sync(db._existing_columns, tables)
     finally:
         await engine.dispose()
 
-    assert "vad_eagerness" in columns["sessions"]
+    for table, column, _ in db.ADDED_COLUMNS:
+        assert column in columns[table], f"{table}.{column} was not restored"

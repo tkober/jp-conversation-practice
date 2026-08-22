@@ -163,6 +163,26 @@
       </label>
 
       <label class="field">
+        <span class="field-label">
+          Verlangsamung bei „わからない“ — {{ helpFactorLabel() }}
+        </span>
+        <input
+          type="range"
+          [min]="settings.help_speed_factor_min"
+          [max]="settings.help_speed_factor_max"
+          step="0.05"
+          [ngModel]="helpFactor()"
+          (ngModelChange)="set('realtime_help_speed_factor', +$event)"
+        />
+        <span class="field-hint">
+          Kein festes Tempo, sondern ein Faktor auf das Tempo der laufenden Session: bei
+          {{ helpBaseSpeed().toFixed(2) }}× kommt die Hilfe mit {{ helpSpeed().toFixed(2) }}×.
+          Änderst du das Tempo mitten in der Session, wandert die Hilfe mit. Ganz rechts ist
+          die Verlangsamung aus.
+        </span>
+      </label>
+
+      <label class="field">
         <span class="field-label">Geduld beim Zuhören</span>
         <select
           [ngModel]="value('realtime_vad_eagerness')"

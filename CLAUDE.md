@@ -320,6 +320,75 @@ value as blank, so the component falls back to the text box instead of
 swallowing it. Picking a realtime model that `MODEL_RATES` does not know says
 so right there, rather than leaving it for the session screen to discover.
 
+## The わからない button
+
+A teacher sees when a learner is out of their depth and eases off without being
+asked. The model cannot see that, and "ask for help in Japanese" is precisely
+what a stuck learner cannot do — so the session screen has a button that says
+it for them.
+
+A press sends `app.session.help`. The relay answers it with **one**
+`response.create` whose `response.instructions` is
+`build_help_instructions()` — the full session prompt plus a block describing
+how to help. Per-response `instructions` *replace* the session prompt rather
+than extending it, which is why that function rebuilds the whole frame; sending
+only the help block would drop the scenario, the level and the language policy
+for exactly the turn where the learner is struggling most.
+
+**The help turn is slowed down, and that is what lets the wording work.** No
+stage may ask the model to "say it again more slowly": it cannot change its own
+delivery, so that instruction reliably produced a near-verbatim repeat — the one
+response guaranteed not to help, since those exact words are what the learner
+just failed to parse. The rate is handled mechanically instead
+(`realtime_help_speed_factor`). It is a factor on `self.speed` — whatever the
+session is running at *now*, so it follows the live tempo slider — and not a
+rate of its own; the Settings screen shows the resulting tempo next to it,
+because a bare "0.80×" is written exactly like the tempo slider's own value and
+reads as an absolute rate. The Realtime API has no per-response speed, so it
+goes through the same narrow `session.update` the slider uses and is put back on
+the following `response.done`.
+
+**Every stage is subject to "smaller than the turn they did not understand"** —
+fewer words, one sentence, at most one question, nothing new. Without that rule
+the model pads the sentence out with explanation instead of cutting it down, and
+the help arrives longer than the thing it was meant to clarify.
+
+`HELP_STAGES` in `prompts.py` is the escalation, one entry per press: two
+Japanese-only stages, a third that assumes nothing landed, and German as the
+last resort. The stage advances with every press and resets to 0 as soon as the
+learner says something (`app.help.stage` carries both directions, so the button
+never has to guess).
+
+**The reset needs a turn that actually carried words.** The semantic VAD commits
+background noise as a user turn too, and those transcribe to nothing; resetting
+on one left a learner who sat silent and kept pressing stuck on stage 1 forever
+— invisibly, because an empty turn never reaches the transcript either. So
+`_emit_turn` resets only after `_record_turn` kept the turn.
+
+**The turn a press produces is marked** (`TranscriptTurn.help_stage`, set while
+that response is being generated). It is the one piece of derived-looking state
+that *is* stored: an export is how a bad conversation gets analysed, and without
+it there is no way to tell a help turn from an ordinary reply — which is the
+first thing you need to know when the help did not help. Each stage offers *several* tactics and tells the model to
+pick one that fits and not to repeat the previous one — a tutor that answers
+the same signal with the same move teaches the learner the pattern instead of
+the language, which is the "roles generalise, checklists fossilise" rule
+applied to helping.
+
+The button usually gets pressed while the tutor is still talking, so a running
+response is cancelled first and the help request rides on the `response.done`
+that the cancellation produces; the browser drops its playback queue the same
+way it does on barge-in. If the cancel errors instead, the pending request is
+sent from the `error` branch — otherwise a failed cancel would leave the button
+dead for the rest of the session.
+
+The model is never told a button exists: it is told the learner signalled they
+are stuck, and to stay in character.
+
+The German stage has to say it **overrides** the "speak ONLY Japanese" rule
+sitting above it in the same prompt. Appending a permission is not enough; the
+earlier absolute wins, and the escalation just never arrives at German.
+
 ## Furigana
 
 The transcript carries its readings. `annotate()` in `furigana.py` cuts a line

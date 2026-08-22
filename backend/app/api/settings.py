@@ -31,6 +31,7 @@ PATCHABLE = (
     "tts_model",
     "realtime_voice",
     "realtime_speed",
+    "realtime_help_speed_factor",
     "realtime_vad_eagerness",
     "wanikani_api_token",
     "ankiconnect_url",
@@ -56,6 +57,7 @@ def to_view(config: RuntimeConfig, row: AppSettings | None) -> SettingsView:
         tts_model=config.tts_model,
         realtime_voice=config.realtime_voice,
         realtime_speed=config.realtime_speed,
+        realtime_help_speed_factor=config.realtime_help_speed_factor,
         realtime_vad_eagerness=config.realtime_vad_eagerness,
         ankiconnect_url=config.ankiconnect_url,
         anki_deck_name=config.anki_deck_name,
@@ -69,6 +71,8 @@ def to_view(config: RuntimeConfig, row: AppSettings | None) -> SettingsView:
         wanikani_api_token_from_env=not (row and row.wanikani_api_token),
         speed_min=config.realtime_speed_min,
         speed_max=config.realtime_speed_max,
+        help_speed_factor_min=config.realtime_help_speed_factor_min,
+        help_speed_factor_max=config.realtime_help_speed_factor_max,
     )
 
 
