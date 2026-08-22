@@ -260,16 +260,16 @@ chosen at setup time and travels in the `app.session.start` handshake. The
 speaking rate and the VAD eagerness are not fixed, so the session screen changes
 both live.
 
-Those two live changes are the only places the browser influences
-`session.update`, and they deliberately do *not* go through the allow-list: the
-client sends `app.session.speed` / `app.session.eagerness`, and
-`RealtimeSession` translates each into a `session.update` carrying nothing but
-`audio.output.speed` / `audio.input.turn_detection`. Keep it that way —
-allow-listing `session.update` itself would hand the browser the instructions
-field. Both values are validated server-side (`_clamp_speed`,
-`normalise_eagerness`, `is_valid_voice`) rather than trusted from the client;
-`voices.py` validates the voice id before it is used in a filesystem path for
-the preview cache.
+Those two live changes are two of the three places the browser influences
+`session.update` (handing over context material is the third), and they
+deliberately do *not* go through the allow-list: the client sends
+`app.session.speed` / `app.session.eagerness`, and `RealtimeSession` translates
+each into a `session.update` carrying nothing but `audio.output.speed` /
+`audio.input.turn_detection`. Keep it that way — allow-listing `session.update`
+itself would hand the browser the instructions field. Both values are validated
+server-side (`_clamp_speed`, `normalise_eagerness`, `is_valid_voice`) rather
+than trusted from the client; `voices.py` validates the voice id before it is
+used in a filesystem path for the preview cache.
 
 **Eagerness decides how long a pause may last before the tutor answers**
 (`turn_detection.py`). The default is `low`, the most patient setting, because a
@@ -389,6 +389,80 @@ The German stage has to say it **overrides** the "speak ONLY Japanese" rule
 sitting above it in the same prompt. Appending a permission is not enough; the
 earlier absolute wins, and the escalation just never arrives at German.
 
+## Context material
+
+A scenario says who the tutor is and where. What it cannot say is what is
+lying on the table — and without that, a learner cannot practise the sentences
+they will actually need, because これ, その赤いの and この先 have nothing to
+point at. Context material fills that in: images or text attached to a
+scenario, shown to the learner and described to the tutor.
+
+**The learner sees it. That is half the feature, not decoration.** Deixis works
+in both directions or not at all: a menu only the tutor knows about is a menu
+nobody can point at. So the session screen renders every attachment
+(`ContextPanel`) alongside the transcript, and the tutor's prompt is told
+explicitly that the learner is looking at it and must not have it read out.
+
+**The material is evaluated once, not sent to the realtime model.** The ticket
+asked for it "aufgearbeitet" and that is the right way round here for three
+reasons: the default `gpt-realtime-2.1-mini` is already the weakest link in
+coherence and reading a photographed menu mid-conversation is exactly the load
+it fails under; a description written once is identical in every session, is
+what the export shows, and can be corrected by hand when a price is misread;
+and it keeps the prompt text-only, so `build_help_instructions()` picks the
+material up for free. `context_material.py` makes that call against
+`scenario_assistant_model` — the same slot that already writes English prose
+for a scenario's prompt, only from a photo instead of a draft. It has to be a
+model that can read images.
+
+**A menu is a list, and this project already knows what a list in the prompt
+does.** Both the evaluation prompt and the `# Context material` block that
+consumes it say the same thing twice over: this describes a thing that EXISTS,
+it is not a plan for the conversation. Without that sentence the model works
+through the menu from the top, in the same order every session — the konbini
+checklist failure with different words. `CONTEXT_RULES` in `prompts.py` carries
+the rest: never invent an item the learner cannot see on their screen, use the
+names and prices exactly as written, and say so when the description calls
+something unreadable.
+
+**The description is an ordinary editable field.** The evaluation is a first
+draft, not an oracle, and a failed one keeps the upload rather than losing the
+file: `analysis_error` reports why, the attachment stays, and the text can be
+retried or simply written. An attachment with an empty description is left out
+of the prompt entirely — announcing a menu and then saying nothing about it is
+worse than not mentioning it.
+
+**Material belongs to a scenario**, because the scenario is the repeatable
+exercise and the evaluation is then paid once instead of per session. Deleting
+the scenario cascades. The free-text scenario on the setup screen owns no row,
+so it has no material — the setup screen simply hides the section. The bytes
+live in the database (`scenario_attachments.data`) rather than on disk, which
+keeps the SQLite deployment a single file and the Postgres one inside the
+existing backup; the cap is `ATTACHMENT_MAX_BYTES`, and **nginx's
+`client_max_body_size` has to be at least as large** or the proxy rejects a
+phone photo with its own 413 before the backend's message about the real limit
+can be shown.
+
+**"At the start or during the exercise"** is `available_from_start`: material
+either sits in the prompt from the first turn or waits until the learner hands
+it over from the session screen. The setup screen seeds the choice from the
+flag and lets it be overridden per run — the same menu can be on the table
+today and brought over by the waiter tomorrow. A handover sends
+`app.session.context` with nothing but an id; the relay reads the row and
+rebuilds the *whole* instructions into a `session.update`. Sending a
+conversation item instead would be lighter and wrong: `response.instructions`
+for a わからない turn rebuilds the frame from scratch, so the one turn where
+the learner is most stuck would be the one that had forgotten the menu they
+are holding. It also does not ask for a reply — the learner clicked because
+they want to look at the thing and then speak, and a tutor turn fired at that
+moment talks over them.
+
+The material travels with the session record (`sessions.context_items`) and
+with the analysis request, both for the same reason: これを二つください is
+unreadable — as history and as feedback — without the menu これ pointed at.
+The stored `instructions` cannot stand in for it, since they were built before
+anything handed over mid-session arrived.
+
 ## Furigana
 
 The transcript carries its readings. `annotate()` in `furigana.py` cuts a line
@@ -447,6 +521,11 @@ Two GHCR images, built by GitHub Actions on push to `main`. Only the frontend
 publishes a port (8085); its nginx serves the SPA and reverse-proxies `/api`
 and `/ws` to the backend over the internal network, which is why no CORS is
 involved and the backend port stays unpublished.
+
+**`/api/` raises two nginx defaults.** `client_max_body_size` (1 MB by
+default) has to cover `ATTACHMENT_MAX_BYTES`, or a material upload dies at the
+proxy; `proxy_read_timeout` has to cover the vision call that answers inside
+that upload, and inside a voice preview's first render.
 
 **The `/ws/` location is not a copy of `/api/`.** It carries the `Upgrade`
 handshake and sets `proxy_read_timeout 3600s` with `proxy_buffering off` — a
