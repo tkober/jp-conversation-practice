@@ -34,6 +34,16 @@ nginx-served frontend, creating the two database roles on first start — the
 same owner/app split the deployment uses. The API key can also be left out here
 and entered in the app's Settings screen instead.
 
+### …without a Postgres server
+
+```bash
+OPENAI_API_KEY=sk-... docker compose -f compose.sqlite.yaml up --build
+```
+
+Same app on the same port, with the database in a SQLite file on a named
+volume instead. Settings, scenarios and session history all live in that one
+file. Pick one of the two stacks — there is no migration between them.
+
 ## Run for development
 
 ```bash
@@ -58,9 +68,16 @@ docker compose up -d postgres
 #   DB_OWNER_USER=jp_conversation_owner  DB_OWNER_PASSWORD=jp_conversation
 ```
 
+Or skip Postgres entirely — one line in `backend/.env`, and the four `DB_*`
+role variables stop mattering:
+
+```
+DB_URL=sqlite:///./data/jp_conversation.db
+```
+
 ## Data
 
-Postgres holds three things, all of which survive an image update:
+The database holds three things, all of which survive an image update:
 
 | Table | Contents |
 |---|---|
@@ -83,6 +100,31 @@ You are the clerk at a Japanese convenience store ...
 
 The body is the model-facing prompt and is English; `title` and `summary` are
 user-facing and German.
+
+### Postgres or SQLite
+
+Postgres is the deployment target and what `DB_URL` points at by default: two
+roles, the owner running DDL at startup and the app role serving requests.
+
+A `sqlite://` URL runs the same schema out of a local file, for a machine that
+has no Postgres to point at. The roles are then ignored — SQLite's access
+control is the filesystem's — and the directory holding the file is created on
+startup. Everything else behaves identically; the differences (JSONB vs JSON,
+timezone handling, the upsert dialect, the WAL and foreign-key PRAGMAs) are
+confined to `backend/app/db.py`.
+
+| | Postgres | SQLite |
+|---|---|---|
+| `DB_URL` | `postgresql://host:5432/jp_conversation` | `sqlite:///./data/jp_conversation.db` |
+| `DB_USER` / `DB_OWNER_USER` … | required | ignored |
+| Bootstrap SQL (`dbeaver/`) | run once by hand | not needed |
+| Concurrency | many writers | one writer at a time (WAL) |
+| Compose stack | `compose.yaml` | `compose.sqlite.yaml` |
+
+Both are real: `TEST_DB=sqlite` runs the whole test suite against a temporary
+SQLite file, so the file backend is covered by every test rather than by a
+handful written for it. There is no migration path between the two — pick one
+before you have a history worth keeping.
 
 ## How it works
 
@@ -256,9 +298,9 @@ are environment-only.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DB_URL` | `postgresql://localhost:5432/jp_conversation` | **Required.** Host/port/database only. |
-| `DB_USER` / `DB_PASSWORD` | `jp_conversation_app` | **Required.** Serves requests. |
-| `DB_OWNER_USER` / `DB_OWNER_PASSWORD` | `jp_conversation_owner` | **Required.** Runs DDL at startup. |
+| `DB_URL` | `postgresql://localhost:5432/jp_conversation` | **Required.** Host/port/database only, or `sqlite:///<path>` for a local file. |
+| `DB_USER` / `DB_PASSWORD` | `jp_conversation_app` | **Required** for Postgres, ignored for SQLite. Serves requests. |
+| `DB_OWNER_USER` / `DB_OWNER_PASSWORD` | `jp_conversation_owner` | **Required** for Postgres, ignored for SQLite. Runs DDL at startup. |
 | `OPENAI_API_KEY` | — | Required unless set in Settings. |
 | `REALTIME_MODEL` | `gpt-realtime-2.1-mini` | Live conversation model. |
 | `ANALYSIS_MODEL` | `gpt-4o-mini` | Post-session analysis model. |
@@ -279,7 +321,8 @@ are environment-only.
 ## Tests
 
 ```bash
-cd backend && uv run pytest
+cd backend && uv run pytest                  # Postgres in a container (needs Docker)
+cd backend && TEST_DB=sqlite uv run pytest   # the same suite against a SQLite file
 ```
 
 The suite covers the cost maths (including cached-token pricing and malformed

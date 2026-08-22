@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL, make_url
@@ -67,6 +68,10 @@ class Settings(BaseSettings):
     # DB_URL carries only host/port/database; credentials come per role, the
     # same split the other stacks on postgres-core use. The owner role runs DDL
     # at startup, the app role serves every request.
+    #
+    # A `sqlite://` URL switches the whole thing to a local file instead --
+    # for a deployment that has no Postgres to point at. The roles are then
+    # ignored: SQLite's access control is the filesystem's.
     db_url: str = "postgresql://localhost:5432/jp_conversation"
     db_user: str = "jp_conversation_app"
     db_password: str = ""
@@ -85,9 +90,38 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
+    @property
+    def uses_sqlite(self) -> bool:
+        """True when DB_URL points at a file rather than at a Postgres server."""
+        return make_url(self.db_url).get_backend_name() == "sqlite"
+
+    @property
+    def sqlite_path(self) -> Path | None:
+        """Where the SQLite file lives, or None when Postgres is configured.
+
+        None also covers the in-memory forms (``sqlite://`` and
+        ``sqlite:///:memory:``) -- there is no file to create a directory for.
+        """
+        if not self.uses_sqlite:
+            return None
+        database = make_url(self.db_url).database
+        if not database or database == ":memory:":
+            return None
+        return Path(database)
+
     def _role_url(self, user: str, password: str) -> URL:
-        """Build an async SQLAlchemy URL for one role from the base DB_URL."""
-        return make_url(self.db_url).set(
+        """Build an async SQLAlchemy URL for one role from the base DB_URL.
+
+        SQLite has no roles, so both roles resolve to the same file: the
+        owner/app split is a Postgres privilege boundary, and there is nothing
+        on the SQLite side to enforce it with. What the split protects against
+        -- a request path quietly issuing DDL -- is still caught by the tests,
+        which run the Postgres roles for real.
+        """
+        url = make_url(self.db_url)
+        if url.get_backend_name() == "sqlite":
+            return url.set(drivername="sqlite+aiosqlite")
+        return url.set(
             drivername="postgresql+asyncpg",
             username=user or None,
             password=password or None,

@@ -1,14 +1,21 @@
-"""Test fixtures: a throwaway Postgres with the deployment's two roles.
+"""Test fixtures: a throwaway database for the suite to run against.
 
-The owner/app role split is reproduced here rather than run as a single
-superuser, so a mistake like issuing DDL from a request path fails in the
-tests instead of at deploy time.
+By default that is Postgres in a container, with the deployment's two roles
+reproduced rather than run as a single superuser, so a mistake like issuing
+DDL from a request path fails in the tests instead of at deploy time.
+
+``TEST_DB=sqlite`` points the same suite at a temporary SQLite file instead.
+That needs no Docker, and it is how the SQLite backend gets covered at all --
+by every test there is, rather than by a handful written for it.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import tempfile
 from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -56,6 +63,11 @@ async def _run_statements(url: str, script: str) -> None:
         await engine.dispose()
 
 
+def running_on_sqlite() -> bool:
+    """Whether this run was asked for SQLite instead of Postgres."""
+    return os.environ.get("TEST_DB", "postgres").strip().lower() == "sqlite"
+
+
 @pytest.fixture(scope="session")
 def postgres() -> Iterator[PostgresContainer]:
     with PostgresContainer("postgres:17", driver="asyncpg") as container:
@@ -63,24 +75,39 @@ def postgres() -> Iterator[PostgresContainer]:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def database(postgres: PostgresContainer) -> Iterator[None]:
-    """Create the roles and database, point the app at them, build the schema."""
-    admin_url = postgres.get_connection_url()
-    host = postgres.get_container_host_ip()
-    port = postgres.get_exposed_port(5432)
+def database(request: pytest.FixtureRequest) -> Iterator[None]:
+    """Point the app at a throwaway database and build the schema."""
+    settings = get_settings()
+    settings.openai_api_key = "test-key"
+
+    if running_on_sqlite():
+        # Requested lazily so the Postgres container is not started for a run
+        # that has no use for it.
+        with tempfile.TemporaryDirectory() as directory:
+            settings.db_url = f"sqlite:///{Path(directory) / 'jp_conversation_test.db'}"
+            asyncio.run(db.init_db())
+            try:
+                yield
+            finally:
+                # Before the directory goes: the engine still holds the file.
+                asyncio.run(db.reset_engines())
+        return
+
+    container: PostgresContainer = request.getfixturevalue("postgres")
+    admin_url = container.get_connection_url()
+    host = container.get_container_host_ip()
+    port = container.get_exposed_port(5432)
 
     asyncio.run(_run_statements(admin_url, BOOTSTRAP))
     asyncio.run(
         _run_statements(admin_url.rsplit("/", 1)[0] + f"/{DB_NAME}", GRANTS)
     )
 
-    settings = get_settings()
     settings.db_url = f"postgresql://{host}:{port}/{DB_NAME}"
     settings.db_user = APP_USER
     settings.db_password = ROLE_PASSWORD
     settings.db_owner_user = OWNER_USER
     settings.db_owner_password = ROLE_PASSWORD
-    settings.openai_api_key = "test-key"
 
     asyncio.run(db.init_db())
     yield
