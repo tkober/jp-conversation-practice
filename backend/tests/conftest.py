@@ -134,6 +134,7 @@ async def clean_tables() -> None:
     """Reset mutable state between tests, keeping the seeded scenarios."""
     async with db.get_sessionmaker()() as session:
         await session.execute(text("DELETE FROM sessions"))
+        await session.execute(text("DELETE FROM scenario_attachments"))
         await session.execute(text("DELETE FROM scenarios WHERE is_builtin = false"))
         await session.execute(
             text("UPDATE scenarios SET is_customized = false")

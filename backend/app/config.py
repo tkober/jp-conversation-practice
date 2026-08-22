@@ -71,6 +71,17 @@ class Settings(BaseSettings):
     # absolute path; relative values resolve against the backend directory.
     scenarios_dir: str = "scenarios"
 
+    # --- Context material ---
+    # Images a scenario can put in front of the learner. The cap is generous
+    # for a phone photo of a menu and far below anything that would make the
+    # row awkward to keep in the database.
+    attachment_max_bytes: int = 8 * 1024 * 1024
+    attachment_max_text_chars: int = 20_000
+    # How many characters of a model-facing description may reach the prompt.
+    # Long enough for a full menu, short enough that ten of them cannot crowd
+    # the tutor frame out of the context window.
+    attachment_description_max_chars: int = 4_000
+
     # --- Database ---
     # DB_URL carries only host/port/database; credentials come per role, the
     # same split the other stacks on postgres-core use. The owner role runs DDL

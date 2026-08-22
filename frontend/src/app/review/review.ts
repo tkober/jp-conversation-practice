@@ -119,6 +119,7 @@ export class Review {
       speed: info?.speed ?? 1,
       vad_eagerness: info?.vad_eagerness ?? '',
       system_instructions: info?.instructions ?? '',
+      context_material: info?.context_items ?? [],
       duration_seconds: this.elapsedSeconds(),
       usage: this.usage(),
       transcript: withoutFurigana(this.transcript()),

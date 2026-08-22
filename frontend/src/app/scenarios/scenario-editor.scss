@@ -250,3 +250,9 @@ textarea {
     max-height: none;
   }
 }
+
+// The material sits full width under the two columns: the descriptions are
+// prose, and half a column turns every line into four words.
+app-scenario-material {
+  grid-column: 1 / -1;
+}

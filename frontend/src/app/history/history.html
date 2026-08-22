@@ -58,6 +58,20 @@
                 <p class="muted">Für diese Session gibt es keine Auswertung.</p>
               }
 
+              @if (full.context_items.length > 0) {
+                <div class="context">
+                  <span class="context-label">Material</span>
+                  @for (item of full.context_items; track item.id) {
+                    <span class="context-item" [title]="item.description">
+                      {{ item.title || 'Material' }}
+                      @if (item.introduced_at !== null) {
+                        <em>ab {{ duration(item.introduced_at) }}</em>
+                      }
+                    </span>
+                  }
+                </div>
+              }
+
               <div class="transcript-tools">
                 <app-furigana-toggle />
               </div>

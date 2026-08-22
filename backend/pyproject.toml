@@ -16,6 +16,8 @@ dependencies = [
     "fugashi>=1.5.2",
     "unidic-lite>=1.0.8",
     "aiosqlite>=0.22.1",
+    # Multipart form parsing, for the context material upload.
+    "python-multipart>=0.0.20",
 ]
 
 [dependency-groups]

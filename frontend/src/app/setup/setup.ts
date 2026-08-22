@@ -1,11 +1,11 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../core/api.service';
 import { microphoneBlockedReason } from '../core/audio-recorder';
 import { RealtimeSessionService } from '../core/realtime-session.service';
-import { HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
+import { Attachment, HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
 const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
   { level: 'N5', label: 'Anfänger — einfache Sätze, langsames Tempo' },
@@ -23,6 +23,10 @@ export interface SessionSetup {
   jlptLevel: JlptLevel;
   voice: string;
   speed: number;
+  /** Everything the scenario has, so the session screen can show it. */
+  material: Attachment[];
+  /** The subset the tutor knows about from the first turn. */
+  contextIds: number[];
 }
 
 @Component({
@@ -62,6 +66,16 @@ export class Setup {
   readonly customScenario = signal('');
   readonly jlptLevel = signal<JlptLevel>('N5');
 
+  /** Context material of the picked scenario, reloaded whenever it changes. */
+  readonly material = signal<Attachment[]>([]);
+  readonly materialLoading = signal(false);
+  /**
+   * Which material starts in the tutor's prompt. Seeded from each item's
+   * `available_from_start` but overridable per run: the same menu can be on
+   * the table today and brought over by the waiter tomorrow.
+   */
+  readonly startingIds = signal<ReadonlySet<number>>(new Set());
+
   readonly selectedScenario = computed(() =>
     this.scenarios().find((item) => item.id === this.selectedScenarioId()) ?? null,
   );
@@ -74,6 +88,14 @@ export class Setup {
   /** True when the free-text field overrides the picked scenario. */
   readonly usingCustomText = computed(() => this.customScenario().trim().length > 0);
 
+  /**
+   * Material only belongs to a saved scenario, so free text has none — saying
+   * so beats an empty section the user cannot explain.
+   */
+  readonly materialAvailable = computed(
+    () => !this.usingCustomText() && this.selectedScenario() !== null,
+  );
+
   readonly canStart = computed(
     () =>
       this.effectiveScenario().length > 0 &&
@@ -82,6 +104,13 @@ export class Setup {
   );
 
   constructor() {
+    // Reload the material whenever the picked scenario changes, and drop it
+    // again while the free-text field is overriding the pick.
+    effect(() => {
+      const id = this.materialAvailable() ? this.selectedScenarioId() : null;
+      untracked(() => this.loadMaterial(id));
+    });
+
     this.api.scenarios().subscribe({
       next: (scenarios) => {
         this.scenarios.set(scenarios);
@@ -152,6 +181,48 @@ export class Setup {
     }
   }
 
+  private loadMaterial(scenarioId: number | null): void {
+    this.material.set([]);
+    this.startingIds.set(new Set());
+    if (scenarioId === null) {
+      return;
+    }
+
+    this.materialLoading.set(true);
+    this.api.attachments(scenarioId).subscribe({
+      next: (items) => {
+        this.material.set(items);
+        this.startingIds.set(
+          new Set(items.filter((item) => item.available_from_start).map((item) => item.id)),
+        );
+        this.materialLoading.set(false);
+      },
+      // A scenario without material and a backend that cannot list it look the
+      // same here on purpose: neither is worth a banner on the setup screen.
+      error: () => this.materialLoading.set(false),
+    });
+  }
+
+  attachmentUrl(id: number): string {
+    return this.api.attachmentFileUrl(id);
+  }
+
+  startsWith(id: number): boolean {
+    return this.startingIds().has(id);
+  }
+
+  toggleStartingMaterial(id: number): void {
+    this.startingIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   selectScenario(scenario: Scenario): void {
     this.selectedScenarioId.set(scenario.id);
     // Picking a scenario replaces whatever free text was there before.
@@ -171,6 +242,10 @@ export class Setup {
       jlptLevel: this.jlptLevel(),
       voice: this.selectedVoice(),
       speed: this.speed(),
+      material: this.materialAvailable() ? this.material() : [],
+      contextIds: this.materialAvailable()
+        ? this.material().filter((item) => this.startsWith(item.id)).map((item) => item.id)
+        : [],
     });
   }
 }
