@@ -61,6 +61,48 @@
     </label>
   </section>
 
+  @if (materialAvailable() && material().length > 0) {
+    <section class="card">
+      <h2>Material</h2>
+      <p class="hint">
+        Was du dabei hast. „Von Anfang an" heißt, die Lehrkraft weiß gleich davon;
+        alles andere kannst du ihr während des Gesprächs zeigen.
+      </p>
+
+      <div class="material">
+        @for (item of material(); track item.id) {
+          <div class="material-item" [class.active]="startsWith(item.id)">
+            @if (item.kind === 'image') {
+              <img class="material-thumb" [src]="attachmentUrl(item.id)" [alt]="item.title" />
+            } @else {
+              <span class="material-icon">✎</span>
+            }
+            <div class="material-body">
+              <span class="material-title">{{ item.title || 'Material' }}</span>
+              @if (!item.description.trim()) {
+                <span class="material-warning">
+                  Noch nicht ausgewertet — die Lehrkraft erfährt davon nichts.
+                </span>
+              }
+              <label class="material-toggle">
+                <input
+                  type="checkbox"
+                  [checked]="startsWith(item.id)"
+                  (change)="toggleStartingMaterial(item.id)"
+                />
+                Von Anfang an
+              </label>
+            </div>
+          </div>
+        }
+      </div>
+
+      <p class="hint">
+        Material lässt sich im <a routerLink="/scenarios">Szenario-Editor</a> hinzufügen.
+      </p>
+    </section>
+  }
+
   <section class="card">
     <h2>2 · Dein Niveau</h2>
     <div class="levels">

@@ -50,6 +50,48 @@ export interface ScenarioDraft {
   prompt: string;
 }
 
+/**
+ * One piece of context material belonging to a scenario.
+ *
+ * `description` is the English prose the tutor gets; `title` is the German
+ * label the learner sees. The image bytes are not in here — they come from
+ * `ApiService.attachmentFileUrl()` — so a scenario's material list stays small.
+ */
+export interface Attachment {
+  id: number;
+  scenario_id: number;
+  kind: 'image' | 'text';
+  title: string;
+  description: string;
+  body: string;
+  media_type: string;
+  byte_size: number;
+  available_from_start: boolean;
+  sort_order: number;
+  /** Set only on an upload or re-evaluation whose description could not be produced. */
+  analysis_error: string | null;
+}
+
+export interface AttachmentPatch {
+  title?: string;
+  description?: string;
+  available_from_start?: boolean;
+  sort_order?: number;
+}
+
+/**
+ * Material as the tutor knows it, which is what a session records.
+ * `introduced_at` holds the elapsed seconds for anything handed over
+ * mid-conversation, and is null for material that was there from the start.
+ */
+export interface ContextItem {
+  id: number;
+  kind: 'image' | 'text';
+  title: string;
+  description: string;
+  introduced_at: number | null;
+}
+
 export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -150,6 +192,7 @@ export interface SessionDetail extends SessionSummary {
   instructions: string;
   usage: UsageSnapshot;
   transcript: TranscriptTurn[];
+  context_items: ContextItem[];
   analysis: AnalysisResponse | null;
 }
 
@@ -261,6 +304,8 @@ export interface SessionInfo {
   vad_eagerness: VadEagerness;
   /** The system prompt the tutor actually ran with. */
   instructions: string;
+  /** The context material it was given, in the order it arrived. */
+  context_items: ContextItem[];
 }
 
 /** Self-contained dump of one session, for sharing or debugging. */
@@ -273,6 +318,12 @@ export interface SessionExport {
   speed: number;
   vad_eagerness: string;
   system_instructions: string;
+  /**
+   * Kept even though the start-active material is already inside
+   * `system_instructions`: anything handed over mid-session is not, and the
+   * export is how a conversation that went wrong gets read.
+   */
+  context_material: ContextItem[];
   duration_seconds: number;
   usage: UsageSnapshot;
   transcript: TranscriptTurn[];

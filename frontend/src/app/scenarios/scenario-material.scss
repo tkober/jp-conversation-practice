@@ -1,0 +1,114 @@
+// Context material belonging to one scenario.
+.material,
+.material-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.material h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.material-intro,
+.material-empty,
+.material-missing {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.material-missing {
+  color: var(--warning);
+}
+
+.material-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.material-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .material-thumb,
+  .material-icon {
+    width: 72px;
+    height: 72px;
+    font-size: 22px;
+  }
+}
+
+.material-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.material-title {
+  font-size: 14px;
+}
+
+.material-actions,
+.material-edit-actions,
+.material-add,
+.material-text-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.material-actions .danger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.material-description {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.material-item textarea,
+.material-text-form textarea,
+.material-description {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.material-add label.btn {
+  cursor: pointer;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.material-busy {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.material-text-form {
+  flex-direction: column;
+  align-items: stretch;
+
+  .btn {
+    align-self: flex-start;
+  }
+}

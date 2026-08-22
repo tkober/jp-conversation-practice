@@ -14,11 +14,12 @@ import { EAGERNESS_OPTIONS, VadEagerness } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
 import { FuriganaText } from '../shared/furigana-text';
 import { FuriganaToggle } from '../shared/furigana-toggle';
+import { ContextPanel } from './context-panel';
 import { WakaranaiButton } from './wakaranai-button';
 
 @Component({
   selector: 'app-conversation',
-  imports: [DecimalPipe, FuriganaText, FuriganaToggle, WakaranaiButton],
+  imports: [ContextPanel, DecimalPipe, FuriganaText, FuriganaToggle, WakaranaiButton],
   templateUrl: './conversation.html',
   styleUrl: './conversation.scss',
 })

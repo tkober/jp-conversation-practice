@@ -1,0 +1,141 @@
+<section class="material card">
+  <h2>Material</h2>
+  <p class="material-intro">
+    Bilder oder Texte, die zu diesem Szenario gehören — eine Speisekarte, ein
+    Regal, ein Kartenausschnitt. Du siehst sie während der Session auf dem
+    Bildschirm, und die Lehrkraft bekommt eine Beschreibung davon. Erst dadurch
+    funktionieren Sätze wie <span class="jp">これをください</span>.
+  </p>
+
+  @if (error(); as error) {
+    <div class="banner banner-error"><span>{{ error }}</span></div>
+  }
+
+  <div class="material-list">
+    @for (item of material(); track item.id) {
+      <article class="material-item">
+        <div class="material-head">
+          @if (item.kind === 'image') {
+            <img class="material-thumb" [src]="fileUrl(item.id)" [alt]="item.title" />
+          } @else {
+            <span class="material-icon">✎</span>
+          }
+
+          <div class="material-info">
+            <span class="material-title">{{ item.title || 'Ohne Titel' }}</span>
+            <label class="material-toggle">
+              <input
+                type="checkbox"
+                [checked]="item.available_from_start"
+                (change)="toggleFromStart(item)"
+              />
+              Von Anfang an dabei
+            </label>
+          </div>
+
+          <div class="material-actions">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              [disabled]="busy()"
+              title="Beschreibung neu erzeugen"
+              (click)="evaluate(item)"
+            >
+              Neu auswerten
+            </button>
+            <button type="button" class="btn btn-ghost danger" (click)="remove(item)">
+              Entfernen
+            </button>
+          </div>
+        </div>
+
+        @if (editingId() === item.id) {
+          <textarea
+            rows="8"
+            spellcheck="false"
+            [ngModel]="editingDescription()"
+            (ngModelChange)="editingDescription.set($event)"
+          ></textarea>
+          <div class="material-edit-actions">
+            <button type="button" class="btn btn-primary" (click)="saveDescription(item)">
+              Speichern
+            </button>
+            <button type="button" class="btn btn-ghost" (click)="cancelEditing()">
+              Abbrechen
+            </button>
+          </div>
+        } @else if (item.description) {
+          <pre class="material-description">{{ item.description }}</pre>
+          <button type="button" class="btn btn-ghost" (click)="startEditing(item)">
+            Beschreibung bearbeiten
+          </button>
+        } @else {
+          <p class="material-missing">
+            Keine Beschreibung — die Lehrkraft erfährt von diesem Material nichts.
+            Werte es neu aus oder schreib die Beschreibung selbst.
+          </p>
+          <button type="button" class="btn btn-ghost" (click)="startEditing(item)">
+            Beschreibung schreiben
+          </button>
+        }
+      </article>
+    } @empty {
+      <p class="material-empty">Noch kein Material.</p>
+    }
+  </div>
+
+  <label class="field">
+    <span class="field-label">
+      Hinweis für die Auswertung <em>(optional)</em>
+    </span>
+    <input
+      type="text"
+      placeholder="z. B. „Nur die linke Spalte ist relevant“"
+      [ngModel]="hint()"
+      (ngModelChange)="hint.set($event)"
+    />
+  </label>
+
+  <div class="material-add">
+    <label class="btn btn-secondary" [class.disabled]="busy()">
+      Bild hochladen
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        hidden
+        [disabled]="busy()"
+        (change)="onFilePicked($event)"
+      />
+    </label>
+    <button
+      type="button"
+      class="btn btn-secondary"
+      [disabled]="busy()"
+      (click)="showTextForm.set(!showTextForm())"
+    >
+      Text hinzufügen
+    </button>
+    @if (busy()) {
+      <span class="material-busy">wird ausgewertet …</span>
+    }
+  </div>
+
+  @if (showTextForm()) {
+    <div class="material-text-form">
+      <textarea
+        rows="5"
+        placeholder="Text einfügen — z. B. die Speisekarte abgetippt"
+        [ngModel]="textDraft()"
+        (ngModelChange)="textDraft.set($event)"
+      ></textarea>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="busy() || !textDraft().trim()"
+        (click)="addText()"
+      >
+        Hinzufügen
+      </button>
+    </div>
+  }
+</section>

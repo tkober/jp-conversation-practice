@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 
 import { ApiService } from '../core/api.service';
 import { AssistantMessage, Scenario } from '../core/models';
+import { ScenarioMaterial } from './scenario-material';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -14,7 +15,7 @@ interface ChatEntry extends AssistantMessage {
 
 @Component({
   selector: 'app-scenario-editor',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ScenarioMaterial],
   templateUrl: './scenario-editor.html',
   styleUrl: './scenario-editor.scss',
 })

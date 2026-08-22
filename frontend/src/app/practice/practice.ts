@@ -43,9 +43,12 @@ export class Practice {
     this.analysisError.set(null);
     await this.session.start({
       scenario: setup.scenario,
+      scenarioId: setup.scenarioId,
       jlptLevel: setup.jlptLevel,
       voice: setup.voice,
       speed: setup.speed,
+      contextIds: setup.contextIds,
+      material: setup.material,
     });
   }
 
@@ -84,6 +87,9 @@ export class Practice {
         cost_usd: this.session.usage().cost_usd,
         usage: this.session.usage(),
         transcript,
+        // Anything handed over mid-session is not in `instructions`, which
+        // were built before it arrived, so the row needs it separately.
+        context_items: this.session.contextItems(),
       })
       .subscribe({
         next: (stored) => {
@@ -126,6 +132,8 @@ export class Practice {
         jlpt_level: this.jlptLevel,
         transcript,
         use_wanikani_filter: true,
+        // これください is unreadable feedback without the menu これ pointed at.
+        context_items: this.session.contextItems(),
       })
       .subscribe({
         next: (result) => {
