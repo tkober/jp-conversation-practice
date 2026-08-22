@@ -2,14 +2,15 @@
   <header>
     <h1>Einstellungen</h1>
     <p>
-      Alles hier wird in der Datenbank gespeichert und hat Vorrang vor den Werten
-      aus der <code>.env</code>. Ein leeres Feld heißt: es gilt wieder der Wert
-      aus der <code>.env</code>.
+      Alles hier wird in der Datenbank gespeichert und hat Vorrang vor den Werten aus der
+      <code>.env</code>. Ein leeres Feld heißt: es gilt wieder der Wert aus der <code>.env</code>.
     </p>
   </header>
 
   @if (loadError(); as error) {
-    <div class="banner banner-error"><span>{{ error }}</span></div>
+    <div class="banner banner-error">
+      <span>{{ error }}</span>
+    </div>
   }
 
   @if (current(); as settings) {
@@ -61,8 +62,7 @@
           />
         </label>
         <p class="field-hint">
-          Filtert Vokabeln, die du laut WaniKani ab Guru schon kannst, aus den
-          Anki-Karten heraus.
+          Filtert Vokabeln, die du laut WaniKani ab Guru schon kannst, aus den Anki-Karten heraus.
           @if (settings.wanikani_api_token_set && !settings.wanikani_api_token_from_env) {
             <button type="button" class="link" (click)="clearSecret('wanikani_api_token')">
               Zurücksetzen
@@ -74,17 +74,62 @@
 
     <section class="card">
       <h2>Modelle</h2>
-      @for (field of modelFields; track field.key) {
-        <label class="field">
-          <span class="field-label">{{ field.label }}</span>
-          <input
-            type="text"
-            spellcheck="false"
-            [ngModel]="value(field.key)"
-            (ngModelChange)="set(field.key, $event)"
-          />
-          <span class="field-hint">{{ field.hint }}</span>
-        </label>
+
+      @if (modelListNote(); as note) {
+        <div class="banner banner-info">
+          <span
+            >{{ note }} Es stehen nur die bekannten Modelle zur Auswahl — ein anderes lässt sich
+            über „Anderes Modell …“ eintragen.</span
+          >
+        </div>
+      }
+
+      @for (slot of modelSlots(); track slot.key) {
+        <div class="field">
+          <label class="field-label" [attr.for]="slot.key">{{ slot.label }}</label>
+          <select
+            [id]="slot.key"
+            [ngModel]="selectValue(slot)"
+            (ngModelChange)="onSlotSelect(slot, $event)"
+          >
+            <optgroup label="Empfohlen">
+              @for (option of curatedOptions(slot); track option.id) {
+                <option [value]="option.id">{{ optionText(option) }}</option>
+              }
+            </optgroup>
+            @if (liveOptions(slot).length) {
+              <optgroup label="Weitere aus deinem Konto">
+                @for (option of liveOptions(slot); track option.id) {
+                  <option [value]="option.id">{{ optionText(option) }}</option>
+                }
+              </optgroup>
+            }
+            <option [value]="customValue">Anderes Modell …</option>
+          </select>
+
+          @if (isCustom(slot)) {
+            <input
+              class="custom-model"
+              type="text"
+              spellcheck="false"
+              autocapitalize="off"
+              placeholder="Modellname, z. B. gpt-realtime-3"
+              [ngModel]="value(slot.key)"
+              (ngModelChange)="set(slot.key, $event)"
+            />
+          }
+
+          <span class="field-hint">{{ slot.hint }}</span>
+          @if (selectedOption(slot)?.description; as description) {
+            <span class="field-hint">{{ description }}</span>
+          }
+          @if (ratesUnknown(slot)) {
+            <span class="field-hint field-hint-warning">
+              Für dieses Modell sind keine Preise hinterlegt — die Kostenanzeige rechnet dann mit
+              den Raten von <code>gpt-realtime-2.1-mini</code>.
+            </span>
+          }
+        </div>
       }
     </section>
 
@@ -128,9 +173,8 @@
           }
         </select>
         <span class="field-hint">
-          Wie lange die Lehrkraft eine Pause abwartet, bevor sie antwortet.
-          Während einer Session lässt sich das jederzeit umstellen — hier steht
-          nur, womit jede Session startet.
+          Wie lange die Lehrkraft eine Pause abwartet, bevor sie antwortet. Während einer Session
+          lässt sich das jederzeit umstellen — hier steht nur, womit jede Session startet.
         </span>
       </label>
     </section>
@@ -146,8 +190,8 @@
           (ngModelChange)="set('ankiconnect_url', $event)"
         />
         <span class="field-hint">
-          Wird vom Backend aufgerufen — die Adresse muss also aus dem Container
-          erreichbar sein, nicht aus dem Browser.
+          Wird vom Backend aufgerufen — die Adresse muss also aus dem Container erreichbar sein,
+          nicht aus dem Browser.
         </span>
       </label>
 
@@ -171,7 +215,11 @@
         {{ saveState() === 'saving' ? 'Speichere …' : 'Speichern' }}
       </button>
       @if (saveMessage(); as message) {
-        <span class="save-message" [class.ok]="saveState() === 'saved'" [class.fail]="saveState() === 'error'">
+        <span
+          class="save-message"
+          [class.ok]="saveState() === 'saved'"
+          [class.fail]="saveState() === 'error'"
+        >
           {{ message }}
         </span>
       }

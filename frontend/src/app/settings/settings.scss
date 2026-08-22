@@ -94,6 +94,15 @@ select {
   cursor: pointer;
 }
 
+/* The free-text escape hatch, shown under its dropdown. */
+.custom-model {
+  margin-top: 8px;
+}
+
+.field-hint-warning {
+  color: var(--warning, var(--text-faint));
+}
+
 .secret {
   margin-bottom: 20px;
 

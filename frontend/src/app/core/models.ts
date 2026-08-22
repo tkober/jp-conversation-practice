@@ -96,6 +96,36 @@ export type AppSettingsPatch = Partial<{
   anki_deck_name: string;
 }>;
 
+/** One entry in a model dropdown, as served by /api/settings/models. */
+export interface ModelOption {
+  id: string;
+  label: string;
+  /** German prose for curated models; null for live extras we know nothing about. */
+  description: string | null;
+  curated: boolean;
+  /** Set only on the cost-tracked slot, and only when MODEL_RATES knows the model. */
+  price_hint: string | null;
+  rates_known: boolean | null;
+  shutdown_date: string | null;
+}
+
+/** One configurable model, with the options offered for it. */
+export interface ModelSlotView {
+  key: keyof AppSettingsPatch;
+  label: string;
+  hint: string;
+  /** True for the slot CostTracker actually bills, where a price is meaningful. */
+  cost_tracked: boolean;
+  options: ModelOption[];
+}
+
+export interface ModelCatalogResponse {
+  slots: ModelSlotView[];
+  /** False when the live model list could not be fetched; the curated entries still apply. */
+  live_ok: boolean;
+  live_detail: string | null;
+}
+
 export interface SessionSummary {
   id: number;
   scenario_title: string;

@@ -52,6 +52,33 @@ MODEL_RATES: dict[str, ModelRates] = {
         audio_cached_input=0.40,
         audio_output=64.00,
     ),
+    # The versioned full-size models. Audio is priced identically to
+    # `gpt-realtime` across all of them -- what moved between 1.5 and 2 is text
+    # output, the small component in a spoken session.
+    "gpt-realtime-1.5": ModelRates(
+        text_input=4.00,
+        text_cached_input=0.40,
+        text_output=16.00,
+        audio_input=32.00,
+        audio_cached_input=0.40,
+        audio_output=64.00,
+    ),
+    "gpt-realtime-2": ModelRates(
+        text_input=4.00,
+        text_cached_input=0.40,
+        text_output=24.00,
+        audio_input=32.00,
+        audio_cached_input=0.40,
+        audio_output=64.00,
+    ),
+    "gpt-realtime-2.1": ModelRates(
+        text_input=4.00,
+        text_cached_input=0.40,
+        text_output=24.00,
+        audio_input=32.00,
+        audio_cached_input=0.40,
+        audio_output=64.00,
+    ),
 }
 
 DEFAULT_RATES = MODEL_RATES["gpt-realtime-2.1-mini"]
