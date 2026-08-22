@@ -120,6 +120,7 @@ class AppSettings(Base):
 
     realtime_voice: Mapped[str | None] = mapped_column(String, nullable=True)
     realtime_speed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    realtime_help_speed_factor: Mapped[float | None] = mapped_column(Float, nullable=True)
     realtime_vad_eagerness: Mapped[str | None] = mapped_column(String, nullable=True)
 
     wanikani_api_token: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -316,6 +317,12 @@ async def migrate_schema(conn: AsyncConnection) -> None:
         text(
             "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "
             "vad_eagerness VARCHAR NOT NULL DEFAULT ''"
+        )
+    )
+    await conn.execute(
+        text(
+            "ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS "
+            "realtime_help_speed_factor DOUBLE PRECISION"
         )
     )
 

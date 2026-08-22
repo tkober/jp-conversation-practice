@@ -19,6 +19,8 @@ from websockets.asyncio.server import serve
 from app.api import practice
 from app.config import get_settings
 from app.pricing import MODEL_RATES
+from app.prompts import HELP_STAGES, MAX_HELP_STAGE
+from app.realtime import USER_TRANSCRIPT_EVENT
 from app.runtime_config import build_runtime_config
 
 
@@ -135,6 +137,15 @@ def start_session(websocket: Any, upstream: FakeRealtimeServer) -> dict[str, Any
     upstream.wait_for_connection()
     upstream.wait_for_messages(1)
     return websocket.receive_json()
+
+
+def responses(upstream: FakeRealtimeServer) -> list[dict[str, Any]]:
+    """Only the response.create messages, in order.
+
+    A help press also sends the slowdown, so counting raw messages would tie
+    every assertion below to that ordering.
+    """
+    return [message for message in upstream.received if message.get("type") == "response.create"]
 
 
 def test_session_update_carries_scenario_and_audio_format(
@@ -348,6 +359,275 @@ def test_disallowed_client_events_are_not_forwarded(
         ]
 
 
+def test_wakaranai_asks_for_one_scaffolded_response(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+
+        assert websocket.receive_json() == {
+            "type": "app.help.stage",
+            "stage": 1,
+            "max_stage": MAX_HELP_STAGE,
+        }
+
+        instructions = responses(upstream)[0]["response"]["instructions"]
+        # The whole session frame is rebuilt, because `response.instructions`
+        # replaces the session prompt rather than adding to it.
+        assert "Kombini" in instructions
+        assert "JLPT N4" in instructions
+        assert HELP_STAGES[0] in instructions
+        assert f"help attempt 1 of {MAX_HELP_STAGE}" in instructions
+
+
+def test_pressing_again_escalates_and_speaking_resets_it(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(5)
+        assert websocket.receive_json()["stage"] == 2
+        assert HELP_STAGES[1] in responses(upstream)[1]["response"]["instructions"]
+
+        # Saying something means the learner is past the spot they were stuck
+        # in, so the next press starts the escalation over.
+        upstream.send_event(
+            {
+                "type": "conversation.item.input_audio_transcription.completed",
+                "transcript": "これください",
+            }
+        )
+        assert websocket.receive_json() == {
+            "type": "app.help.stage",
+            "stage": 0,
+            "max_stage": MAX_HELP_STAGE,
+        }
+        websocket.receive_json()  # app.transcript.turn
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(7)
+        assert websocket.receive_json()["stage"] == 1
+
+
+def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """The VAD commits background noise as a turn; it transcribes to nothing.
+
+    Resetting on one of those left a learner who sat silent and pressed the
+    button over and over stuck on stage 1 -- and invisibly so, because an empty
+    turn never reaches the transcript.
+    """
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        assert websocket.receive_json()["stage"] == 1
+
+        upstream.send_event(
+            {"type": USER_TRANSCRIPT_EVENT, "transcript": "   "}
+        )
+        websocket.receive_json()  # the relayed raw event, and nothing else
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(5)
+        assert websocket.receive_json()["stage"] == 2
+
+
+def test_a_help_turn_is_marked_in_the_transcript(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """An export cannot otherwise tell help apart from an ordinary reply."""
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "何にしますか"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] is None
+        websocket.receive_json()  # the relayed raw event
+        upstream.send_event({"type": "response.done", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()  # app.help.stage
+
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "飲み物ですか"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] == 1
+
+        websocket.receive_json()  # the relayed raw event
+        upstream.send_event({"type": "response.done", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        # The marker stops with the response it belonged to.
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "はい"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] is None
+
+
+def test_the_last_stage_is_german_and_does_not_run_past_it(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        for _ in range(MAX_HELP_STAGE + 2):
+            websocket.send_text(json.dumps({"type": "app.session.help"}))
+
+        presses = MAX_HELP_STAGE + 2
+        # One slowdown plus one response.create per press, after the setup.
+        upstream.wait_for_messages(1 + 2 * presses)
+
+        stages = [websocket.receive_json()["stage"] for _ in range(presses)]
+        assert stages == list(range(1, MAX_HELP_STAGE + 1)) + [MAX_HELP_STAGE] * 2
+
+        last = responses(upstream)[-1]["response"]["instructions"]
+        assert HELP_STAGES[-1] in last
+        # The escalation ends in German -- that is the point of the last stage.
+        assert "German" in HELP_STAGES[-1]
+        # And it has to say so loudly enough to beat the "speak ONLY Japanese"
+        # rule sitting above it in the same prompt, which it otherwise loses to.
+        assert "OVERRIDES" in HELP_STAGES[-1]
+
+
+def test_wakaranai_slows_the_tutor_down_and_puts_the_speed_back(
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream)
+        assert started["help_speed_factor"] == config.realtime_help_speed_factor
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()  # app.help.stage
+
+        # There is no per-response speed in the Realtime API, so the slowdown
+        # goes through session.update -- carrying the speed and nothing else.
+        slow_down = upstream.received[1]
+        assert slow_down["type"] == "session.update"
+        expected = config.realtime_speed * config.realtime_help_speed_factor
+        assert slow_down["session"]["audio"] == {"output": {"speed": expected}}
+        assert "instructions" not in slow_down["session"]
+        assert upstream.received[2]["type"] == "response.create"
+
+        upstream.send_event({"type": "response.done", "response": {}})
+        upstream.wait_for_messages(4)
+
+        # ... and the next ordinary turn is back at the learner's own rate.
+        assert upstream.received[3]["session"]["audio"] == {
+            "output": {"speed": config.realtime_speed}
+        }
+
+
+def test_the_help_rate_never_drops_below_the_slider_floor(
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
+) -> None:
+    """At the slowest setting there is nothing left to give."""
+    with client.websocket_connect("/ws/realtime") as websocket:
+        websocket.send_text(
+            json.dumps(
+                {
+                    "type": "app.session.start",
+                    "scenario": "x",
+                    "speed": config.realtime_speed_min,
+                }
+            )
+        )
+        upstream.wait_for_connection()
+        upstream.wait_for_messages(1)
+        websocket.receive_json()
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        assert upstream.received[1]["session"]["audio"] == {
+            "output": {"speed": config.realtime_speed_min}
+        }
+
+
+def test_a_slider_move_during_a_help_turn_lands_when_it_ends(
+    client: TestClient, upstream: FakeRealtimeServer, config: Any
+) -> None:
+    """The help turn keeps its rate; the new one applies from the next reply."""
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        websocket.send_text(json.dumps({"type": "app.session.speed", "speed": 1.2}))
+        assert websocket.receive_json() == {"type": "app.speed.changed", "speed": 1.2}
+
+        upstream.send_event({"type": "response.done", "response": {}})
+        upstream.wait_for_messages(4)
+
+        # One update, not two: the slider did not interrupt the help turn.
+        assert upstream.received[3]["session"]["audio"] == {"output": {"speed": 1.2}}
+        assert len(upstream.received) == 4
+
+
+def test_the_help_block_demands_a_smaller_turn(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """The failure this was written for: help that came out longer than the
+    sentence the learner had not understood."""
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        instructions = upstream.received[2]["response"]["instructions"]
+        assert "Fewer words than your last turn" in instructions
+        assert "word for word" in instructions
+        # Asking the model to speak more slowly only ever produced a verbatim
+        # repeat, so no stage may ask for one; the rate is handled for it.
+        assert not any("more slowly" in stage for stage in HELP_STAGES)
+
+
+def test_wakaranai_cancels_a_response_that_is_still_being_generated(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        upstream.send_event({"type": "response.created", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(2)
+        websocket.receive_json()  # app.help.stage
+
+        # The API refuses a second response while one is running, so the help
+        # request has to wait for the cancellation to land.
+        assert upstream.received[1] == {"type": "response.cancel"}
+
+        upstream.send_event(
+            {"type": "response.done", "response": {"status": "cancelled"}}
+        )
+        upstream.wait_for_messages(4)
+        assert upstream.received[2]["type"] == "session.update"  # the slowdown
+        assert upstream.received[3]["type"] == "response.create"
+
+
 def test_response_done_produces_a_cost_update(
     client: TestClient, upstream: FakeRealtimeServer, config: Any
 ) -> None:
@@ -415,6 +695,8 @@ def test_transcripts_are_normalised_into_app_events(
             "timestamp": pytest.approx(0, abs=10),
             # Kana only, so there is no reading to put anywhere.
             "ruby": None,
+            # Nobody pressed わからない, so this is an ordinary turn.
+            "help_stage": None,
         }
 
         websocket.receive_json()  # the relayed raw event

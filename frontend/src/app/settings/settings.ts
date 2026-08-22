@@ -61,6 +61,42 @@ export class SettingsPage {
       this.wanikaniTokenInput().length > 0,
   );
 
+  // --- わからない slowdown ----------------------------------------------
+  //
+  // Shown as a factor *and* as the tempo it produces, because the number alone
+  // is written the same way as the tempo slider's ("0.80×") and reads as an
+  // absolute rate rather than something applied on top of one.
+
+  /** The tempo a session starts at, including an unsaved edit above. */
+  readonly helpBaseSpeed = computed(
+    () => Number(this.value('realtime_speed')) || this.current()?.realtime_speed || 1,
+  );
+
+  readonly helpFactor = computed(
+    () =>
+      Number(this.value('realtime_help_speed_factor')) ||
+      this.current()?.realtime_help_speed_factor ||
+      1,
+  );
+
+  /** What a help turn actually comes out at, floor and all. */
+  readonly helpSpeed = computed(() => {
+    const settings = this.current();
+    const raw = this.helpBaseSpeed() * this.helpFactor();
+    if (!settings) {
+      return raw;
+    }
+    // The backend clamps into the tempo slider's own range: below its floor
+    // speech smears instead of clarifying, so there is nothing left to give.
+    return Math.max(settings.speed_min, Math.min(settings.speed_max, raw));
+  });
+
+  readonly helpFactorLabel = computed(() => {
+    const factor = this.helpFactor();
+    const percent = Math.round((1 - factor) * 100);
+    return percent > 0 ? `×${factor.toFixed(2)} — ${percent} % langsamer` : 'aus';
+  });
+
   constructor() {
     this.reload();
     this.api.voices().subscribe({

@@ -44,6 +44,17 @@ export class RealtimeSessionService {
   readonly speedMax = signal(1.4);
   /** Overwritten from `app.session.started` with whatever the backend is using. */
   readonly eagerness = signal<VadEagerness>('low');
+  /**
+   * わからない: how much help the tutor is currently giving. 0 means none has
+   * been asked for since the last thing you said; the backend owns the value
+   * and pushes every change, so this only ever mirrors it.
+   */
+  readonly helpStage = signal(0);
+  readonly maxHelpStage = signal(1);
+  /** How much the tutor slows down for a help turn; 1 means not at all. */
+  readonly helpSpeedFactor = signal(1);
+  /** True between pressing the button and the backend confirming the stage. */
+  readonly helpPending = signal(false);
 
   readonly costUsd = computed(() => this.usage().cost_usd);
   readonly isLive = computed(() => this.phase() === 'live');
@@ -136,6 +147,25 @@ export class RealtimeSessionService {
     }
   }
 
+  /**
+   * わからない: tell the tutor you are stuck. Each press without saying
+   * anything in between escalates the help one step; the last step is an
+   * explanation in German.
+   *
+   * The tutor is silenced right away, because the press usually happens *while*
+   * it is talking — the backend cancels the response upstream, and the queued
+   * audio has to go here too, exactly as it does on barge-in.
+   */
+  requestHelp(): void {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    this.player?.stop();
+    this.tutorSpeaking.set(false);
+    this.helpPending.set(true);
+    this.socket.send(JSON.stringify({ type: 'app.session.help' }));
+  }
+
   /** Clear everything so a new session can start from the setup screen. */
   reset(): void {
     this.usage.set(EMPTY_USAGE);
@@ -145,6 +175,8 @@ export class RealtimeSessionService {
     this.muted.set(false);
     this.sessionInfo.set(null);
     this.speed.set(1);
+    this.helpStage.set(0);
+    this.helpPending.set(false);
   }
 
   // --- socket ------------------------------------------------------------
@@ -224,6 +256,8 @@ export class RealtimeSessionService {
         });
         this.speed.set(speed);
         this.eagerness.set(eagerness);
+        this.maxHelpStage.set(Number(message['help_stages'] ?? 1));
+        this.helpSpeedFactor.set(Number(message['help_speed_factor'] ?? 1));
         break;
       }
 
@@ -235,6 +269,14 @@ export class RealtimeSessionService {
       case 'app.eagerness.changed':
         // Same as the speed: the server validates, so its value is the truth.
         this.eagerness.set((message['eagerness'] ?? this.eagerness()) as VadEagerness);
+        break;
+
+      case 'app.help.stage':
+        // Includes the reset to 0 when you start speaking again, so the button
+        // never has to guess where the escalation stands.
+        this.helpStage.set(Number(message['stage'] ?? 0));
+        this.maxHelpStage.set(Number(message['max_stage'] ?? this.maxHelpStage()));
+        this.helpPending.set(false);
         break;
 
       case 'app.cost.update':

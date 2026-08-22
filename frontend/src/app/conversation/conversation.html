@@ -46,13 +46,20 @@
     }
     @for (turn of transcript(); track $index) {
       <div class="turn" [class.turn-user]="turn.role === 'user'">
-        <span class="turn-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+        <span class="turn-role">
+          {{ turn.role === 'user' ? 'Du' : '先生' }}
+          @if (turn.help_stage) {
+            <span class="turn-help">わからない · Stufe {{ turn.help_stage }}</span>
+          }
+        </span>
         <p class="turn-text jp">
           <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
         </p>
       </div>
     }
   </div>
+
+  <app-wakaranai-button />
 
   <div class="speed">
     <label for="speed-slider">

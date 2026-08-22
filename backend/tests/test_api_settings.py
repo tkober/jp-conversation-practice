@@ -79,6 +79,26 @@ async def test_speed_is_clamped_into_the_supported_range(api: AsyncClient) -> No
     assert body["realtime_speed"] == body["speed_max"]
 
 
+async def test_the_help_speed_factor_is_settable_and_clamped(api: AsyncClient) -> None:
+    """How much the tutor slows down for a わからない turn."""
+    env = get_settings()
+
+    assert (await read(api))["realtime_help_speed_factor"] == env.realtime_help_speed_factor
+
+    assert (await patch(api, realtime_help_speed_factor=0.6))[
+        "realtime_help_speed_factor"
+    ] == 0.6
+
+    # 1.0 is the top of the range: a factor above it would speed the tutor up
+    # for the one turn where the learner already could not follow.
+    body = await patch(api, realtime_help_speed_factor=2.5)
+    assert body["realtime_help_speed_factor"] == env.realtime_help_speed_factor_max
+    assert body["help_speed_factor_max"] == env.realtime_help_speed_factor_max
+
+    body = await patch(api, realtime_help_speed_factor=None)
+    assert body["realtime_help_speed_factor"] == env.realtime_help_speed_factor
+
+
 async def test_eagerness_override_and_fallback(api: AsyncClient) -> None:
     assert (await patch(api, realtime_vad_eagerness="high"))["realtime_vad_eagerness"] == "high"
 
