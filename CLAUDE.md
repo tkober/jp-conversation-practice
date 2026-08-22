@@ -299,6 +299,20 @@ than extending it, which is why that function rebuilds the whole frame; sending
 only the help block would drop the scenario, the level and the language policy
 for exactly the turn where the learner is struggling most.
 
+**The help turn is slowed down, and that is what lets the wording work.** No
+stage may ask the model to "say it again more slowly": it cannot change its own
+delivery, so that instruction reliably produced a near-verbatim repeat — the one
+response guaranteed not to help, since those exact words are what the learner
+just failed to parse. The rate is handled mechanically instead
+(`realtime_help_speed_factor`, a factor on the current speed). The Realtime API
+has no per-response speed, so it goes through the same narrow `session.update`
+the slider uses and is put back on the following `response.done`.
+
+**Every stage is subject to "smaller than the turn they did not understand"** —
+fewer words, one sentence, at most one question, nothing new. Without that rule
+the model pads the sentence out with explanation instead of cutting it down, and
+the help arrives longer than the thing it was meant to clarify.
+
 `HELP_STAGES` in `prompts.py` is the escalation, one entry per press: two
 Japanese-only stages, a third that assumes nothing landed, and German as the
 last resort. The stage advances with every press and resets to 0 as soon as the

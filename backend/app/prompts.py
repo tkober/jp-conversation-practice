@@ -108,28 +108,32 @@ Short affirmations (そうですか、いいですね、なるほど) keep them 
 # tutor that answers the same signal with the same move every time teaches the
 # learner the pattern instead of the language -- the "roles generalise,
 # checklists fossilise" rule applies to helping just as much as to scenarios.
+#
+# None of them is "say it again more slowly". The model cannot slow its own
+# delivery down, so asking for it yields a near-verbatim repeat -- which is the
+# one thing that provably does not help, since those exact words are what the
+# learner just failed to understand. The pace is handled mechanically instead
+# (REALTIME_HELP_SPEED_FACTOR), which frees the wording to do the real work:
+# make the turn smaller.
 HELP_STAGES: tuple[str, ...] = (
-    """Stay in Japanese. The learner probably missed a word or the shape of
-your sentence, not the whole situation. Choose one of:
-- say your last line again, slower and more clearly articulated,
-- say the same thing with easier words and simpler grammar,
-- name the one word that was most likely the obstacle and paraphrase it in
-  Japanese at their level.""",
-    """Stay in Japanese, and make *answering* easier, not just understanding.
-Choose one of:
-- turn your question into a yes/no or an either-or question,
-- give one concrete example answer in Japanese they can copy and adapt,
-- narrow the topic down to something smaller and more concrete,
-- ask a simpler question that leads towards the same thing.""",
-    """Stay in Japanese and assume that nothing has landed yet. Choose one of:
+    """They have probably lost one word, not the whole situation. Choose one of:
+- cut your last line down to its core and say only that,
+- swap the one hard word for an easier one and drop everything else,
+- say the thing you are asking about on its own, as a short phrase.""",
+    """Understanding is not the obstacle any more -- answering is. Choose one of:
+- make it a yes/no question they can answer with はい or いいえ,
+- name exactly two options and nothing else,
+- say one short answer they could give, so they can copy it.
+If your last turn was ALREADY an either-or question, do not ask it again in
+other words. Hand them one of the options to say instead.""",
+    """Assume nothing has landed. Choose one of:
 - say the sentence they could answer with, and invite them to repeat it,
-- fall back to one very short question they can answer with a single word,
-- move to something easier in this same setting and return to the topic later.""",
-    """Last resort: switch to German for one or two sentences -- explain what
-is blocking them, or simply say what your Japanese sentence meant. Then return
-to Japanese immediately, in this same turn, with one easy question that keeps
-the role-play going. Do not stay in German, and do not turn this into a grammar
-lesson.""",
+- ask for a single word,
+- drop this point entirely and ask something easier in the same setting.""",
+    """Last resort: German, one or two sentences -- what is blocking them, or
+simply what your Japanese sentence meant. Then straight back into Japanese in
+this same turn, with one easy question that keeps the role-play going. Do not
+stay in German, and do not turn this into a grammar lesson.""",
 )
 
 MAX_HELP_STAGE = len(HELP_STAGES)
@@ -153,16 +157,29 @@ def build_help_instructions(scenario: str, jlpt_level: str, stage: int) -> str:
 The learner has just signalled that they did not understand, or do not know
 what to say. They did not say so out loud: never mention a signal, a button or
 the exercise, never ask whether they understood, and stay in character. Just
-help, the way an attentive person helps someone who has lost the thread, and
-carry the conversation on.
+help, the way an attentive person helps someone who has lost the thread.
 
-This is help attempt {stage} of {MAX_HELP_STAGE} for the same spot.
+Your next turn must be SMALLER than the one they did not understand. This
+outranks everything else about how you normally speak:
+- Fewer words than your last turn. If it comes out longer, you have made it
+  worse rather than better.
+- One sentence if at all possible, and never more than two.
+- At most one question. None at all is fine.
+- Nothing new. Do not move the situation on, do not add information, do not
+  raise anything they have not already heard. Help with THIS spot, then wait.
+- Do not say your previous sentence again word for word. Those are the exact
+  words they just failed to understand; repeating them only spends their
+  patience.
+
+Your delivery is already slowed down for this turn, so say nothing about pace
+and do not pad the sentence out to fill the time.
+
+This is help attempt {stage} of {MAX_HELP_STAGE} at the same spot.
 {tactics}
 
-Pick ONE tactic -- whichever actually fits what you last said -- rather than
-working down the list, and do not reuse the tactic you used on the previous
-attempt. Keep it as short as any other turn, and end in a way that gives them
-something easy to say next."""
+Pick the ONE tactic that fits what you actually said last, rather than working
+down the list, and do not reuse the tactic from the previous attempt."""
+
 
 ANALYSIS_SYSTEM_PROMPT = """You are a Japanese language teacher analysing a transcript of a
 spoken practice conversation between a learner and an AI tutor.

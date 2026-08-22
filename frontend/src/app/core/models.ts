@@ -68,6 +68,7 @@ export interface AppSettingsView {
   tts_model: string;
   realtime_voice: string;
   realtime_speed: number;
+  realtime_help_speed_factor: number;
   realtime_vad_eagerness: VadEagerness;
   ankiconnect_url: string;
   anki_deck_name: string;
@@ -79,6 +80,8 @@ export interface AppSettingsView {
   wanikani_api_token_from_env: boolean;
   speed_min: number;
   speed_max: number;
+  help_speed_factor_min: number;
+  help_speed_factor_max: number;
 }
 
 export type AppSettingsPatch = Partial<{
@@ -90,6 +93,7 @@ export type AppSettingsPatch = Partial<{
   tts_model: string;
   realtime_voice: string;
   realtime_speed: number;
+  realtime_help_speed_factor: number;
   realtime_vad_eagerness: VadEagerness;
   wanikani_api_token: string;
   ankiconnect_url: string;

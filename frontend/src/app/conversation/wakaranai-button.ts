@@ -103,6 +103,11 @@ export class WakaranaiButton {
     () => this.session.phase() === 'live' && !this.session.helpPending(),
   );
 
+  /** Only claim a slowdown when there is one — the factor can be set to 1. */
+  private readonly slower = computed(() =>
+    this.session.helpSpeedFactor() < 1 ? '; die Hilfe kommt langsamer' : '',
+  );
+
   protected readonly hint = computed(() => {
     if (this.session.helpPending()) {
       return 'Die Lehrkraft geht gerade darauf ein …';
@@ -110,7 +115,7 @@ export class WakaranaiButton {
     const stage = this.stage();
     const max = this.max();
     if (stage === 0) {
-      return 'Drücken, wenn du nicht weiterkommst — du musst nicht extra nach Hilfe fragen.';
+      return `Drücken, wenn du nicht weiterkommst${this.slower()} — du musst nicht extra nach Hilfe fragen.`;
     }
     if (stage < max) {
       return `Stufe ${stage} von ${max} — noch mal drücken, wenn das nicht gereicht hat.`;

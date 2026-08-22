@@ -116,6 +116,7 @@ async def clean_tables() -> None:
                 "UPDATE app_settings SET openai_api_key = NULL, realtime_model = NULL, "
                 "analysis_model = NULL, scenario_assistant_model = NULL, "
                 "realtime_voice = NULL, realtime_speed = NULL, "
+                "realtime_help_speed_factor = NULL, realtime_vad_eagerness = NULL, "
                 "wanikani_api_token = NULL, anki_deck_name = NULL, "
                 "ankiconnect_url = NULL, transcription_model = NULL, tts_model = NULL"
             )

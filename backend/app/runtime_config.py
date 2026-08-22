@@ -34,6 +34,7 @@ class RuntimeConfig:
     tts_model: str
     realtime_voice: str
     realtime_speed: float
+    realtime_help_speed_factor: float
     realtime_vad_eagerness: str
     wanikani_api_token: str
     ankiconnect_url: str
@@ -47,6 +48,8 @@ class RuntimeConfig:
     audio_sample_rate: int
     realtime_speed_min: float
     realtime_speed_max: float
+    realtime_help_speed_factor_min: float
+    realtime_help_speed_factor_max: float
     realtime_beta_header: bool
     realtime_max_frame_bytes: int
     voice_sample_cache_dir: str
@@ -72,6 +75,10 @@ def build_runtime_config(row: AppSettings | None, env: Settings) -> RuntimeConfi
     if row is not None and row.realtime_speed is not None:
         speed = row.realtime_speed
 
+    help_factor = env.realtime_help_speed_factor
+    if row is not None and row.realtime_help_speed_factor is not None:
+        help_factor = row.realtime_help_speed_factor
+
     return RuntimeConfig(
         openai_api_key=_pick(row and row.openai_api_key, env.openai_api_key),
         realtime_model=_pick(row and row.realtime_model, env.realtime_model),
@@ -83,6 +90,10 @@ def build_runtime_config(row: AppSettings | None, env: Settings) -> RuntimeConfi
         tts_model=_pick(row and row.tts_model, env.tts_model),
         realtime_voice=_pick(row and row.realtime_voice, env.realtime_voice),
         realtime_speed=max(env.realtime_speed_min, min(env.realtime_speed_max, speed)),
+        realtime_help_speed_factor=max(
+            env.realtime_help_speed_factor_min,
+            min(env.realtime_help_speed_factor_max, help_factor),
+        ),
         realtime_vad_eagerness=normalise_eagerness(
             row and row.realtime_vad_eagerness,
             normalise_eagerness(env.realtime_vad_eagerness),
@@ -97,6 +108,8 @@ def build_runtime_config(row: AppSettings | None, env: Settings) -> RuntimeConfi
         audio_sample_rate=env.audio_sample_rate,
         realtime_speed_min=env.realtime_speed_min,
         realtime_speed_max=env.realtime_speed_max,
+        realtime_help_speed_factor_min=env.realtime_help_speed_factor_min,
+        realtime_help_speed_factor_max=env.realtime_help_speed_factor_max,
         realtime_beta_header=env.realtime_beta_header,
         realtime_max_frame_bytes=env.realtime_max_frame_bytes,
         voice_sample_cache_dir=env.voice_sample_cache_dir,

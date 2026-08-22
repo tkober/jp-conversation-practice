@@ -97,6 +97,7 @@ class SettingsUpdate(BaseModel):
     tts_model: str | None = None
     realtime_voice: str | None = None
     realtime_speed: float | None = None
+    realtime_help_speed_factor: float | None = None
     realtime_vad_eagerness: str | None = None
     wanikani_api_token: str | None = None
     ankiconnect_url: str | None = None
@@ -117,6 +118,7 @@ class SettingsView(BaseModel):
     tts_model: str
     realtime_voice: str
     realtime_speed: float
+    realtime_help_speed_factor: float
     realtime_vad_eagerness: str
     ankiconnect_url: str
     anki_deck_name: str
@@ -130,6 +132,8 @@ class SettingsView(BaseModel):
 
     speed_min: float
     speed_max: float
+    help_speed_factor_min: float
+    help_speed_factor_max: float
 
 
 # --- Scenarios ---------------------------------------------------------------

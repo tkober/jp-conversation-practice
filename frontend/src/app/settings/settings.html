@@ -163,6 +163,25 @@
       </label>
 
       <label class="field">
+        <span class="field-label">
+          Tempo bei „わからない“ —
+          {{ (+value('realtime_help_speed_factor') || settings.realtime_help_speed_factor).toFixed(2) }}×
+        </span>
+        <input
+          type="range"
+          [min]="settings.help_speed_factor_min"
+          [max]="settings.help_speed_factor_max"
+          step="0.05"
+          [ngModel]="+value('realtime_help_speed_factor') || settings.realtime_help_speed_factor"
+          (ngModelChange)="set('realtime_help_speed_factor', +$event)"
+        />
+        <span class="field-hint">
+          Faktor auf das laufende Tempo, wenn du den わからない-Knopf drückst — Hilfe im
+          Plauderton hilft wenig. 1,00× schaltet die Verlangsamung ab.
+        </span>
+      </label>
+
+      <label class="field">
         <span class="field-label">Geduld beim Zuhören</span>
         <select
           [ngModel]="value('realtime_vad_eagerness')"

@@ -51,6 +51,8 @@ export class RealtimeSessionService {
    */
   readonly helpStage = signal(0);
   readonly maxHelpStage = signal(1);
+  /** How much the tutor slows down for a help turn; 1 means not at all. */
+  readonly helpSpeedFactor = signal(1);
   /** True between pressing the button and the backend confirming the stage. */
   readonly helpPending = signal(false);
 
@@ -255,6 +257,7 @@ export class RealtimeSessionService {
         this.speed.set(speed);
         this.eagerness.set(eagerness);
         this.maxHelpStage.set(Number(message['help_stages'] ?? 1));
+        this.helpSpeedFactor.set(Number(message['help_speed_factor'] ?? 1));
         break;
       }
 

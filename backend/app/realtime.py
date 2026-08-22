@@ -104,6 +104,7 @@ class RealtimeSession:
         self.help_stage = 0
         self._response_active = False
         self._help_pending = False
+        self._help_speed_active = False
 
     # --- helpers ---------------------------------------------------------
 
@@ -178,6 +179,34 @@ class RealtimeSession:
         return max(
             self.settings.realtime_speed_min,
             min(self.settings.realtime_speed_max, speed),
+        )
+
+    def _help_speed(self) -> float:
+        """The rate a わからない turn is spoken at.
+
+        Help delivered at conversational pace is not much help -- the learner
+        pressed the button because they could not follow. Clamped into the same
+        range the slider offers: at the slowest setting there is nothing left
+        to give, and below it the speech smears rather than clarifies.
+        """
+        return self._clamp_speed(self.speed * self.settings.realtime_help_speed_factor)
+
+    async def _set_output_speed(self, upstream: Any, speed: float) -> None:
+        """Change the tutor's speaking rate and nothing else.
+
+        The one narrow translation into ``session.update`` that both the
+        slider and the help turn go through, so neither can widen it.
+        """
+        await upstream.send(
+            json.dumps(
+                {
+                    "type": "session.update",
+                    "session": {
+                        "type": "realtime",
+                        "audio": {"output": {"speed": speed}},
+                    },
+                }
+            )
         )
 
     def _turn_detection(self) -> dict[str, Any]:
@@ -272,17 +301,10 @@ class RealtimeSession:
                 # Translated here rather than allow-listing `session.update`:
                 # the browser may change the speed and nothing else.
                 self.speed = self._clamp_speed(event.get("speed"))
-                await upstream.send(
-                    json.dumps(
-                        {
-                            "type": "session.update",
-                            "session": {
-                                "type": "realtime",
-                                "audio": {"output": {"speed": self.speed}},
-                            },
-                        }
-                    )
-                )
+                if not self._help_speed_active:
+                    # While a わからない turn is running the tutor is on the
+                    # help rate; restoring afterwards picks up the new value.
+                    await self._set_output_speed(upstream, self.speed)
                 await self.send_json({"type": "app.speed.changed", "speed": self.speed})
                 continue
 
@@ -352,8 +374,16 @@ class RealtimeSession:
         await self._send_help_response(upstream)
 
     async def _send_help_response(self, upstream: Any) -> None:
-        """Ask for the one response that carries the scaffolding instructions."""
+        """Ask for the one response that carries the scaffolding instructions.
+
+        Slowed down first. There is no per-response speed in the Realtime API,
+        so it goes through ``session.update`` and is put back on the
+        ``response.done`` this response produces -- the next ordinary turn is
+        at the learner's own rate again.
+        """
         self._help_pending = False
+        await self._set_output_speed(upstream, self._help_speed())
+        self._help_speed_active = True
         await upstream.send(
             json.dumps(
                 {
@@ -368,6 +398,11 @@ class RealtimeSession:
                 }
             )
         )
+
+    async def _restore_speed(self, upstream: Any) -> None:
+        """Put the tutor back on the learner's own rate after a help turn."""
+        self._help_speed_active = False
+        await self._set_output_speed(upstream, self.speed)
 
     async def _reset_help(self) -> None:
         """Forget the escalation: the learner is talking again."""
@@ -407,6 +442,8 @@ class RealtimeSession:
                 await self._handle_response_done(event)
                 if self._help_pending:
                     await self._send_help_response(upstream)
+                elif self._help_speed_active:
+                    await self._restore_speed(upstream)
             elif event_type == USER_TRANSCRIPT_EVENT:
                 await self._reset_help()
                 await self._emit_turn("user", event.get("transcript", ""))
@@ -490,6 +527,7 @@ class RealtimeSession:
                         "speed": self.speed,
                         "vad_eagerness": self.eagerness,
                         "help_stages": MAX_HELP_STAGE,
+                        "help_speed_factor": self.settings.realtime_help_speed_factor,
                         # Echoed back so a session export can show exactly what
                         # the tutor was told -- without it, debugging an odd
                         # conversation means guessing at the prompt.
