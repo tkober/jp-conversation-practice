@@ -154,7 +154,9 @@ export class SettingsPage {
       notes.push('kein Preis hinterlegt');
     }
     if (option.shutdown_date) {
-      notes.push(`abgekündigt zum ${option.shutdown_date}`);
+      // The field is the shutdown date, not the date it was deprecated: it is
+      // callable until then, it just has a successor already.
+      notes.push(`deprecated (Abschaltung ${option.shutdown_date})`);
     }
     return notes.length ? `${option.label} — ${notes.join(', ')}` : option.label;
   }
