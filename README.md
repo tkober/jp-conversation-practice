@@ -149,8 +149,10 @@ breaking into teacher mode. Saying something resets the escalation.
 Two things make it help rather than repeat. The turn is required to be
 **smaller** than the one you did not understand — fewer words, one sentence,
 nothing new — because without that rule the model pads instead of simplifying.
-And the help is **spoken more slowly** (`REALTIME_HELP_SPEED_FACTOR`, 0.8 by
-default, adjustable in Settings): the model cannot slow its own delivery down,
+And the help is **spoken more slowly** — a factor on whatever tempo the session
+is running at rather than a tempo of its own, so it follows the tempo slider
+(`REALTIME_HELP_SPEED_FACTOR`, 0.8 by default, adjustable in Settings, floored
+at the slider's own minimum): the model cannot slow its own delivery down,
 so asking it to in the prompt only ever produced a word-for-word repeat of the
 sentence you had just failed to parse. The rate is handled mechanically, which
 frees the wording to do the real work.
@@ -286,7 +288,7 @@ are environment-only.
 | `REALTIME_VOICE` | `marin` | Default voice. |
 | `REALTIME_SPEED` | `1.0` | Default speaking rate. |
 | `REALTIME_SPEED_MIN` / `_MAX` | `0.6` / `1.4` | Slider bounds. |
-| `REALTIME_HELP_SPEED_FACTOR` | `0.8` | Tempo factor for a わからない turn. `1.0` disables the slowdown. |
+| `REALTIME_HELP_SPEED_FACTOR` | `0.8` | Factor on the session's tempo for a わからない turn, not a tempo of its own. `1.0` disables it. |
 | `REALTIME_VAD_EAGERNESS` | `low` | How soon a pause ends your turn: `low`/`medium`/`high`/`auto`. |
 | `TTS_MODEL` | `gpt-4o-mini-tts` | Renders the voice previews. |
 | `TRANSCRIPTION_MODEL` | `gpt-4o-mini-transcribe` | Input transcription. |

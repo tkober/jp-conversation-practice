@@ -103,10 +103,19 @@ export class WakaranaiButton {
     () => this.session.phase() === 'live' && !this.session.helpPending(),
   );
 
-  /** Only claim a slowdown when there is one — the factor can be set to 1. */
-  private readonly slower = computed(() =>
-    this.session.helpSpeedFactor() < 1 ? '; die Hilfe kommt langsamer' : '',
-  );
+  /**
+   * The rate a help turn comes out at — the live tempo times the configured
+   * factor, so it moves with the tempo slider. Empty when the factor is 1,
+   * which switches the slowdown off.
+   */
+  private readonly slower = computed(() => {
+    const factor = this.session.helpSpeedFactor();
+    if (factor >= 1) {
+      return '';
+    }
+    const rate = Math.max(this.session.speedMin(), this.session.speed() * factor);
+    return `; die Hilfe kommt mit ${rate.toFixed(2)}×`;
+  });
 
   protected readonly hint = computed(() => {
     if (this.session.helpPending()) {

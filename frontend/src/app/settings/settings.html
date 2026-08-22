@@ -164,20 +164,21 @@
 
       <label class="field">
         <span class="field-label">
-          Tempo bei „わからない“ —
-          {{ (+value('realtime_help_speed_factor') || settings.realtime_help_speed_factor).toFixed(2) }}×
+          Verlangsamung bei „わからない“ — {{ helpFactorLabel() }}
         </span>
         <input
           type="range"
           [min]="settings.help_speed_factor_min"
           [max]="settings.help_speed_factor_max"
           step="0.05"
-          [ngModel]="+value('realtime_help_speed_factor') || settings.realtime_help_speed_factor"
+          [ngModel]="helpFactor()"
           (ngModelChange)="set('realtime_help_speed_factor', +$event)"
         />
         <span class="field-hint">
-          Faktor auf das laufende Tempo, wenn du den わからない-Knopf drückst — Hilfe im
-          Plauderton hilft wenig. 1,00× schaltet die Verlangsamung ab.
+          Kein festes Tempo, sondern ein Faktor auf das Tempo der laufenden Session: bei
+          {{ helpBaseSpeed().toFixed(2) }}× kommt die Hilfe mit {{ helpSpeed().toFixed(2) }}×.
+          Änderst du das Tempo mitten in der Session, wandert die Hilfe mit. Ganz rechts ist
+          die Verlangsamung aus.
         </span>
       </label>
 

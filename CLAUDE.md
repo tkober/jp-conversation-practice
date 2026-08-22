@@ -304,9 +304,13 @@ stage may ask the model to "say it again more slowly": it cannot change its own
 delivery, so that instruction reliably produced a near-verbatim repeat — the one
 response guaranteed not to help, since those exact words are what the learner
 just failed to parse. The rate is handled mechanically instead
-(`realtime_help_speed_factor`, a factor on the current speed). The Realtime API
-has no per-response speed, so it goes through the same narrow `session.update`
-the slider uses and is put back on the following `response.done`.
+(`realtime_help_speed_factor`). It is a factor on `self.speed` — whatever the
+session is running at *now*, so it follows the live tempo slider — and not a
+rate of its own; the Settings screen shows the resulting tempo next to it,
+because a bare "0.80×" is written exactly like the tempo slider's own value and
+reads as an absolute rate. The Realtime API has no per-response speed, so it
+goes through the same narrow `session.update` the slider uses and is put back on
+the following `response.done`.
 
 **Every stage is subject to "smaller than the turn they did not understand"** —
 fewer words, one sentence, at most one question, nothing new. Without that rule
