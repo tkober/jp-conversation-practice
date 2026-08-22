@@ -8,13 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import get_settings
 from ..db import SETTINGS_ROW_ID, AppSettings, ensure_settings_row, load_settings
+from ..model_catalog import SLOTS_BY_KEY, ModelCatalog, is_valid_model_id
 from ..models import SettingsUpdate, SettingsView
 from ..runtime_config import RuntimeConfig, build_runtime_config
 from ..turn_detection import is_valid_eagerness
 from ..voices import is_valid_voice
-from .deps import db_session
+from .deps import db_session, runtime_config
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+# Long-lived so the live model list stays cached between requests; the key is
+# passed per call because it can change on this very screen.
+_catalog = ModelCatalog()
 
 # Fields the client may patch, mapped to their column on AppSettings.
 PATCHABLE = (
@@ -101,6 +106,12 @@ async def write_settings(
             and not is_valid_eagerness(str(value))
         ):
             continue
+        if field in SLOTS_BY_KEY and value is not None and not is_valid_model_id(str(value)):
+            # The dropdown's free-text escape hatch accepts any model name, so
+            # the shape is checked here: tts_model becomes a directory under
+            # `.voice-samples/`, and a name with a slash in it would write
+            # outside the cache.
+            continue
         values[field] = value
 
     if values:
@@ -112,3 +123,10 @@ async def write_settings(
 
     row = await load_settings(session)
     return to_view(build_runtime_config(row, get_settings()), row)
+
+
+@router.get("/models")
+async def read_models(config: RuntimeConfig = Depends(runtime_config)) -> dict[str, object]:
+    """Dropdown contents for every configurable model slot."""
+    catalog = await _catalog.build(config.openai_api_base, config.openai_api_key)
+    return catalog.as_dict()

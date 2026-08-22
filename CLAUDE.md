@@ -134,6 +134,11 @@ subtracts cached input tokens before applying the uncached rate. `MODEL_RATES`
 in `pricing.py` is hard-coded and must be updated when OpenAI changes pricing;
 an unknown model falls back to the mini rates and sets `rates_known: false`.
 
+Only the realtime session is counted. The analysis call, the scenario
+assistant and the TTS previews are real spending that no counter reports, so
+the session and history totals are exact for what they measure and lower than
+the actual OpenAI bill.
+
 **AnkiConnect is called from the backend, not the browser.** AnkiConnect checks
 the `Origin` header against its `webCorsOriginList` and rejects
 `http://localhost:4200` by default. A server-side request sends no Origin and is
@@ -235,6 +240,44 @@ always sends the whole block, never just the changed field: a partial
 Voice previews are rendered through the TTS endpoint on first request and cached
 in `backend/.voice-samples/` (gitignored). `VOICES` lists only voices available
 to *both* the Realtime and TTS APIs, so a preview is representative.
+
+## Choosing models
+
+The Settings screen offers a dropdown per slot, built by `model_catalog.py`
+from two sources that answer different questions.
+
+`GET /v1/models` answers *what this key may call*. It is authoritative and
+current, but each entry carries only `id`, `created`, `owned_by` and
+`shutdown_date` — **no price, and no capability or modality**. There is no
+pricing API at all; the Costs API under the Admin key reports what was already
+billed, aggregated per day, which is a reconciliation tool and not a rate
+table. `MODEL_RATES` therefore stays hand-maintained whatever else changes.
+
+The `SLOTS` table answers *what is worth picking and what it costs*. It carries
+the German descriptions, the curated order, and — for the one cost-tracked slot
+— the price the app will actually bill. Curated entries come first, live extras
+follow, and the merge means a model released after the last deploy is still
+selectable.
+
+**The ids are not self-describing, so the filters are load-bearing.**
+`gpt-realtime-whisper` and `gpt-realtime-translate` both match "realtime"
+without holding a conversation, and `gpt-4o-transcribe-diarize` splits speakers
+apart when the realtime input stream is one. Each entry in `excludes` is a
+model that would otherwise be offered for a job it cannot do. Dated snapshot
+ids (`-YYYY-MM-DD`) are dropped as well — they pin an alias that is already
+listed, so they would double every dropdown without adding a capability.
+
+**A model id reaches the filesystem.** `VoiceSampleService` caches previews
+under `.voice-samples/<tts_model>/`, so the settings PUT validates the shape of
+every model field against `MODEL_ID_PATTERN`, for the same reason `voices.py`
+validates voice ids.
+
+The dropdown keeps a free-text escape hatch ("Anderes Modell …") because trying
+a model the day it ships is the point of a PoC. It is also where a configured
+model that has since left the list resurfaces: a `<select>` renders an unknown
+value as blank, so the component falls back to the text box instead of
+swallowing it. Picking a realtime model that `MODEL_RATES` does not know says
+so right there, rather than leaving it for the session screen to discover.
 
 ## Session export
 

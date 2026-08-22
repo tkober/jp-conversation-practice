@@ -12,6 +12,7 @@ import {
   AssistantReply,
   HealthResponse,
   JlptLevel,
+  ModelCatalogResponse,
   Scenario,
   ScenarioDraft,
   SessionDetail,
@@ -93,6 +94,11 @@ export class ApiService {
 
   saveSettings(patch: AppSettingsPatch): Observable<AppSettingsView> {
     return this.http.put<AppSettingsView>('/api/settings', patch);
+  }
+
+  /** Which models the dropdowns may offer, curated plus whatever the key can call. */
+  modelCatalog(): Observable<ModelCatalogResponse> {
+    return this.http.get<ModelCatalogResponse>('/api/settings/models');
   }
 
   // --- sessions ---
