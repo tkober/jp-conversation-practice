@@ -19,6 +19,7 @@ from websockets.asyncio.server import serve
 from app.api import practice
 from app.config import get_settings
 from app.pricing import MODEL_RATES
+from app.prompts import HELP_STAGES, MAX_HELP_STAGE
 from app.runtime_config import build_runtime_config
 
 
@@ -346,6 +347,114 @@ def test_disallowed_client_events_are_not_forwarded(
             "session.update",
             "input_audio_buffer.commit",
         ]
+
+
+def test_wakaranai_asks_for_one_scaffolded_response(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(2)
+
+        assert websocket.receive_json() == {
+            "type": "app.help.stage",
+            "stage": 1,
+            "max_stage": MAX_HELP_STAGE,
+        }
+
+        create = upstream.received[1]
+        assert create["type"] == "response.create"
+        instructions = create["response"]["instructions"]
+        # The whole session frame is rebuilt, because `response.instructions`
+        # replaces the session prompt rather than adding to it.
+        assert "Kombini" in instructions
+        assert "JLPT N4" in instructions
+        assert HELP_STAGES[0] in instructions
+        assert f"help attempt 1 of {MAX_HELP_STAGE}" in instructions
+
+
+def test_pressing_again_escalates_and_speaking_resets_it(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(2)
+        websocket.receive_json()
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        assert websocket.receive_json()["stage"] == 2
+        assert HELP_STAGES[1] in upstream.received[2]["response"]["instructions"]
+
+        # Saying something means the learner is past the spot they were stuck
+        # in, so the next press starts the escalation over.
+        upstream.send_event(
+            {
+                "type": "conversation.item.input_audio_transcription.completed",
+                "transcript": "これください",
+            }
+        )
+        assert websocket.receive_json() == {
+            "type": "app.help.stage",
+            "stage": 0,
+            "max_stage": MAX_HELP_STAGE,
+        }
+        websocket.receive_json()  # app.transcript.turn
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(4)
+        assert websocket.receive_json()["stage"] == 1
+
+
+def test_the_last_stage_is_german_and_does_not_run_past_it(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        for _ in range(MAX_HELP_STAGE + 2):
+            websocket.send_text(json.dumps({"type": "app.session.help"}))
+
+        upstream.wait_for_messages(MAX_HELP_STAGE + 3)
+
+        stages = [
+            websocket.receive_json()["stage"] for _ in range(MAX_HELP_STAGE + 2)
+        ]
+        assert stages == list(range(1, MAX_HELP_STAGE + 1)) + [MAX_HELP_STAGE] * 2
+
+        last = upstream.received[-1]["response"]["instructions"]
+        assert HELP_STAGES[-1] in last
+        # The escalation ends in German -- that is the point of the last stage.
+        assert "German" in HELP_STAGES[-1]
+
+
+def test_wakaranai_cancels_a_response_that_is_still_being_generated(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        upstream.send_event({"type": "response.created", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(2)
+        websocket.receive_json()  # app.help.stage
+
+        # The API refuses a second response while one is running, so the help
+        # request has to wait for the cancellation to land.
+        assert upstream.received[1] == {"type": "response.cancel"}
+
+        upstream.send_event(
+            {"type": "response.done", "response": {"status": "cancelled"}}
+        )
+        upstream.wait_for_messages(3)
+        assert upstream.received[2]["type"] == "response.create"
 
 
 def test_response_done_produces_a_cost_update(

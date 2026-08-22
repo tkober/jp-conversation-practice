@@ -99,6 +99,71 @@ Be patient, positive and genuinely interested in what the learner says.
 Short affirmations (そうですか、いいですね、なるほど) keep them talking."""
 
 
+# --- "わからない": the learner says they are stuck -------------------------
+
+# One entry per press of the わからない button, in escalation order. The last
+# one is the ultima ratio: German.
+#
+# Each stage offers several tactics rather than prescribing one, because a
+# tutor that answers the same signal with the same move every time teaches the
+# learner the pattern instead of the language -- the "roles generalise,
+# checklists fossilise" rule applies to helping just as much as to scenarios.
+HELP_STAGES: tuple[str, ...] = (
+    """Stay in Japanese. The learner probably missed a word or the shape of
+your sentence, not the whole situation. Choose one of:
+- say your last line again, slower and more clearly articulated,
+- say the same thing with easier words and simpler grammar,
+- name the one word that was most likely the obstacle and paraphrase it in
+  Japanese at their level.""",
+    """Stay in Japanese, and make *answering* easier, not just understanding.
+Choose one of:
+- turn your question into a yes/no or an either-or question,
+- give one concrete example answer in Japanese they can copy and adapt,
+- narrow the topic down to something smaller and more concrete,
+- ask a simpler question that leads towards the same thing.""",
+    """Stay in Japanese and assume that nothing has landed yet. Choose one of:
+- say the sentence they could answer with, and invite them to repeat it,
+- fall back to one very short question they can answer with a single word,
+- move to something easier in this same setting and return to the topic later.""",
+    """Last resort: switch to German for one or two sentences -- explain what
+is blocking them, or simply say what your Japanese sentence meant. Then return
+to Japanese immediately, in this same turn, with one easy question that keeps
+the role-play going. Do not stay in German, and do not turn this into a grammar
+lesson.""",
+)
+
+MAX_HELP_STAGE = len(HELP_STAGES)
+
+
+def build_help_instructions(scenario: str, jlpt_level: str, stage: int) -> str:
+    """Instructions for the one response that answers a わからない press.
+
+    The full session prompt with a block appended, not a prompt of its own:
+    sent as ``response.instructions`` it *replaces* the session instructions
+    for that response, so leaving the frame out would drop the scenario, the
+    level and the language policy for exactly the turn where the learner is
+    struggling most.
+    """
+    stage = max(1, min(MAX_HELP_STAGE, stage))
+    tactics = HELP_STAGES[stage - 1]
+
+    return f"""{build_realtime_instructions(scenario, jlpt_level)}
+
+# The learner is stuck right now
+The learner has just signalled that they did not understand, or do not know
+what to say. They did not say so out loud: never mention a signal, a button or
+the exercise, never ask whether they understood, and stay in character. Just
+help, the way an attentive person helps someone who has lost the thread, and
+carry the conversation on.
+
+This is help attempt {stage} of {MAX_HELP_STAGE} for the same spot.
+{tactics}
+
+Pick ONE tactic -- whichever actually fits what you last said -- rather than
+working down the list, and do not reuse the tactic you used on the previous
+attempt. Keep it as short as any other turn, and end in a way that gives them
+something easy to say next."""
+
 ANALYSIS_SYSTEM_PROMPT = """You are a Japanese language teacher analysing a transcript of a
 spoken practice conversation between a learner and an AI tutor.
 

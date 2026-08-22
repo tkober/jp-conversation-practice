@@ -136,6 +136,17 @@ question → model an example answer. It only switches to German or English when
 the learner explicitly asks. Grammar is never corrected mid-conversation; that
 happens in the review step.
 
+**The わからない button.** A teacher notices when you are out of your depth and
+eases off unasked; the model cannot, and asking for help *in Japanese* is
+exactly what someone who is stuck cannot do. So the session screen has a button
+that says it for you. Each press without saying anything in between escalates
+one step — stay in Japanese and make the sentence easier to understand, then
+make it easier to *answer*, then assume nothing landed at all, and only as a
+last resort explain it in German before switching straight back. The tutor is
+never told that a button exists, only that you signalled you are stuck, so it
+helps in character instead of breaking into teacher mode. Saying something
+resets the escalation.
+
 ### 4. Live cost tracking
 
 The relay listens for `response.done` and reads the exact `usage` object:
