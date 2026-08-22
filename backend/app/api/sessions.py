@@ -8,7 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import Session as SessionRow
 from ..furigana import annotate
-from ..models import SessionCreate, SessionDetail, SessionSummary, TranscriptTurn
+from ..models import (
+    ContextItem,
+    SessionCreate,
+    SessionDetail,
+    SessionSummary,
+    TranscriptTurn,
+)
 from .deps import db_session
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
@@ -93,6 +99,7 @@ async def read_session(
         instructions=row.instructions,
         usage=row.usage or {},
         transcript=with_furigana(row.transcript or []),
+        context_items=[ContextItem.model_validate(item) for item in row.context_items or []],
         analysis=row.analysis,
     )
 
@@ -124,6 +131,7 @@ async def create_session(
         # a stored copy would freeze today's readings and bloat every export,
         # while annotating on read gives older sessions furigana too.
         transcript=[turn.model_dump(exclude={"ruby"}) for turn in payload.transcript],
+        context_items=[item.model_dump() for item in payload.context_items],
         analysis=payload.analysis,
     )
     session.add(row)

@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
+from .models import ContextItem
+
 JLPT_GUIDANCE = {
     "N5": (
         "Absolute beginner. Use only the most common ~800 words and basic "
@@ -29,11 +33,79 @@ JLPT_GUIDANCE = {
 DEFAULT_JLPT_LEVEL = "N5"
 
 
-def build_realtime_instructions(scenario: str, jlpt_level: str) -> str:
+# The rules that turn a description of a menu into a scene rather than a script.
+# Every one of them exists against a specific failure:
+#
+# * The learner can SEE the material -- that is the whole point of it, and the
+#   tutor has to know it, or it will describe what is already on screen instead
+#   of talking about it.
+# * "Facts, not a plan" is "roles generalise, checklists fossilise" applied to
+#   the one input that genuinely is a list. A menu handed over without this
+#   sentence gets read out from the top, every session, in the same order.
+# * "Never invent" mirrors the frame's existing rule about admitting
+#   incomprehension: an item the learner cannot find on their screen destroys
+#   trust in the material faster than a gap ever could.
+CONTEXT_RULES = """How to use it:
+- The learner is looking at this material while you talk. Do not describe it to
+  them and do not read it out -- they can see it. Talk about it the way two
+  people talk about something lying on the table between them.
+- Because you both have it in front of you, deixis works in both directions.
+  When the learner says これ, それ, その赤いの or ここ, they are pointing at
+  something in this material: work out what fits and answer about that. You may
+  point the same way (この, そこの, 右の, 上の段の).
+- Use the names, prices and numbers exactly as written above. Say the Japanese
+  words as they are written, not a translation of them.
+- This is a description of what EXISTS, not a plan for the conversation. Do not
+  work through it item by item, do not enumerate it, and do not turn it into a
+  sequence of questions. It is there to be referred to when the conversation
+  happens to go there, and ignored when it does not.
+- Never invent anything that is not described above. If the learner asks about
+  something that is not there, or about a part the description calls unreadable,
+  react like a real person would -- say you do not have it, or look again and
+  say you cannot make it out. Do not fill the gap with something plausible: the
+  learner is looking at the real thing and will see that it is not there."""
+
+
+def format_context_block(items: Sequence[ContextItem]) -> str:
+    """Render the material into the ``# Context material`` section, or "".
+
+    Empty when there is no material, so a session without any gets exactly the
+    prompt it got before this feature existed.
+    """
+    described = [item for item in items if item.description.strip()]
+    if not described:
+        return ""
+
+    lines = [
+        "",
+        "# Context material",
+        "The learner has the following in front of them on screen right now. You",
+        "cannot see it yourself; what follows is an accurate description of it.",
+        "Treat it as part of the situation you are both in.",
+    ]
+    for index, item in enumerate(described, start=1):
+        label = item.title.strip() or f"Material {index}"
+        note = (
+            " (handed to the learner during the conversation)"
+            if item.introduced_at is not None
+            else ""
+        )
+        lines += ["", f"## {label}{note}", item.description.strip()]
+
+    lines += ["", CONTEXT_RULES]
+    return "\n".join(lines) + "\n"
+
+
+def build_realtime_instructions(
+    scenario: str,
+    jlpt_level: str,
+    context_items: Sequence[ContextItem] = (),
+) -> str:
     """Build the system prompt for the live Realtime API session."""
     level = jlpt_level if jlpt_level in JLPT_GUIDANCE else DEFAULT_JLPT_LEVEL
     level_guidance = JLPT_GUIDANCE[level]
     scenario_text = scenario.strip() or "A free everyday conversation in Japanese."
+    context_block = format_context_block(context_items)
 
     return f"""You are a warm, encouraging Japanese conversation partner and language teacher.
 You are running a spoken role-play practice session with a learner.
@@ -45,7 +117,7 @@ Play this role as a real person would. The scenario tells you who you are and
 where you are -- it is not a list of steps to work through. Open with a short,
 natural line that fits the setting, then let the learner respond and take it
 from there.
-
+{context_block}
 # Learner level: JLPT {level}
 {level_guidance}
 
@@ -142,19 +214,27 @@ stay in German, and do not turn this into a grammar lesson.""",
 MAX_HELP_STAGE = len(HELP_STAGES)
 
 
-def build_help_instructions(scenario: str, jlpt_level: str, stage: int) -> str:
+def build_help_instructions(
+    scenario: str,
+    jlpt_level: str,
+    stage: int,
+    context_items: Sequence[ContextItem] = (),
+) -> str:
     """Instructions for the one response that answers a わからない press.
 
     The full session prompt with a block appended, not a prompt of its own:
     sent as ``response.instructions`` it *replaces* the session instructions
     for that response, so leaving the frame out would drop the scenario, the
     level and the language policy for exactly the turn where the learner is
-    struggling most.
+    struggling most. The context material is part of that frame for the same
+    reason -- pointing at the menu is one of the better ways out of a spot
+    where words are not landing, and it is unavailable if the help turn does
+    not know the menu exists.
     """
     stage = max(1, min(MAX_HELP_STAGE, stage))
     tactics = HELP_STAGES[stage - 1]
 
-    return f"""{build_realtime_instructions(scenario, jlpt_level)}
+    return f"""{build_realtime_instructions(scenario, jlpt_level, context_items)}
 
 # The learner is stuck right now
 The learner has just signalled that they did not understand, or do not know
@@ -219,11 +299,31 @@ def build_analysis_user_prompt(
     jlpt_level: str,
     transcript_text: str,
     excluded_words: list[str],
+    context_items: Sequence[ContextItem] = (),
 ) -> str:
-    """Build the user message for the post-session analysis call."""
+    """Build the user message for the post-session analysis call.
+
+    The material travels with the transcript because a transcript recorded
+    against it is not self-explanatory: これを二つください is unreadable
+    feedback without the menu that これ pointed at.
+    """
     parts = [
         f"Scenario: {scenario.strip() or 'Free conversation'}",
         f"Learner JLPT level: {jlpt_level}",
+    ]
+
+    described = [item for item in context_items if item.description.strip()]
+    if described:
+        parts += [
+            "",
+            "The learner had this material in front of them during the "
+            "conversation, so demonstratives in the transcript may point at it:",
+        ]
+        for index, item in enumerate(described, start=1):
+            label = item.title.strip() or f"Material {index}"
+            parts.append(f"- {label}: {item.description.strip()}")
+
+    parts += [
         "",
         "Transcript:",
         transcript_text or "(the learner did not say anything)",

@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .models import SessionAnalysis, TranscriptTurn
+from .models import ContextItem, SessionAnalysis, TranscriptTurn
 from .prompts import ANALYSIS_SYSTEM_PROMPT, build_analysis_user_prompt
 from .runtime_config import RuntimeConfig
 
@@ -72,6 +72,7 @@ class AnalysisService:
         jlpt_level: str,
         transcript: list[TranscriptTurn],
         excluded_words: list[str],
+        context_items: list[ContextItem] | None = None,
     ) -> SessionAnalysis:
         if not self.settings.openai_api_key:
             raise AnalysisError("OPENAI_API_KEY is not configured on the server.")
@@ -83,7 +84,11 @@ class AnalysisService:
                 {
                     "role": "user",
                     "content": build_analysis_user_prompt(
-                        scenario, jlpt_level, format_transcript(transcript), excluded_words
+                        scenario,
+                        jlpt_level,
+                        format_transcript(transcript),
+                        excluded_words,
+                        context_items or [],
                     ),
                 },
             ],

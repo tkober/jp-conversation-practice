@@ -145,6 +145,7 @@ async def analyse_session(
             jlpt_level=request.jlpt_level,
             transcript=request.transcript,
             excluded_words=sorted(known_words),
+            context_items=request.context_items,
         )
     except AnalysisError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

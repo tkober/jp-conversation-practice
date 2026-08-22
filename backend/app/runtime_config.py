@@ -53,6 +53,9 @@ class RuntimeConfig:
     realtime_beta_header: bool
     realtime_max_frame_bytes: int
     voice_sample_cache_dir: str
+    attachment_max_bytes: int
+    attachment_max_text_chars: int
+    attachment_description_max_chars: int
 
     @property
     def openai_configured(self) -> bool:
@@ -113,6 +116,9 @@ def build_runtime_config(row: AppSettings | None, env: Settings) -> RuntimeConfi
         realtime_beta_header=env.realtime_beta_header,
         realtime_max_frame_bytes=env.realtime_max_frame_bytes,
         voice_sample_cache_dir=env.voice_sample_cache_dir,
+        attachment_max_bytes=env.attachment_max_bytes,
+        attachment_max_text_chars=env.attachment_max_text_chars,
+        attachment_description_max_chars=env.attachment_description_max_chars,
     )
 
 

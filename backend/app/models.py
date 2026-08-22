@@ -21,6 +21,24 @@ class RubySegment(BaseModel):
     reading: str | None = None
 
 
+class ContextItem(BaseModel):
+    """One piece of context material as the tutor and the export see it.
+
+    The prepared form of a :class:`~app.db.ScenarioAttachment`: the bytes stay
+    in the database for the learner's screen, this is what reaches the prompt.
+    ``introduced_at`` is None for material that was there from the first turn
+    and holds the elapsed seconds for material handed over mid-conversation --
+    the one thing about a session that the stored ``instructions`` cannot say,
+    since those were built before it arrived.
+    """
+
+    id: int
+    kind: Literal["image", "text"] = "image"
+    title: str = ""
+    description: str = ""
+    introduced_at: float | None = None
+
+
 class TranscriptTurn(BaseModel):
     """A single spoken turn captured during the realtime session."""
 
@@ -68,6 +86,7 @@ class AnalysisRequest(BaseModel):
     jlpt_level: JlptLevel = "N5"
     transcript: list[TranscriptTurn] = Field(default_factory=list)
     use_wanikani_filter: bool = True
+    context_items: list[ContextItem] = Field(default_factory=list)
 
 
 class AnalysisResponse(SessionAnalysis):
@@ -191,6 +210,56 @@ class ScenarioAssistantReply(BaseModel):
     )
 
 
+# --- Context material --------------------------------------------------------
+
+
+class AttachmentView(BaseModel):
+    """One piece of scenario material, without its bytes.
+
+    The image itself is fetched separately from ``/api/attachments/{id}/file``
+    so that listing a scenario's material does not drag several megabytes of
+    base64 through every request that only needs the labels.
+    """
+
+    id: int
+    scenario_id: int
+    kind: Literal["image", "text"]
+    title: str
+    description: str
+    body: str
+    media_type: str
+    byte_size: int
+    available_from_start: bool
+    sort_order: int
+    analysis_error: str | None = Field(
+        default=None,
+        description=(
+            "Only set on the response to an upload or a re-evaluation, when the "
+            "material was stored but the model could not describe it. The "
+            "attachment is kept either way so the file does not have to be "
+            "picked again."
+        ),
+    )
+
+
+class AttachmentUpdate(BaseModel):
+    """Patch for one attachment; omitted fields stay as they are."""
+
+    title: str | None = Field(default=None, max_length=120)
+    description: str | None = None
+    available_from_start: bool | None = None
+    sort_order: int | None = None
+
+
+class TextAttachmentCreate(BaseModel):
+    """A pasted piece of text, as opposed to an uploaded file."""
+
+    body: str = Field(min_length=1)
+    title: str = Field(default="", max_length=120)
+    hint: str = Field(default="", max_length=500)
+    available_from_start: bool = True
+
+
 # --- Sessions ----------------------------------------------------------------
 
 
@@ -208,6 +277,7 @@ class SessionCreate(BaseModel):
     cost_usd: float = 0
     usage: dict = Field(default_factory=dict)
     transcript: list[TranscriptTurn] = Field(default_factory=list)
+    context_items: list[ContextItem] = Field(default_factory=list)
     analysis: dict | None = None
 
 
@@ -233,6 +303,7 @@ class SessionDetail(SessionSummary):
     instructions: str
     usage: dict
     transcript: list[TranscriptTurn]
+    context_items: list[ContextItem]
     analysis: dict | None
 
 
