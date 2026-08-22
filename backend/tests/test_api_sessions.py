@@ -18,7 +18,7 @@ def session_payload(**overrides: object) -> dict:
         "cost_usd": 0.0663,
         "usage": {"cost_usd": 0.0663, "response_count": 3},
         "transcript": [
-            {"role": "assistant", "text": "いらっしゃいませ。", "timestamp": 1.0},
+            {"role": "assistant", "text": "お会計は千円です。", "timestamp": 1.0},
             {"role": "user", "text": "こんばんは。", "timestamp": 4.0},
         ],
     }
@@ -40,9 +40,23 @@ async def test_detail_carries_transcript_and_instructions(api: AsyncClient) -> N
 
     body = (await api.get(f"/api/sessions/{created['id']}")).json()
 
-    assert [turn["text"] for turn in body["transcript"]] == ["いらっしゃいませ。", "こんばんは。"]
+    assert [turn["text"] for turn in body["transcript"]] == ["お会計は千円です。", "こんばんは。"]
+    # Furigana is added on the way out rather than stored, so a session
+    # recorded before the feature existed shows the readings too.
+    assert {"text": "会計", "reading": "かいけい"} in body["transcript"][0]["ruby"]
     assert body["instructions"].startswith("You are a warm")
     assert body["scenario_prompt"] == "You are the clerk ..."
+
+
+async def test_stored_transcripts_stay_plain(api: AsyncClient) -> None:
+    """The row keeps the text; the readings are derived on read."""
+    payload = session_payload()
+    payload["transcript"][0]["ruby"] = [{"text": "お会計", "reading": "でたらめ"}]
+
+    created = (await api.post("/api/sessions", json=payload)).json()
+    body = (await api.get(f"/api/sessions/{created['id']}")).json()
+
+    assert {"text": "会計", "reading": "かいけい"} in body["transcript"][0]["ruby"]
 
 
 async def test_list_is_newest_first_and_omits_transcripts(api: AsyncClient) -> None:

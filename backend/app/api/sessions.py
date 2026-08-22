@@ -7,12 +7,25 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import Session as SessionRow
-from ..models import SessionCreate, SessionDetail, SessionSummary
+from ..furigana import annotate
+from ..models import SessionCreate, SessionDetail, SessionSummary, TranscriptTurn
 from .deps import db_session
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 MAX_PAGE_SIZE = 200
+
+
+def with_furigana(transcript: list[dict]) -> list[TranscriptTurn]:
+    """Annotate a stored transcript on the way out.
+
+    The rows hold the plain text the session produced; the readings are added
+    here so a conversation recorded before this existed shows them too.
+    """
+    turns = [TranscriptTurn.model_validate(turn) for turn in transcript]
+    for turn in turns:
+        turn.ruby = annotate(turn.text)
+    return turns
 
 
 def to_summary(row: SessionRow) -> SessionSummary:
@@ -79,7 +92,7 @@ async def read_session(
         vad_eagerness=row.vad_eagerness,
         instructions=row.instructions,
         usage=row.usage or {},
-        transcript=row.transcript or [],
+        transcript=with_furigana(row.transcript or []),
         analysis=row.analysis,
     )
 
@@ -107,7 +120,10 @@ async def create_session(
         duration_seconds=payload.duration_seconds,
         cost_usd=payload.cost_usd,
         usage=payload.usage,
-        transcript=[turn.model_dump() for turn in payload.transcript],
+        # Furigana is derived from the text, so the row keeps the plain turn:
+        # a stored copy would freeze today's readings and bloat every export,
+        # while annotating on read gives older sessions furigana too.
+        transcript=[turn.model_dump(exclude={"ruby"}) for turn in payload.transcript],
         analysis=payload.analysis,
     )
     session.add(row)

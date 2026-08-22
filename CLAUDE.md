@@ -284,6 +284,36 @@ value as blank, so the component falls back to the text box instead of
 swallowing it. Picking a realtime model that `MODEL_RATES` does not know says
 so right there, rather than leaving it for the session screen to discover.
 
+## Furigana
+
+The transcript carries its readings. `annotate()` in `furigana.py` cuts a line
+into segments and puts the reading over the kanji **only** — 食べる becomes
+食[た]べる, not 食べる[たべる], because the okurigana is the part the learner can
+already read. Where the kana of a word do not line up with its reading, the
+whole word gets one ruby rather than a plausible-looking wrong split.
+
+The readings come from a local morphological analysis (MeCab via `fugashi`,
+dictionary `unidic-lite`), not from a per-kanji table: only the surrounding
+word decides that 今日 is キョウ and not イマヒ. It costs no API call and about
+0.1 ms per sentence, so the relay annotates every turn as it arrives. The
+dictionary is the price — roughly 250 MB in the backend image, memory-mapped,
+so the resident footprint stays small. If it cannot be loaded, `annotate()`
+returns None and the UI shows plain text, the same degradation WaniKani has.
+
+**Furigana is derived, never stored.** The session row keeps the plain
+transcript and `/api/sessions/{id}` annotates on the way out, so sessions
+recorded before this feature have readings too, and both JSON exports strip
+them again (`withoutFurigana()`) — an export is meant to be read, and segment
+arrays bury the conversation in it.
+
+`_SURFACE_READINGS` is the one hand-maintained exception: unidic reads 私 as
+ワタクシ, which is defensible and not what a textbook teaches. Keep that table
+short — it is for readings that are *misleading*, not merely surprising.
+
+The toggle (`FuriganaService`) is one setting for the whole app, kept in
+localStorage and offered wherever a transcript appears: session, review,
+history.
+
 ## Session export
 
 `app.session.started` echoes the tutor's full instructions, voice, speed and

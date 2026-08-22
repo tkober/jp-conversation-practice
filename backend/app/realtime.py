@@ -6,7 +6,7 @@ directions. On the way through, the relay
   * injects the scenario/level system prompt into ``session.update``,
   * accounts exact token cost from every ``response.done`` event,
   * normalises the various transcript events into a single ``transcript.turn``
-    event, and
+    event and annotates it with furigana, and
   * forwards audio deltas as raw binary frames so the browser does not have to
     base64-decode on the hot path.
 """
@@ -27,6 +27,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 from websockets.asyncio.client import connect as ws_connect
 
+from .furigana import annotate
 from .models import TranscriptTurn
 from .pricing import CostTracker
 from .prompts import DEFAULT_JLPT_LEVEL, JLPT_GUIDANCE, build_realtime_instructions
@@ -117,7 +118,12 @@ class RealtimeSession:
         text = (text or "").strip()
         if not text:
             return None
-        turn = TranscriptTurn(role=role, text=text, timestamp=time.time() - self.started_at)
+        turn = TranscriptTurn(
+            role=role,
+            text=text,
+            timestamp=time.time() - self.started_at,
+            ruby=annotate(text),
+        )
         self.transcript.append(turn)
         return turn
 

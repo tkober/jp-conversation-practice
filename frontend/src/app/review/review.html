@@ -127,6 +127,10 @@
         {{ showTranscript() ? 'Transkript ausblenden' : 'Transkript anzeigen' }}
       </button>
 
+      @if (showTranscript()) {
+        <app-furigana-toggle />
+      }
+
       <button
         type="button"
         class="btn btn-ghost"
@@ -150,7 +154,9 @@
         @for (turn of transcript(); track $index) {
           <p class="line">
             <span class="line-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-            <span class="jp">{{ turn.text }}</span>
+            <span class="jp">
+              <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+            </span>
           </p>
         }
       </section>

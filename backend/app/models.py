@@ -10,12 +10,26 @@ from pydantic import BaseModel, Field
 JlptLevel = Literal["N5", "N4", "N3", "N2"]
 
 
+class RubySegment(BaseModel):
+    """One piece of a line, with its reading when it contains kanji.
+
+    ``text`` is always a verbatim slice of the turn, so the segments joined
+    together are the original line again.
+    """
+
+    text: str
+    reading: str | None = None
+
+
 class TranscriptTurn(BaseModel):
     """A single spoken turn captured during the realtime session."""
 
     role: Literal["user", "assistant"]
     text: str
     timestamp: float | None = None
+    # Furigana, derived from ``text`` (see furigana.py) rather than stored:
+    # None means "nothing to annotate here", and the UI shows the plain text.
+    ruby: list[RubySegment] | None = None
 
 
 # --- Structured LLM output ---------------------------------------------------

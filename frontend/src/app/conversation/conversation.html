@@ -33,6 +33,10 @@
     <div class="banner banner-error"><span>{{ error }}</span></div>
   }
 
+  <div class="transcript-tools">
+    <app-furigana-toggle />
+  </div>
+
   <div class="transcript" #scrollBox>
     @if (transcript().length === 0) {
       <div class="empty">
@@ -43,7 +47,9 @@
     @for (turn of transcript(); track $index) {
       <div class="turn" [class.turn-user]="turn.role === 'user'">
         <span class="turn-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-        <p class="turn-text jp">{{ turn.text }}</p>
+        <p class="turn-text jp">
+          <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+        </p>
       </div>
     }
   </div>

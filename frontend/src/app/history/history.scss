@@ -166,6 +166,12 @@ header {
   }
 }
 
+.transcript-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 4px;
+}
+
 .transcript {
   max-height: 300px;
   overflow-y: auto;

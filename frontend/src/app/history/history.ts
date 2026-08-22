@@ -7,11 +7,14 @@ import {
   SessionDetail,
   SessionStats,
   SessionSummary,
+  withoutFurigana,
 } from '../core/models';
+import { FuriganaText } from '../shared/furigana-text';
+import { FuriganaToggle } from '../shared/furigana-toggle';
 
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })
@@ -95,7 +98,8 @@ export class History {
   /** Download one stored session as JSON, prompt included. */
   downloadJson(detail: SessionDetail, event: Event): void {
     event.stopPropagation();
-    const blob = new Blob([JSON.stringify(detail, null, 2)], { type: 'application/json' });
+    const payload = { ...detail, transcript: withoutFurigana(detail.transcript) };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;

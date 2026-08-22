@@ -155,10 +155,30 @@ export interface SessionStats {
   total_seconds: number;
 }
 
+/** One piece of a line; `reading` is set where the piece contains kanji. */
+export interface RubySegment {
+  text: string;
+  reading: string | null;
+}
+
 export interface TranscriptTurn {
   role: 'user' | 'assistant';
   text: string;
   timestamp?: number;
+  /**
+   * Furigana for `text`, segment by segment — null when there is nothing to
+   * annotate. The backend derives it; joining the segments gives `text` back.
+   */
+  ruby?: RubySegment[] | null;
+}
+
+/**
+ * Strip the readings again. They are derived data: an export is meant to be
+ * read (by a human or another agent), and segment arrays only bury the
+ * conversation in it.
+ */
+export function withoutFurigana(turns: TranscriptTurn[]): TranscriptTurn[] {
+  return turns.map(({ ruby, ...turn }) => turn);
 }
 
 export interface TokenBucket {
