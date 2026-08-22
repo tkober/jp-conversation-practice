@@ -36,12 +36,14 @@ leave the commits invisible.
 
 ```bash
 docker compose up --build   # whole stack incl. Postgres on :8085
+docker compose -f compose.sqlite.yaml up --build   # same, but SQLite in a volume
 ./dev.sh                    # dev servers; frontend proxies /api and /ws to :8000
 
 cd backend
 uv sync                     # install
 uv run uvicorn app.main:app --reload --port 8000
 uv run pytest               # needs Docker: testcontainers starts a Postgres
+TEST_DB=sqlite uv run pytest   # same suite against a temp SQLite file, no Docker
 uv run pytest tests/test_pricing.py::test_cached_tokens_are_billed_at_the_cached_rate
 
 cd frontend
@@ -81,6 +83,40 @@ owner/app split, so a stray DDL statement in a request path fails there rather
 than at deploy time. HTTP tests use `httpx.ASGITransport` rather than
 `TestClient`: the latter runs the app on its own event loop in a worker thread,
 which the shared SQLAlchemy engine cannot be used from.
+
+### SQLite, for a machine with no Postgres
+
+A `sqlite://` `DB_URL` runs the same schema out of a local file
+(`compose.sqlite.yaml` is that stack). It is a second backend, not a second
+code path: everything that differs is collected in `db.py`, and nothing above
+that module knows which one is in use. What differs:
+
+- **The roles collapse.** `_role_url()` returns the same file for both, because
+  the owner/app split is a Postgres privilege boundary and SQLite has nothing
+  to enforce it with. The Postgres test run still exercises the split for real.
+- **`JSONColumn`** is `JSON` with a `JSONB` variant for Postgres — declared
+  that way round so the Postgres DDL is byte-for-byte what it already was.
+- **`UtcDateTime`** exists because SQLite has no timestamp type:
+  `DateTime(timezone=True)` reads a *naive* datetime back, FastAPI serialises
+  it without a zone, and the browser reads it as local time. The type attaches
+  UTC on the way out.
+- **Boolean `server_default`s must be `false()`, not `"false"`.** SQLAlchemy
+  quotes a string default as a literal, so SQLite stores the *text* `'false'`
+  and reads it back as `True` — every seeded scenario would look customised and
+  would never be refreshed from its file again.
+- **`migrate_schema()` reflects instead of `ADD COLUMN IF NOT EXISTS`**, which
+  SQLite does not have. Add to `ADDED_COLUMNS`, not to the SQL.
+- **`_upsert()`** picks the dialect's `insert`; both offer `on_conflict_*` with
+  the same arguments but neither accepts the other's construct.
+- **Three PRAGMAs on every connection** (`_configure_sqlite_connection`):
+  `foreign_keys` (off by default, and `ON DELETE SET NULL` is silently ignored
+  without it), `journal_mode=WAL` and `busy_timeout`.
+- **`_wait_for_database()` does not wait.** A file is openable now or never, so
+  it fails immediately with the path named instead of retrying for a minute.
+
+`TEST_DB=sqlite uv run pytest` points the whole suite at a temporary file —
+that, rather than `test_sqlite.py`, is what actually covers the backend;
+`test_sqlite.py` holds the cases that must run on a Postgres run too.
 
 ## Architecture
 

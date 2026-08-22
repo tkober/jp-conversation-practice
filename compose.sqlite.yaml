@@ -1,0 +1,48 @@
+# Local stack without a Postgres server: backend + nginx frontend on :8085,
+# with the database in a SQLite file on a named volume.
+#
+# For a machine that has no Postgres to point at. Everything the app does works
+# the same -- settings, scenarios and session history all live in that one file
+# (see backend/app/db.py for what differs underneath).
+#
+#   docker compose -f compose.sqlite.yaml up --build
+#
+# compose.yaml next to this one is the Postgres version, and the one the
+# deployment mirrors. There is no migration between the two: pick one.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      # Four slashes: an absolute path inside the container. The directory is
+      # created on startup, the file on first connect.
+      DB_URL: sqlite:////data/jp_conversation.db
+      # Supply your key here or set it in the app's Settings screen, which
+      # stores it in the database and takes precedence.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - jp-conversation-sqlite:/data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      # The image default points at the deployment's container name; locally
+      # the backend answers to its compose service name.
+      API_UPSTREAM: backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8085:80"
+    restart: unless-stopped
+
+volumes:
+  jp-conversation-sqlite:
