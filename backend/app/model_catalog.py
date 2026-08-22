@@ -132,15 +132,17 @@ SLOTS: tuple[ModelSlot, ...] = (
                 "Standard. Günstig, aber das schwächste Glied in der Kohärenz.",
             ),
             CuratedModel(
-                "gpt-realtime",
-                "gpt-realtime",
-                "Rund 3x teurer, dafür deutlich kohärenter — die erste Wahl, wenn "
-                "nicht die Formulierung, sondern das Denken des Tutors das Problem ist.",
+                "gpt-realtime-2.1",
+                "gpt-realtime-2.1",
+                "Aktuelle Vollversion. 3,2x teurer pro Audio-Token, dafür deutlich "
+                "kohärenter — die erste Wahl, wenn nicht die Formulierung, sondern "
+                "das Denken des Tutors das Problem ist.",
             ),
             CuratedModel(
-                "gpt-realtime-mini",
-                "gpt-realtime-mini",
-                "Gleiche Preise wie 2.1-mini.",
+                "gpt-realtime",
+                "gpt-realtime",
+                "Der unversionierte Alias derselben Klasse: gleiche Audio-Preise wie "
+                "2.1, aber mit Abschaltdatum. Für Neues 2.1 nehmen.",
             ),
         ),
         prefixes=("gpt-realtime",),

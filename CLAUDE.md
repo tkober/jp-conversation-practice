@@ -208,9 +208,14 @@ with meta-commentary about the exercise. Each of those rules corresponds to an
 observed failure, so removing one is likely to bring that failure back.
 
 `gpt-realtime-2.1-mini` is the default for cost reasons and is the weakest link
-in coherence. Switching `REALTIME_MODEL` to `gpt-realtime` is the first thing to
-try when the tutor's reasoning, not its wording, is the problem — it costs
-roughly 3x more per audio token.
+in coherence. Switching `REALTIME_MODEL` to `gpt-realtime-2.1` is the first
+thing to try when the tutor's reasoning, not its wording, is the problem — it
+costs exactly 3.2x more per audio token ($32/$64 against $10/$20 per 1M).
+
+Reach for the *versioned* id. `gpt-realtime` bills the same for audio and is
+what this file used to recommend, but it is an unversioned alias and OpenAI has
+it shutting down on 2027-01-20; the same goes for `gpt-realtime-mini` against
+`gpt-realtime-2.1-mini`. The versioned ids carry no shutdown date.
 
 ## Voice, speaking rate and turn taking
 

@@ -20,6 +20,8 @@ LIVE_PAYLOAD = {
     "data": [
         {"id": "gpt-realtime", "shutdown_date": "2027-01-20"},
         {"id": "gpt-realtime-2.1", "shutdown_date": None},
+        # Stands in for a model newer than MODEL_RATES, whatever ships next.
+        {"id": "gpt-realtime-3-preview", "shutdown_date": None},
         {"id": "gpt-realtime-2025-08-28", "shutdown_date": None},
         {"id": "gpt-realtime-whisper", "shutdown_date": None},
         {"id": "gpt-realtime-translate", "shutdown_date": None},
@@ -118,7 +120,7 @@ async def test_price_is_shown_only_where_cost_is_actually_tracked(live) -> None:
 
 
 async def test_a_realtime_model_without_rates_is_flagged(live) -> None:
-    option = find_option(await build(), "realtime_model", "gpt-realtime-2.1")
+    option = find_option(await build(), "realtime_model", "gpt-realtime-3-preview")
 
     assert option["rates_known"] is False
     assert option["price_hint"] is None
@@ -203,4 +205,4 @@ def test_model_id_validation(model_id: str, valid: bool) -> None:
 
 def test_price_hint_is_absent_for_models_without_rates() -> None:
     assert price_hint("gpt-realtime") is not None
-    assert price_hint("gpt-realtime-2.1") is None
+    assert price_hint("gpt-realtime-3-preview") is None
