@@ -174,6 +174,12 @@ export interface TranscriptTurn {
    * annotate. The backend derives it; joining the segments gives `text` back.
    */
   ruby?: RubySegment[] | null;
+  /**
+   * Set on an assistant turn that answers a わからない press, to the stage it
+   * was given at. Unlike `ruby` it is kept in exports — it records what
+   * happened, and a transcript full of unhelpful help is unreadable without it.
+   */
+  help_stage?: number | null;
 }
 
 /**

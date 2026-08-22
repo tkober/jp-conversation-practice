@@ -30,6 +30,10 @@ class TranscriptTurn(BaseModel):
     # Furigana, derived from ``text`` (see furigana.py) rather than stored:
     # None means "nothing to annotate here", and the UI shows the plain text.
     ruby: list[RubySegment] | None = None
+    # Set on an assistant turn that answers a わからない press, to the stage it
+    # was given at. Stored with the session, unlike the furigana: it records
+    # what happened rather than deriving from the text.
+    help_stage: int | None = None
 
 
 # --- Structured LLM output ---------------------------------------------------

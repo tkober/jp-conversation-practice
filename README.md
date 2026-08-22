@@ -144,7 +144,10 @@ one step — make the sentence smaller, then make it easier to *answer*, then
 assume nothing landed at all, and only as a last resort explain it in German
 before switching straight back. The tutor is never told that a button exists,
 only that you signalled you are stuck, so it helps in character instead of
-breaking into teacher mode. Saying something resets the escalation.
+breaking into teacher mode. Saying something resets the escalation — something
+with words in it, not the background noise the VAD also commits as a turn.
+Turns produced by a press are marked in the transcript and in the export, so a
+conversation where the help did not help can actually be read back.
 
 Two things make it help rather than repeat. The turn is required to be
 **smaller** than the one you did not understand — fewer words, one sentence,

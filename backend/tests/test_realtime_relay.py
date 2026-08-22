@@ -20,6 +20,7 @@ from app.api import practice
 from app.config import get_settings
 from app.pricing import MODEL_RATES
 from app.prompts import HELP_STAGES, MAX_HELP_STAGE
+from app.realtime import USER_TRANSCRIPT_EVENT
 from app.runtime_config import build_runtime_config
 
 
@@ -418,6 +419,67 @@ def test_pressing_again_escalates_and_speaking_resets_it(
         assert websocket.receive_json()["stage"] == 1
 
 
+def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """The VAD commits background noise as a turn; it transcribes to nothing.
+
+    Resetting on one of those left a learner who sat silent and pressed the
+    button over and over stuck on stage 1 -- and invisibly so, because an empty
+    turn never reaches the transcript.
+    """
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        assert websocket.receive_json()["stage"] == 1
+
+        upstream.send_event(
+            {"type": USER_TRANSCRIPT_EVENT, "transcript": "   "}
+        )
+        websocket.receive_json()  # the relayed raw event, and nothing else
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(5)
+        assert websocket.receive_json()["stage"] == 2
+
+
+def test_a_help_turn_is_marked_in_the_transcript(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """An export cannot otherwise tell help apart from an ordinary reply."""
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream)
+
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "何にしますか"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] is None
+        websocket.receive_json()  # the relayed raw event
+        upstream.send_event({"type": "response.done", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()  # app.help.stage
+
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "飲み物ですか"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] == 1
+
+        websocket.receive_json()  # the relayed raw event
+        upstream.send_event({"type": "response.done", "response": {}})
+        websocket.receive_json()  # the relayed raw event
+
+        # The marker stops with the response it belonged to.
+        upstream.send_event(
+            {"type": "response.output_audio_transcript.done", "transcript": "はい"}
+        )
+        assert websocket.receive_json()["turn"]["help_stage"] is None
+
+
 def test_the_last_stage_is_german_and_does_not_run_past_it(
     client: TestClient, upstream: FakeRealtimeServer
 ) -> None:
@@ -438,6 +500,9 @@ def test_the_last_stage_is_german_and_does_not_run_past_it(
         assert HELP_STAGES[-1] in last
         # The escalation ends in German -- that is the point of the last stage.
         assert "German" in HELP_STAGES[-1]
+        # And it has to say so loudly enough to beat the "speak ONLY Japanese"
+        # rule sitting above it in the same prompt, which it otherwise loses to.
+        assert "OVERRIDES" in HELP_STAGES[-1]
 
 
 def test_wakaranai_slows_the_tutor_down_and_puts_the_speed_back(
@@ -630,6 +695,8 @@ def test_transcripts_are_normalised_into_app_events(
             "timestamp": pytest.approx(0, abs=10),
             # Kana only, so there is no reading to put anywhere.
             "ruby": None,
+            # Nobody pressed わからない, so this is an ordinary turn.
+            "help_stage": None,
         }
 
         websocket.receive_json()  # the relayed raw event

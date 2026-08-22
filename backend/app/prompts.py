@@ -130,8 +130,11 @@ other words. Hand them one of the options to say instead.""",
 - say the sentence they could answer with, and invite them to repeat it,
 - ask for a single word,
 - drop this point entirely and ask something easier in the same setting.""",
-    """Last resort: German, one or two sentences -- what is blocking them, or
-simply what your Japanese sentence meant. Then straight back into Japanese in
+    """Last resort, and this one OVERRIDES the "speak ONLY Japanese" rule above:
+say one or two sentences in GERMAN. What is blocking them, or simply what your
+Japanese sentence meant. German is not optional at this point -- they have now
+asked for help four times and Japanese has not got through, so answering in
+Japanese again is a failure, not caution. Then straight back into Japanese in
 this same turn, with one easy question that keeps the role-play going. Do not
 stay in German, and do not turn this into a grammar lesson.""",
 )

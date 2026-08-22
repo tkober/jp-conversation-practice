@@ -105,6 +105,9 @@ class RealtimeSession:
         self._response_active = False
         self._help_pending = False
         self._help_speed_active = False
+        # Set while the response to a press is being generated, so the turn it
+        # produces can be told apart from an ordinary one afterwards.
+        self._help_turn_stage: int | None = None
 
     # --- helpers ---------------------------------------------------------
 
@@ -137,6 +140,10 @@ class RealtimeSession:
             text=text,
             timestamp=time.time() - self.started_at,
             ruby=annotate(text),
+            # Which わからない press this answers, if any. Without it an export
+            # cannot tell a help turn from an ordinary one -- which is exactly
+            # what you need to know when the help was not helpful.
+            help_stage=self._help_turn_stage if role == "assistant" else None,
         )
         self.transcript.append(turn)
         return turn
@@ -384,6 +391,7 @@ class RealtimeSession:
         self._help_pending = False
         await self._set_output_speed(upstream, self._help_speed())
         self._help_speed_active = True
+        self._help_turn_stage = self.help_stage
         await upstream.send(
             json.dumps(
                 {
@@ -439,13 +447,15 @@ class RealtimeSession:
                 self._response_active = True
             elif event_type == "response.done":
                 self._response_active = False
+                # The transcript for this response has already been through
+                # `_emit_turn`, so the marker has done its job.
+                self._help_turn_stage = None
                 await self._handle_response_done(event)
                 if self._help_pending:
                     await self._send_help_response(upstream)
                 elif self._help_speed_active:
                     await self._restore_speed(upstream)
             elif event_type == USER_TRANSCRIPT_EVENT:
-                await self._reset_help()
                 await self._emit_turn("user", event.get("transcript", ""))
             elif event_type in ASSISTANT_TRANSCRIPT_EVENTS:
                 await self._emit_turn("assistant", event.get("transcript", ""))
@@ -475,6 +485,12 @@ class RealtimeSession:
         turn = self._record_turn(role, text)
         if turn is None:
             return
+        if role == "user":
+            # Only a turn that carried words counts as getting past the spot.
+            # The VAD commits background noise as a turn too, and those
+            # transcribe to nothing -- resetting on one would silently undo the
+            # escalation while the learner sits there pressing the button.
+            await self._reset_help()
         await self.send_json({"type": "app.transcript.turn", "turn": turn.model_dump()})
 
     async def _handle_response_done(self, event: dict[str, Any]) -> None:
