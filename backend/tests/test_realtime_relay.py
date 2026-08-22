@@ -10,12 +10,14 @@ import asyncio
 import base64
 import json
 import threading
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from websockets.asyncio.server import serve
 
+from app import realtime
 from app.api import practice
 from app.config import get_settings
 from app.pricing import MODEL_RATES
@@ -128,15 +130,54 @@ def practice_app() -> Any:
     return app
 
 
-def start_session(websocket: Any, upstream: FakeRealtimeServer) -> dict[str, Any]:
+def start_session(
+    websocket: Any, upstream: FakeRealtimeServer, **extra: Any
+) -> dict[str, Any]:
     websocket.send_text(
         json.dumps(
-            {"type": "app.session.start", "scenario": "Kombini", "jlpt_level": "N4"}
+            {
+                "type": "app.session.start",
+                "scenario": "Kombini",
+                "jlpt_level": "N4",
+                **extra,
+            }
         )
     )
     upstream.wait_for_connection()
     upstream.wait_for_messages(1)
     return websocket.receive_json()
+
+
+# Stand-ins for `scenario_attachments` rows. The relay only ever reads the
+# four fields `to_context_item` maps, and the query itself is covered against a
+# real database in test_api_attachments; going through one here would mean
+# using the shared engine from TestClient's worker thread, which it cannot be.
+MATERIAL = {
+    7: SimpleNamespace(
+        id=7, kind="image", title="Speisekarte", description="唐揚げ (からあげ) – 600円"
+    ),
+    8: SimpleNamespace(
+        id=8, kind="image", title="Kartenausschnitt", description="A map of the station area."
+    ),
+}
+
+
+@pytest.fixture(autouse=True)
+def material(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Serve the fake material without touching a database."""
+
+    class _Session:
+        async def __aenter__(self) -> Any:
+            return self
+
+        async def __aexit__(self, *_: Any) -> bool:
+            return False
+
+    async def load(_session: Any, _scenario_id: int, ids: set[int] | None = None) -> list[Any]:
+        return [MATERIAL[key] for key in sorted(ids or ()) if key in MATERIAL]
+
+    monkeypatch.setattr(realtime, "get_sessionmaker", lambda: _Session)
+    monkeypatch.setattr(realtime, "load_scenario_attachments", load)
 
 
 def responses(upstream: FakeRealtimeServer) -> list[dict[str, Any]]:
@@ -751,3 +792,139 @@ def test_missing_api_key_is_reported_to_the_client(
     assert error["type"] == "app.error"
     assert error["fatal"] is True
     assert "OPENAI_API_KEY" in error["message"]
+
+
+def test_context_material_from_the_handshake_reaches_the_prompt(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        instructions = upstream.received[0]["session"]["instructions"]
+        assert "# Context material" in instructions
+        assert "唐揚げ (からあげ) – 600円" in instructions
+        # Echoed back so the session screen can show the learner the same thing
+        # the tutor was told about -- without that, deixis has nothing to point
+        # at.
+        assert [item["id"] for item in started["context_items"]] == [7]
+
+
+def test_material_ids_are_looked_up_not_taken_from_the_browser(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(
+            websocket,
+            upstream,
+            scenario_id=1,
+            context_ids=[7, 999, "not-an-id"],
+        )
+
+        instructions = upstream.received[0]["session"]["instructions"]
+        # The browser names which material, never what it says: an id with no
+        # row behind it contributes nothing, and a non-id is dropped.
+        assert "唐揚げ" in instructions
+        assert "not-an-id" not in instructions
+
+
+def test_material_without_a_scenario_id_is_ignored(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream, context_ids=[7])
+
+        # A free-text scenario owns no material, so there is nothing to look
+        # up -- and nothing to complain about either.
+        assert started["type"] == "app.session.started"
+        assert started["context_items"] == []
+        assert "# Context material" not in upstream.received[0]["session"]["instructions"]
+
+
+def test_material_that_cannot_be_found_is_reported(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        websocket.send_text(
+            json.dumps(
+                {
+                    "type": "app.session.start",
+                    "scenario": "Kombini",
+                    "scenario_id": 1,
+                    "context_ids": [999],
+                }
+            )
+        )
+        upstream.wait_for_connection()
+        upstream.wait_for_messages(1)
+
+        # Ticking a menu on the setup screen and then not having it is worth a
+        # line; the session still starts without it.
+        error = websocket.receive_json()
+        assert error["type"] == "app.error"
+        assert error["fatal"] is False
+        assert websocket.receive_json()["type"] == "app.session.started"
+
+
+def test_handing_material_over_mid_session_rebuilds_the_instructions(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(
+            json.dumps({"type": "app.session.context", "attachment_id": 8})
+        )
+        upstream.wait_for_messages(2)
+
+        update = upstream.received[1]
+        assert update["type"] == "session.update"
+        # Only the instructions travel this path, and they are rebuilt here
+        # from the trusted frame rather than sent by the browser.
+        assert set(update["session"]) == {"type", "instructions"}
+        instructions = update["session"]["instructions"]
+        assert "A map of the station area." in instructions
+        # The material that was already there stays.
+        assert "唐揚げ" in instructions
+
+        added = websocket.receive_json()
+        assert added["type"] == "app.context.added"
+        assert added["item"]["id"] == 8
+        assert added["item"]["introduced_at"] is not None
+
+
+def test_handing_the_same_material_over_twice_changes_nothing(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(
+            json.dumps({"type": "app.session.context", "attachment_id": 7})
+        )
+        websocket.send_text(json.dumps({"type": "input_audio_buffer.commit"}))
+        upstream.wait_for_messages(2)
+
+        # No second session.update: the material is already in the prompt, and
+        # re-sending it would only claim it had just been handed over.
+        assert [message["type"] for message in upstream.received] == [
+            "session.update",
+            "input_audio_buffer.commit",
+        ]
+
+
+def test_a_wakaranai_turn_knows_about_the_material(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        # `response.instructions` replaces the session prompt, so the material
+        # has to be rebuilt into it -- pointing at the menu is one of the
+        # better ways out of a spot where words are not landing.
+        instructions = responses(upstream)[0]["response"]["instructions"]
+        assert "唐揚げ (からあげ) – 600円" in instructions
+        assert HELP_STAGES[0] in instructions

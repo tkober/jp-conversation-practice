@@ -8,7 +8,9 @@ directions. On the way through, the relay
   * normalises the various transcript events into a single ``transcript.turn``
     event and annotates it with furigana,
   * turns a わからない press into one scaffolded response, escalating with
-    every press until the learner speaks again, and
+    every press until the learner speaks again,
+  * folds the scenario's context material into the prompt, both at the start
+    and when the learner is handed something mid-conversation, and
   * forwards audio deltas as raw binary frames so the browser does not have to
     base64-decode on the hot path.
 """
@@ -29,8 +31,10 @@ from fastapi import WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketState
 from websockets.asyncio.client import connect as ws_connect
 
+from .context_material import to_context_item
+from .db import get_sessionmaker, load_scenario_attachments
 from .furigana import annotate
-from .models import TranscriptTurn
+from .models import ContextItem, TranscriptTurn
 from .pricing import CostTracker
 from .prompts import (
     DEFAULT_JLPT_LEVEL,
@@ -83,6 +87,21 @@ NOISY_EVENTS = frozenset(
 )
 
 
+def _as_int(value: Any) -> int | None:
+    """A row id from an untrusted message, or None if it is not one."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _as_ids(value: Any) -> set[int]:
+    """The ids in a handshake list, silently dropping anything that is not one."""
+    if not isinstance(value, list):
+        return set()
+    return {number for number in (_as_int(entry) for entry in value) if number is not None}
+
+
 class RealtimeSession:
     """One browser <-> backend <-> OpenAI conversation."""
 
@@ -93,7 +112,12 @@ class RealtimeSession:
         self.cost = CostTracker(self.model)
         self.transcript: list[TranscriptTurn] = []
         self.scenario = ""
+        self.scenario_id: int | None = None
         self.jlpt_level = DEFAULT_JLPT_LEVEL
+        # Context material the tutor currently knows about, in the order it
+        # arrived. Everything here came out of the database, never out of a
+        # browser message -- see `_add_context`.
+        self.context_items: list[ContextItem] = []
         self.voice = settings.realtime_voice
         self.speed = settings.realtime_speed
         self.eagerness = settings.realtime_vad_eagerness
@@ -175,7 +199,86 @@ class RealtimeSession:
         if is_valid_voice(requested_voice):
             self.voice = requested_voice
         self.speed = self._clamp_speed(message.get("speed"))
+
+        self.scenario_id = _as_int(message.get("scenario_id"))
+        requested = _as_ids(message.get("context_ids"))
+        self.context_items = await self._load_context(requested)
+        if requested and self.scenario_id is not None and not self.context_items:
+            # Ticking a menu on the setup screen and then not having it is
+            # confusing enough to be worth a line, whether the cause was the
+            # database or a row that is no longer there.
+            await self.send_error(
+                "The scenario's context material could not be loaded; the "
+                "conversation runs without it."
+            )
         return True
+
+    async def _load_context(self, ids: set[int]) -> list[ContextItem]:
+        """Fetch the chosen material for this session, by id.
+
+        The browser names *which* material, never what it says: the text that
+        reaches the prompt is read here, out of the row the id points at. That
+        is the same boundary `ALLOWED_CLIENT_EVENTS` draws -- the browser
+        chooses, the backend decides what the words are.
+
+        No ids means no database work at all, which is what keeps a session
+        without material (and the relay's own tests) off the database entirely.
+        """
+        if not ids or self.scenario_id is None:
+            return []
+        try:
+            async with get_sessionmaker()() as session:
+                rows = await load_scenario_attachments(session, self.scenario_id, ids)
+        except Exception:  # noqa: BLE001 - material must not sink the session
+            logger.exception(
+                "Could not load context material for scenario %s", self.scenario_id
+            )
+            # Reported by the caller, which knows whether this was the session
+            # starting up or the learner handing something over.
+            return []
+        return [to_context_item(row) for row in rows]
+
+    async def _add_context(self, upstream: Any, attachment_id: int | None) -> None:
+        """Hand the learner one more piece of material, mid-conversation.
+
+        The third and last place the browser moves ``session.update``, and it
+        obeys the same rule as the speed and the eagerness: the browser sends
+        an id, and the payload is rebuilt here from the trusted frame. Sending
+        the whole instructions rather than a conversation item is what makes
+        the material stick -- a ``response.instructions`` for a わからない turn
+        rebuilds the frame from scratch, and would otherwise be the one turn
+        that has forgotten the menu the learner is holding.
+        """
+        if attachment_id is None or self.scenario_id is None:
+            return
+        if any(item.id == attachment_id for item in self.context_items):
+            return
+
+        items = await self._load_context({attachment_id})
+        if not items:
+            await self.send_error("That context material could not be loaded.")
+            return
+
+        item = items[0]
+        item.introduced_at = round(time.time() - self.started_at, 1)
+        self.context_items.append(item)
+
+        await upstream.send(
+            json.dumps(
+                {
+                    "type": "session.update",
+                    "session": {
+                        "type": "realtime",
+                        "instructions": self._instructions(),
+                    },
+                }
+            )
+        )
+        await self.send_json({"type": "app.context.added", "item": item.model_dump()})
+
+    def _instructions(self) -> str:
+        """The tutor's system prompt as it stands right now."""
+        return build_realtime_instructions(self.scenario, self.jlpt_level, self.context_items)
 
     def _clamp_speed(self, value: Any) -> float:
         """Coerce a requested speed into the supported range."""
@@ -238,7 +341,7 @@ class RealtimeSession:
             "type": "session.update",
             "session": {
                 "type": "realtime",
-                "instructions": build_realtime_instructions(self.scenario, self.jlpt_level),
+                "instructions": self._instructions(),
                 "output_modalities": ["audio"],
                 "audio": {
                     "input": {
@@ -313,6 +416,13 @@ class RealtimeSession:
                     # help rate; restoring afterwards picks up the new value.
                     await self._set_output_speed(upstream, self.speed)
                 await self.send_json({"type": "app.speed.changed", "speed": self.speed})
+                continue
+
+            if event_type == "app.session.context":
+                # The learner has just been handed something. Same shape as the
+                # speed and eagerness translations: validated here, never
+                # forwarded as the browser sent it.
+                await self._add_context(upstream, _as_int(event.get("attachment_id")))
                 continue
 
             if event_type == "app.session.help":
@@ -400,7 +510,10 @@ class RealtimeSession:
                         # `instructions` replaces the session prompt for this
                         # response only, so the whole frame is rebuilt here.
                         "instructions": build_help_instructions(
-                            self.scenario, self.jlpt_level, self.help_stage
+                            self.scenario,
+                            self.jlpt_level,
+                            self.help_stage,
+                            self.context_items,
                         )
                     },
                 }
@@ -544,6 +657,7 @@ class RealtimeSession:
                         "vad_eagerness": self.eagerness,
                         "help_stages": MAX_HELP_STAGE,
                         "help_speed_factor": self.settings.realtime_help_speed_factor,
+                        "context_items": [item.model_dump() for item in self.context_items],
                         # Echoed back so a session export can show exactly what
                         # the tutor was told -- without it, debugging an odd
                         # conversation means guessing at the prompt.
@@ -593,6 +707,9 @@ class RealtimeSession:
                 "usage": self.cost.snapshot(),
                 "elapsed_seconds": round(time.time() - self.started_at, 1),
                 "transcript": [turn.model_dump() for turn in self.transcript],
+                # Including anything handed over mid-session, which the echoed
+                # instructions predate.
+                "context_items": [item.model_dump() for item in self.context_items],
             }
         )
         if self.client_ws.client_state is WebSocketState.CONNECTED:
