@@ -196,6 +196,18 @@
     accent-color: var(--accent);
     cursor: pointer;
   }
+
+  select {
+    margin-left: auto;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
 }
 
 .speed-note {

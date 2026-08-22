@@ -117,6 +117,7 @@ export class ApiService {
     model: string;
     voice: string;
     speed: number;
+    vad_eagerness: string;
     instructions: string;
     duration_seconds: number;
     cost_usd: number;

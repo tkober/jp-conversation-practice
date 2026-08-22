@@ -71,6 +71,9 @@
                 <span>{{ full.model }}</span>
                 <span>Stimme {{ full.voice }}</span>
                 <span>Tempo {{ full.speed }}×</span>
+                @if (full.vad_eagerness) {
+                  <span>Geduld {{ eagernessLabel(full.vad_eagerness) }}</span>
+                }
                 <button type="button" class="btn btn-ghost" (click)="downloadJson(full, $event)">
                   JSON herunterladen
                 </button>

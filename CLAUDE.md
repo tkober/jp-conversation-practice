@@ -171,8 +171,7 @@ else. When a conversation goes wrong, the frame is usually not the suspect.
 Around the prompt, the harness is deliberately thin: no tools are declared (the
 tutor can only talk), the level comes from the setup screen, and the only other
 levers are `REALTIME_MODEL`, the voice, the speaking rate and the semantic VAD's
-`eagerness: "low"`, which exists so a learner's thinking pause is not read as the
-end of their turn.
+eagerness (see below).
 
 ### Where the scenario text comes from
 
@@ -208,21 +207,30 @@ in coherence. Switching `REALTIME_MODEL` to `gpt-realtime` is the first thing to
 try when the tutor's reasoning, not its wording, is the problem — it costs
 roughly 3x more per audio token.
 
-## Voice and speaking rate
+## Voice, speaking rate and turn taking
 
 The voice is fixed by the Realtime API once a session produces audio, so it is
 chosen at setup time and travels in the `app.session.start` handshake. The
-speaking rate is not fixed, so the session screen can change it live.
+speaking rate and the VAD eagerness are not fixed, so the session screen changes
+both live.
 
-That live change is the one place the browser influences `session.update`, and
-it deliberately does *not* go through the allow-list: the client sends
-`app.session.speed`, and `RealtimeSession` translates it into a `session.update`
-carrying nothing but `audio.output.speed`. Keep it that way — allow-listing
-`session.update` itself would hand the browser the instructions field.
+Those two live changes are the only places the browser influences
+`session.update`, and they deliberately do *not* go through the allow-list: the
+client sends `app.session.speed` / `app.session.eagerness`, and
+`RealtimeSession` translates each into a `session.update` carrying nothing but
+`audio.output.speed` / `audio.input.turn_detection`. Keep it that way —
+allow-listing `session.update` itself would hand the browser the instructions
+field. Both values are validated server-side (`_clamp_speed`,
+`normalise_eagerness`, `is_valid_voice`) rather than trusted from the client;
+`voices.py` validates the voice id before it is used in a filesystem path for
+the preview cache.
 
-Both values are clamped server-side (`_clamp_speed`, `is_valid_voice`) rather
-than trusted from the client; `voices.py` validates the voice id before it is
-used in a filesystem path for the preview cache.
+**Eagerness decides how long a pause may last before the tutor answers**
+(`turn_detection.py`). The default is `low`, the most patient setting, because a
+learner assembling a sentence pauses where a native speaker would not; the value
+is exposed because it stops fitting as the learner improves. `_turn_detection()`
+always sends the whole block, never just the changed field: a partial
+`turn_detection` drops `interrupt_response` and silently breaks barge-in.
 
 Voice previews are rendered through the TTS endpoint on first request and cached
 in `backend/.voice-samples/` (gitignored). `VOICES` lists only voices available
@@ -230,8 +238,9 @@ to *both* the Realtime and TTS APIs, so a preview is representative.
 
 ## Session export
 
-`app.session.started` echoes the tutor's full instructions, voice and speed
-back to the browser so the review screen's JSON export can include them. That export is the intended
+`app.session.started` echoes the tutor's full instructions, voice, speed and
+VAD eagerness back to the browser so the review screen's JSON export can include
+them; the same values are stored on the session row for the history export. That export is the intended
 way to hand a bad conversation to another agent for analysis: the transcript
 shows the symptom, the prompt usually contains the cause.
 

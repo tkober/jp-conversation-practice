@@ -2,6 +2,36 @@
 
 export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2';
 
+/**
+ * How readily the tutor treats a pause as the end of your turn. The API's own
+ * wording is inverted from how it feels to a learner -- eagerness 'low' means
+ * the tutor is *patient* -- so the UI labels it as patience and maps here.
+ */
+export type VadEagerness = 'low' | 'medium' | 'high' | 'auto';
+
+export const EAGERNESS_OPTIONS: { id: VadEagerness; label: string; hint: string }[] = [
+  {
+    id: 'low',
+    label: 'Viel Denkzeit',
+    hint: 'Wartet lange, bevor geantwortet wird — gut, solange du Sätze noch zusammenbaust.',
+  },
+  {
+    id: 'medium',
+    label: 'Mittel',
+    hint: 'Etwas kürzere Pausen, bevor geantwortet wird.',
+  },
+  {
+    id: 'high',
+    label: 'Wenig — antwortet zügig',
+    hint: 'Antwortet schnell — natürlicher, unterbricht dich aber eher mitten im Satz.',
+  },
+  {
+    id: 'auto',
+    label: 'Automatisch',
+    hint: 'Das Modell entscheidet selbst (Voreinstellung der API).',
+  },
+];
+
 export type SessionPhase = 'setup' | 'connecting' | 'live' | 'analysing' | 'review';
 
 export interface Scenario {
@@ -38,6 +68,7 @@ export interface AppSettingsView {
   tts_model: string;
   realtime_voice: string;
   realtime_speed: number;
+  realtime_vad_eagerness: VadEagerness;
   ankiconnect_url: string;
   anki_deck_name: string;
   openai_api_key_set: boolean;
@@ -59,6 +90,7 @@ export type AppSettingsPatch = Partial<{
   tts_model: string;
   realtime_voice: string;
   realtime_speed: number;
+  realtime_vad_eagerness: VadEagerness;
   wanikani_api_token: string;
   ankiconnect_url: string;
   anki_deck_name: string;
@@ -80,6 +112,7 @@ export interface SessionSummary {
 export interface SessionDetail extends SessionSummary {
   scenario_prompt: string;
   speed: number;
+  vad_eagerness: string;
   instructions: string;
   usage: UsageSnapshot;
   transcript: TranscriptTurn[];
@@ -165,6 +198,7 @@ export interface SessionInfo {
   jlpt_level: string;
   voice: string;
   speed: number;
+  vad_eagerness: VadEagerness;
   /** The system prompt the tutor actually ran with. */
   instructions: string;
 }
@@ -177,6 +211,7 @@ export interface SessionExport {
   model: string;
   voice: string;
   speed: number;
+  vad_eagerness: string;
   system_instructions: string;
   duration_seconds: number;
   usage: UsageSnapshot;

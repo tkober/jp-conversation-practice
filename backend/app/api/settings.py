@@ -10,6 +10,7 @@ from ..config import get_settings
 from ..db import SETTINGS_ROW_ID, AppSettings, ensure_settings_row, load_settings
 from ..models import SettingsUpdate, SettingsView
 from ..runtime_config import RuntimeConfig, build_runtime_config
+from ..turn_detection import is_valid_eagerness
 from ..voices import is_valid_voice
 from .deps import db_session
 
@@ -25,6 +26,7 @@ PATCHABLE = (
     "tts_model",
     "realtime_voice",
     "realtime_speed",
+    "realtime_vad_eagerness",
     "wanikani_api_token",
     "ankiconnect_url",
     "anki_deck_name",
@@ -49,6 +51,7 @@ def to_view(config: RuntimeConfig, row: AppSettings | None) -> SettingsView:
         tts_model=config.tts_model,
         realtime_voice=config.realtime_voice,
         realtime_speed=config.realtime_speed,
+        realtime_vad_eagerness=config.realtime_vad_eagerness,
         ankiconnect_url=config.ankiconnect_url,
         anki_deck_name=config.anki_deck_name,
         openai_api_key_set=bool(config.openai_api_key),
@@ -91,6 +94,12 @@ async def write_settings(
         if field == "realtime_voice" and value is not None and not is_valid_voice(str(value)):
             # Silently dropping is friendlier than a 422 here: the picker only
             # ever sends known ids, so this guards a hand-crafted request.
+            continue
+        if (
+            field == "realtime_vad_eagerness"
+            and value is not None
+            and not is_valid_eagerness(str(value))
+        ):
             continue
         values[field] = value
 

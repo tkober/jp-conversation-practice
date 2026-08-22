@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 
+import { EAGERNESS_OPTIONS, VadEagerness } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
 
 @Component({
@@ -34,6 +35,8 @@ export class Conversation {
   readonly speed = this.session.speed;
   readonly speedMin = this.session.speedMin;
   readonly speedMax = this.session.speedMax;
+  readonly eagerness = this.session.eagerness;
+  readonly eagernessOptions = EAGERNESS_OPTIONS;
   readonly sessionInfo = this.session.sessionInfo;
 
   readonly showTokenDetails = signal(false);
@@ -96,6 +99,10 @@ export class Conversation {
 
   onSpeedChange(value: string): void {
     this.session.setSpeed(Number(value));
+  }
+
+  onEagernessChange(value: string): void {
+    this.session.setEagerness(value as VadEagerness);
   }
 
   onFinish(): void {

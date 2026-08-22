@@ -116,6 +116,23 @@
           (ngModelChange)="set('realtime_speed', +$event)"
         />
       </label>
+
+      <label class="field">
+        <span class="field-label">Geduld beim Zuhören</span>
+        <select
+          [ngModel]="value('realtime_vad_eagerness')"
+          (ngModelChange)="set('realtime_vad_eagerness', $event)"
+        >
+          @for (option of eagernessOptions; track option.id) {
+            <option [value]="option.id">{{ option.label }} — {{ option.hint }}</option>
+          }
+        </select>
+        <span class="field-hint">
+          Wie lange die Lehrkraft eine Pause abwartet, bevor sie antwortet.
+          Während einer Session lässt sich das jederzeit umstellen — hier steht
+          nur, womit jede Session startet.
+        </span>
+      </label>
     </section>
 
     <section class="card">

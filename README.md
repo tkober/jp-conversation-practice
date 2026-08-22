@@ -112,9 +112,12 @@ backend as raw PCM16 binary frames; the backend base64-encodes them into
 frames and scheduled gap-free in the browser, so the browser never base64-decodes
 on the hot path.
 
-Turn taking uses the Realtime API's `semantic_vad` with `eagerness: "low"` —
-learners need thinking time, and being cut off mid-sentence is the fastest way to
-kill a practice session.
+Turn taking uses the Realtime API's `semantic_vad`. The default eagerness is
+`low` — learners need thinking time, and being cut off mid-sentence is the
+fastest way to kill a practice session — but the right value changes as you
+improve, so it is a setting (`REALTIME_VAD_EAGERNESS`, overridable in Settings)
+and the session screen can change it live, next to the tempo slider. Waiting for
+a tutor that already knows you have finished is its own kind of annoying.
 
 **Scenario design.** A scenario preset describes *who you are and where you
 are*, never a sequence of things to ask. The first version of the convenience
@@ -264,6 +267,7 @@ are environment-only.
 | `REALTIME_VOICE` | `marin` | Default voice. |
 | `REALTIME_SPEED` | `1.0` | Default speaking rate. |
 | `REALTIME_SPEED_MIN` / `_MAX` | `0.6` / `1.4` | Slider bounds. |
+| `REALTIME_VAD_EAGERNESS` | `low` | How soon a pause ends your turn: `low`/`medium`/`high`/`auto`. |
 | `TTS_MODEL` | `gpt-4o-mini-tts` | Renders the voice previews. |
 | `TRANSCRIPTION_MODEL` | `gpt-4o-mini-transcribe` | Input transcription. |
 | `REALTIME_BETA_HEADER` | `false` | Set `true` for pre-GA realtime models. |

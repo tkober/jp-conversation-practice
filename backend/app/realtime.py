@@ -31,6 +31,7 @@ from .models import TranscriptTurn
 from .pricing import CostTracker
 from .prompts import DEFAULT_JLPT_LEVEL, JLPT_GUIDANCE, build_realtime_instructions
 from .runtime_config import RuntimeConfig
+from .turn_detection import normalise_eagerness
 from .voices import is_valid_voice
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,7 @@ class RealtimeSession:
         self.jlpt_level = DEFAULT_JLPT_LEVEL
         self.voice = settings.realtime_voice
         self.speed = settings.realtime_speed
+        self.eagerness = settings.realtime_vad_eagerness
         self.started_at = time.time()
         self._dropped_event_types: set[str] = set()
 
@@ -159,6 +161,21 @@ class RealtimeSession:
             min(self.settings.realtime_speed_max, speed),
         )
 
+    def _turn_detection(self) -> dict[str, Any]:
+        """How the API decides the learner has finished speaking.
+
+        Sent as a whole block, both at setup and on a live change: a
+        ``session.update`` carrying a partial ``turn_detection`` would drop the
+        flags it does not mention, and losing ``interrupt_response`` would
+        quietly break barge-in.
+        """
+        return {
+            "type": "semantic_vad",
+            "eagerness": self.eagerness,
+            "create_response": True,
+            "interrupt_response": True,
+        }
+
     def _session_update_payload(self) -> dict[str, Any]:
         """Build the ``session.update`` that configures the realtime session."""
         rate = self.settings.audio_sample_rate
@@ -175,13 +192,7 @@ class RealtimeSession:
                             "model": self.settings.transcription_model,
                             "language": "ja",
                         },
-                        "turn_detection": {
-                            "type": "semantic_vad",
-                            # Learners need thinking time -- do not cut them off.
-                            "eagerness": "low",
-                            "create_response": True,
-                            "interrupt_response": True,
-                        },
+                        "turn_detection": self._turn_detection(),
                     },
                     "output": {
                         "format": {"type": "audio/pcm", "rate": rate},
@@ -254,6 +265,28 @@ class RealtimeSession:
                     )
                 )
                 await self.send_json({"type": "app.speed.changed", "speed": self.speed})
+                continue
+
+            if event_type == "app.session.eagerness":
+                # Same deal as the speed: a narrow, validated translation into
+                # `session.update`, never the raw event from the browser.
+                self.eagerness = normalise_eagerness(
+                    event.get("eagerness"), self.settings.realtime_vad_eagerness
+                )
+                await upstream.send(
+                    json.dumps(
+                        {
+                            "type": "session.update",
+                            "session": {
+                                "type": "realtime",
+                                "audio": {"input": {"turn_detection": self._turn_detection()}},
+                            },
+                        }
+                    )
+                )
+                await self.send_json(
+                    {"type": "app.eagerness.changed", "eagerness": self.eagerness}
+                )
                 continue
 
             if event_type not in ALLOWED_CLIENT_EVENTS:
@@ -361,6 +394,7 @@ class RealtimeSession:
                         "sample_rate": self.settings.audio_sample_rate,
                         "voice": self.voice,
                         "speed": self.speed,
+                        "vad_eagerness": self.eagerness,
                         # Echoed back so a session export can show exactly what
                         # the tutor was told -- without it, debugging an odd
                         # conversation means guessing at the prompt.

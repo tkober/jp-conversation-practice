@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import Settings, get_settings
 from .db import AppSettings, load_settings
+from .turn_detection import normalise_eagerness
 
 
 @dataclass(frozen=True)
@@ -33,6 +34,7 @@ class RuntimeConfig:
     tts_model: str
     realtime_voice: str
     realtime_speed: float
+    realtime_vad_eagerness: str
     wanikani_api_token: str
     ankiconnect_url: str
     anki_deck_name: str
@@ -81,6 +83,10 @@ def build_runtime_config(row: AppSettings | None, env: Settings) -> RuntimeConfi
         tts_model=_pick(row and row.tts_model, env.tts_model),
         realtime_voice=_pick(row and row.realtime_voice, env.realtime_voice),
         realtime_speed=max(env.realtime_speed_min, min(env.realtime_speed_max, speed)),
+        realtime_vad_eagerness=normalise_eagerness(
+            row and row.realtime_vad_eagerness,
+            normalise_eagerness(env.realtime_vad_eagerness),
+        ),
         wanikani_api_token=_pick(row and row.wanikani_api_token, env.wanikani_api_token),
         ankiconnect_url=_pick(row and row.ankiconnect_url, env.ankiconnect_url),
         anki_deck_name=_pick(row and row.anki_deck_name, env.anki_deck_name),

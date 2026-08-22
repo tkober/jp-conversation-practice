@@ -120,6 +120,7 @@ class AppSettings(Base):
 
     realtime_voice: Mapped[str | None] = mapped_column(String, nullable=True)
     realtime_speed: Mapped[float | None] = mapped_column(Float, nullable=True)
+    realtime_vad_eagerness: Mapped[str | None] = mapped_column(String, nullable=True)
 
     wanikani_api_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     ankiconnect_url: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -182,6 +183,7 @@ class Session(Base):
     model: Mapped[str] = mapped_column(String, nullable=False, server_default="")
     voice: Mapped[str] = mapped_column(String, nullable=False, server_default="")
     speed: Mapped[float] = mapped_column(Float, nullable=False, server_default="1")
+    vad_eagerness: Mapped[str] = mapped_column(String, nullable=False, server_default="")
     instructions: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
 
     started_at: Mapped[datetime] = mapped_column(
@@ -307,8 +309,15 @@ async def migrate_schema(conn: AsyncConnection) -> None:
     Keep the statements idempotent and append-only — an existing database
     carries real session history.
     """
-    # No migrations yet; the hook exists so the first one has an obvious home.
-    return None
+    await conn.execute(
+        text("ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS realtime_vad_eagerness VARCHAR")
+    )
+    await conn.execute(
+        text(
+            "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "
+            "vad_eagerness VARCHAR NOT NULL DEFAULT ''"
+        )
+    )
 
 
 async def ensure_settings_row(session: AsyncSession) -> None:

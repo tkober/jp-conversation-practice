@@ -2,7 +2,12 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { ApiService } from '../core/api.service';
-import { SessionDetail, SessionStats, SessionSummary } from '../core/models';
+import {
+  EAGERNESS_OPTIONS,
+  SessionDetail,
+  SessionStats,
+  SessionSummary,
+} from '../core/models';
 
 @Component({
   selector: 'app-history',
@@ -97,6 +102,11 @@ export class History {
     link.download = `jp-session-${detail.id}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** The stored eagerness is the API's wording; the UI shows the German label. */
+  eagernessLabel(eagerness: string): string {
+    return EAGERNESS_OPTIONS.find((option) => option.id === eagerness)?.label ?? eagerness;
   }
 
   duration(seconds: number): string {
