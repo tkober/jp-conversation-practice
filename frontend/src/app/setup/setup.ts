@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../core/api.service';
+import { microphoneBlockedReason } from '../core/audio-recorder';
 import { RealtimeSessionService } from '../core/realtime-session.service';
 import { HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
@@ -40,6 +41,10 @@ export class Setup {
   readonly scenarios = signal<Scenario[]>([]);
   readonly health = signal<HealthResponse | null>(null);
   readonly backendUnreachable = signal(false);
+  /** Set when the browsing context has no microphone to offer at all. */
+  readonly microphoneBlocked = signal(microphoneBlockedReason());
+  /** Why the previous attempt to go live failed, if one did. */
+  readonly startError = this.session.errorMessage;
 
   readonly voices = signal<VoiceOption[]>([]);
   readonly selectedVoice = signal('');
@@ -70,7 +75,10 @@ export class Setup {
   readonly usingCustomText = computed(() => this.customScenario().trim().length > 0);
 
   readonly canStart = computed(
-    () => this.effectiveScenario().length > 0 && this.health()?.openai_configured === true,
+    () =>
+      this.effectiveScenario().length > 0 &&
+      this.health()?.openai_configured === true &&
+      this.microphoneBlocked() === null,
   );
 
   constructor() {
