@@ -1,4 +1,4 @@
-// Context material belonging to one scenario.
+// The material library and what this run takes along.
 //
 // The form styles are repeated here rather than inherited: `.field` and the
 // input rules live in the scenario editor's own stylesheet, and component
@@ -49,11 +49,6 @@ textarea {
   gap: 12px;
 }
 
-.material h2 {
-  margin: 0;
-  font-size: 15px;
-}
-
 .material-intro,
 .material-empty,
 .material-missing {
@@ -81,9 +76,50 @@ textarea {
 
   .material-thumb,
   .material-icon {
-    width: 72px;
-    height: 72px;
-    font-size: 22px;
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+  }
+}
+
+.material-item.picked {
+  border-color: var(--accent);
+}
+
+.material-pick input {
+  margin-top: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.material-warning {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--warning);
+}
+
+.material-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// A star rather than a checkbox: it is not part of this run, it is a note to
+// the app about what to tick next time.
+.pin {
+  padding: 4px 8px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-faint);
+  background: none;
+  border: 1px solid transparent;
+
+  &.on {
+    color: var(--warning);
+  }
+
+  &:hover {
+    color: var(--warning);
   }
 }
 
@@ -100,7 +136,6 @@ textarea {
 }
 
 .material-actions,
-.material-edit-actions,
 .material-add,
 .material-text-form {
   display: flex;

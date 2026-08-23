@@ -173,11 +173,11 @@ def material(monkeypatch: pytest.MonkeyPatch) -> None:
         async def __aexit__(self, *_: Any) -> bool:
             return False
 
-    async def load(_session: Any, _scenario_id: int, ids: set[int] | None = None) -> list[Any]:
+    async def load(_session: Any, ids: set[int] | None = None) -> list[Any]:
         return [MATERIAL[key] for key in sorted(ids or ()) if key in MATERIAL]
 
     monkeypatch.setattr(realtime, "get_sessionmaker", lambda: _Session)
-    monkeypatch.setattr(realtime, "load_scenario_attachments", load)
+    monkeypatch.setattr(realtime, "load_attachments", load)
 
 
 def next_of(websocket: Any, event_type: str, limit: int = 12) -> dict[str, Any]:
@@ -843,17 +843,16 @@ def test_material_ids_are_looked_up_not_taken_from_the_browser(
         assert "not-an-id" not in instructions
 
 
-def test_material_without_a_scenario_id_is_ignored(
+def test_material_needs_no_scenario_behind_it(
     client: TestClient, upstream: FakeRealtimeServer
 ) -> None:
     with client.websocket_connect("/ws/realtime") as websocket:
         started = start_session(websocket, upstream, context_ids=[7])
 
-        # A free-text scenario owns no material, so there is nothing to look
-        # up -- and nothing to complain about either.
-        assert started["type"] == "app.session.started"
-        assert started["context_items"] == []
-        assert "# Context material" not in upstream.received[0]["session"]["instructions"]
+        # The library belongs to nobody, so a free-text scenario can bring
+        # material along just as a saved one can.
+        assert [item["id"] for item in started["context_items"]] == [7]
+        assert "唐揚げ" in upstream.received[0]["session"]["instructions"]
 
 
 def test_material_that_cannot_be_found_is_reported(
@@ -862,12 +861,7 @@ def test_material_that_cannot_be_found_is_reported(
     with client.websocket_connect("/ws/realtime") as websocket:
         websocket.send_text(
             json.dumps(
-                {
-                    "type": "app.session.start",
-                    "scenario": "Kombini",
-                    "scenario_id": 1,
-                    "context_ids": [999],
-                }
+                {"type": "app.session.start", "scenario": "Kombini", "context_ids": [999]}
             )
         )
         upstream.wait_for_connection()

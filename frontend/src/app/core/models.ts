@@ -53,13 +53,16 @@ export interface ScenarioDraft {
 /**
  * One piece of context material belonging to a scenario.
  *
+ * The library belongs to nobody: the scenario is the role, and the role is the
+ * part that repeats, so what is on the shelf is picked per run. A scenario can
+ * pre-select entries, which is only about what gets ticked for you.
+ *
  * `description` is the English prose the tutor gets; `title` is the German
  * label the learner sees. The image bytes are not in here — they come from
- * `ApiService.attachmentFileUrl()` — so a scenario's material list stays small.
+ * `ApiService.attachmentFileUrl()` — so the list stays small.
  */
 export interface Attachment {
   id: number;
-  scenario_id: number;
   kind: 'image' | 'text';
   title: string;
   description: string;
@@ -68,6 +71,8 @@ export interface Attachment {
   byte_size: number;
   available_from_start: boolean;
   sort_order: number;
+  /** Whether the scenario currently picked ticks this one for you. */
+  default_for_scenario: boolean;
   /** Set only on an upload or re-evaluation whose description could not be produced. */
   analysis_error: string | null;
 }

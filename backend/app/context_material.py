@@ -32,7 +32,7 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, ValidationError
 
-from .db import ScenarioAttachment
+from .db import Attachment
 from .models import ContextItem
 from .runtime_config import RuntimeConfig
 
@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def to_context_item(
-    row: ScenarioAttachment, introduced_at: float | None = None
+    row: Attachment, introduced_at: float | None = None
 ) -> ContextItem:
     """The prompt-facing form of one stored attachment.
 

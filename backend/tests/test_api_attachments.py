@@ -62,9 +62,9 @@ async def scenario_id(api: AsyncClient) -> int:
     return int(body["id"])
 
 
-async def upload(api: AsyncClient, scenario: int, **form: object) -> dict:
+async def upload(api: AsyncClient, **form: object) -> dict:
     response = await api.post(
-        f"/api/scenarios/{scenario}/attachments/image",
+        "/api/attachments/image",
         files={"file": ("menu.png", PNG, "image/png")},
         data={"title": "", "hint": "", "available_from_start": "true", **form},
     )
@@ -75,9 +75,7 @@ async def upload(api: AsyncClient, scenario: int, **form: object) -> dict:
 
 
 async def test_an_uploaded_image_is_described_for_the_tutor(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
-
-    body = await upload(api, scenario)
+    body = await upload(api)
 
     assert body["_status"] == 201
     assert body["kind"] == "image"
@@ -93,7 +91,7 @@ async def test_the_evaluation_sees_the_scenario_it_belongs_to(
 ) -> None:
     scenario = await scenario_id(api)
 
-    await upload(api, scenario)
+    await upload(api, scenario_id=scenario)
 
     # A shelf photo reads differently in a konbini than in a supermarket, so
     # the role the material belongs to travels with it.
@@ -101,9 +99,7 @@ async def test_the_evaluation_sees_the_scenario_it_belongs_to(
 
 
 async def test_a_typed_title_survives_the_evaluation(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
-
-    body = await upload(api, scenario, title="Meine Karte")
+    body = await upload(api, title="Meine Karte")
 
     assert body["title"] == "Meine Karte"
 
@@ -112,29 +108,23 @@ async def test_a_failed_evaluation_keeps_the_upload(
     api: AsyncClient, stub_evaluation: type[_StubService]
 ) -> None:
     stub_evaluation.error = "the model has no vision support"
-    scenario = await scenario_id(api)
-
-    body = await upload(api, scenario)
+    body = await upload(api)
 
     # Losing the file would mean finding the photo again; the description is
     # an ordinary editable field, so an empty one is recoverable.
     assert body["_status"] == 201
     assert body["description"] == ""
     assert "vision" in body["analysis_error"]
-    assert len((await api.get(f"/api/scenarios/{scenario}/attachments")).json()) == 1
+    assert len((await api.get("/api/attachments")).json()) == 1
 
 
 async def test_unevaluated_text_falls_back_to_its_own_body(
     api: AsyncClient, stub_evaluation: type[_StubService]
 ) -> None:
     stub_evaluation.error = "nope"
-    scenario = await scenario_id(api)
 
     body = (
-        await api.post(
-            f"/api/scenarios/{scenario}/attachments/text",
-            json={"body": "唐揚げ 600円"},
-        )
+        await api.post("/api/attachments/text", json={"body": "唐揚げ 600円"})
     ).json()
 
     # Unlike an image, raw text is still readable by the tutor -- it just has
@@ -143,10 +133,8 @@ async def test_unevaluated_text_falls_back_to_its_own_body(
 
 
 async def test_a_non_image_upload_is_rejected(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
-
     response = await api.post(
-        f"/api/scenarios/{scenario}/attachments/image",
+        "/api/attachments/image",
         files={"file": ("menu.pdf", b"%PDF-1.4", "application/pdf")},
     )
 
@@ -160,11 +148,9 @@ async def test_an_oversized_image_is_rejected(
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "attachment_max_bytes", 10)
-    scenario = await scenario_id(api)
 
     response = await api.post(
-        f"/api/scenarios/{scenario}/attachments/image",
-        files={"file": ("menu.png", PNG, "image/png")},
+        "/api/attachments/image", files={"file": ("menu.png", PNG, "image/png")}
     )
 
     assert response.status_code == 413
@@ -174,8 +160,7 @@ async def test_an_oversized_image_is_rejected(
 
 
 async def test_the_image_itself_is_served_back(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
-    body = await upload(api, scenario)
+    body = await upload(api)
 
     response = await api.get(f"/api/attachments/{body['id']}/file")
 
@@ -185,19 +170,15 @@ async def test_the_image_itself_is_served_back(api: AsyncClient) -> None:
 
 
 async def test_a_text_attachment_has_no_file(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
     body = (
-        await api.post(
-            f"/api/scenarios/{scenario}/attachments/text", json={"body": "唐揚げ 600円"}
-        )
+        await api.post("/api/attachments/text", json={"body": "唐揚げ 600円"})
     ).json()
 
     assert (await api.get(f"/api/attachments/{body['id']}/file")).status_code == 404
 
 
 async def test_the_description_can_be_corrected_by_hand(api: AsyncClient) -> None:
-    scenario = await scenario_id(api)
-    body = await upload(api, scenario)
+    body = await upload(api)
 
     updated = (
         await api.put(
@@ -210,19 +191,67 @@ async def test_the_description_can_be_corrected_by_hand(api: AsyncClient) -> Non
     assert updated["available_from_start"] is False
 
 
-async def test_deleting_the_scenario_takes_its_material_with_it(api: AsyncClient) -> None:
+async def test_material_outlives_the_scenario_it_was_evaluated_for(
+    api: AsyncClient,
+) -> None:
     scenario = await scenario_id(api)
-    body = await upload(api, scenario)
+    body = await upload(api, scenario_id=scenario)
 
     await api.delete(f"/api/scenarios/{scenario}")
 
-    # Material has no meaning without the scenario it describes, unlike a
-    # session, which records something that happened.
-    assert (await api.get(f"/api/attachments/{body['id']}/file")).status_code == 404
+    # The library belongs to nobody: the same shelf photo is worth reusing in
+    # the supermarket scenario, and a deleted role must not take it away.
+    assert (await api.get(f"/api/attachments/{body['id']}/file")).status_code == 200
 
 
-async def test_material_for_an_unknown_scenario_is_a_404(api: AsyncClient) -> None:
-    response = await api.get("/api/scenarios/999999/attachments")
+async def test_a_scenario_pre_selects_material_without_owning_it(
+    api: AsyncClient,
+) -> None:
+    scenario = await scenario_id(api)
+    picked = await upload(api)
+    other = await upload(api)
+
+    await api.put(f"/api/attachments/{picked['id']}/default/{scenario}")
+    listed = (await api.get(f"/api/attachments?scenario_id={scenario}")).json()
+
+    # Both stay in the library; only one is ticked for you.
+    assert {row["id"]: row["default_for_scenario"] for row in listed} == {
+        picked["id"]: True,
+        other["id"]: False,
+    }
+
+    await api.delete(f"/api/attachments/{picked['id']}/default/{scenario}")
+    listed = (await api.get(f"/api/attachments?scenario_id={scenario}")).json()
+    assert all(row["default_for_scenario"] is False for row in listed)
+
+
+async def test_the_library_is_the_same_whichever_scenario_asks(
+    api: AsyncClient,
+) -> None:
+    scenario = await scenario_id(api)
+    await upload(api)
+
+    without = (await api.get("/api/attachments")).json()
+    with_scenario = (await api.get(f"/api/attachments?scenario_id={scenario}")).json()
+
+    assert [row["id"] for row in without] == [row["id"] for row in with_scenario]
+    assert all(row["default_for_scenario"] is False for row in without)
+
+
+async def test_deleting_material_forgets_the_pre_selection(api: AsyncClient) -> None:
+    scenario = await scenario_id(api)
+    body = await upload(api)
+    await api.put(f"/api/attachments/{body['id']}/default/{scenario}")
+
+    await api.delete(f"/api/attachments/{body['id']}")
+
+    assert (await api.get(f"/api/attachments?scenario_id={scenario}")).json() == []
+
+
+async def test_pre_selecting_for_an_unknown_scenario_is_a_404(api: AsyncClient) -> None:
+    body = await upload(api)
+
+    response = await api.put(f"/api/attachments/{body['id']}/default/999999")
 
     assert response.status_code == 404
 

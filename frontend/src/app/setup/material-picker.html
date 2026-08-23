@@ -1,0 +1,166 @@
+<section class="material">
+  <p class="material-intro">
+    Bilder oder Texte, die du mit ins Gespräch nimmst — eine Speisekarte, ein Regal,
+    ein Kartenausschnitt. Du siehst sie während der Session auf dem Bildschirm, und
+    die Lehrkraft bekommt eine Beschreibung davon. Erst dadurch funktionieren Sätze
+    wie <span class="jp">これをください</span>.
+  </p>
+
+  @if (error(); as message) {
+    <div class="banner banner-error"><span>{{ message }}</span></div>
+  }
+
+  <div class="material-list">
+    @for (item of material(); track item.id) {
+      <article class="material-item" [class.picked]="isSelected(item.id)">
+        <div class="material-head">
+          <label class="material-pick">
+            <input
+              type="checkbox"
+              [checked]="isSelected(item.id)"
+              (change)="toggleSelected(item.id)"
+            />
+          </label>
+
+          @if (item.kind === 'image') {
+            <img class="material-thumb" [src]="fileUrl(item.id)" [alt]="item.title" />
+          } @else {
+            <span class="material-icon">✎</span>
+          }
+
+          <div class="material-info">
+            <span class="material-title">{{ item.title || 'Ohne Titel' }}</span>
+
+            @if (isSelected(item.id)) {
+              <label class="material-toggle">
+                <input
+                  type="checkbox"
+                  [checked]="startsInPrompt(item.id)"
+                  (change)="toggleFromStart(item.id)"
+                />
+                Von Anfang an — sonst reichst du es im Gespräch nach
+              </label>
+            } @else if (!item.description.trim()) {
+              <span class="material-warning">
+                Noch nicht ausgewertet — die Lehrkraft erführe davon nichts.
+              </span>
+            }
+          </div>
+
+          <div class="material-actions">
+            @if (scenarioId() !== null) {
+              <button
+                type="button"
+                class="pin"
+                [class.on]="item.default_for_scenario"
+                [title]="
+                  item.default_for_scenario
+                    ? 'Wird bei diesem Szenario nicht mehr vorausgewählt'
+                    : 'Bei diesem Szenario künftig vorauswählen'
+                "
+                (click)="toggleDefault(item)"
+              >
+                ★
+              </button>
+            }
+            <button
+              type="button"
+              class="btn btn-ghost"
+              [title]="expandedId() === item.id ? 'Zuklappen' : 'Beschreibung ansehen'"
+              (click)="toggleExpanded(item)"
+            >
+              {{ expandedId() === item.id ? '▴' : '▾' }}
+            </button>
+          </div>
+        </div>
+
+        @if (expandedId() === item.id) {
+          <div class="material-detail">
+            <label class="field">
+              <span class="field-label">
+                Beschreibung für die Lehrkraft <em>(englisch — das liest das Modell)</em>
+              </span>
+              <textarea
+                rows="8"
+                spellcheck="false"
+                [ngModel]="editingDescription()"
+                (ngModelChange)="editingDescription.set($event)"
+              ></textarea>
+            </label>
+            <div class="material-actions">
+              <button type="button" class="btn btn-primary" (click)="saveDescription(item)">
+                Beschreibung speichern
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                [disabled]="busy()"
+                (click)="evaluate(item)"
+              >
+                Neu auswerten
+              </button>
+              <button type="button" class="btn btn-ghost danger" (click)="remove(item)">
+                Entfernen
+              </button>
+            </div>
+          </div>
+        }
+      </article>
+    } @empty {
+      <p class="material-empty">Noch kein Material.</p>
+    }
+  </div>
+
+  <label class="field">
+    <span class="field-label">Hinweis für die Auswertung <em>(optional)</em></span>
+    <input
+      type="text"
+      placeholder="z. B. „Nur die linke Spalte ist relevant“"
+      [ngModel]="hint()"
+      (ngModelChange)="hint.set($event)"
+    />
+  </label>
+
+  <div class="material-add">
+    <label class="btn btn-secondary" [class.disabled]="busy()">
+      Bild hochladen
+      <input
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        hidden
+        [disabled]="busy()"
+        (change)="onFilePicked($event)"
+      />
+    </label>
+    <button
+      type="button"
+      class="btn btn-secondary"
+      [disabled]="busy()"
+      (click)="showTextForm.set(!showTextForm())"
+    >
+      Text hinzufügen
+    </button>
+    @if (busy()) {
+      <span class="material-busy">wird ausgewertet …</span>
+    }
+  </div>
+
+  @if (showTextForm()) {
+    <div class="material-text-form">
+      <textarea
+        rows="5"
+        placeholder="Text einfügen — z. B. die Speisekarte abgetippt"
+        [ngModel]="textDraft()"
+        (ngModelChange)="textDraft.set($event)"
+      ></textarea>
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="busy() || !textDraft().trim()"
+        (click)="addText()"
+      >
+        Hinzufügen
+      </button>
+    </div>
+  }
+</section>

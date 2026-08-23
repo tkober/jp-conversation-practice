@@ -77,13 +77,14 @@ DB_URL=sqlite:///./data/jp_conversation.db
 
 ## Data
 
-The database holds four things, all of which survive an image update:
+The database holds five things, all of which survive an image update:
 
 | Table | Contents |
 |---|---|
 | `app_settings` | One row. API keys and model choices from the Settings screen. Every column is nullable — a NULL falls back to the environment variable, so the app boots from its `.env` alone. |
 | `scenarios` | Seeded on first start from `backend/scenarios/*.md`. Editing one in the UI marks it `is_customized`, which stops the next boot from seeding the file version back over it. |
-| `scenario_attachments` | Context material: the image bytes or text, plus the English description the tutor is given. Deleted with its scenario. |
+| `attachments` | The context material library: image bytes or text, plus the English description the tutor is given. Belongs to no scenario. |
+| `scenario_material` | Which library entries a scenario ticks for you by default. A convenience, not ownership. |
 | `sessions` | Finished conversations: transcript, exact cost, the analysis, the context material that was on the table, and the prompt the tutor actually ran with. |
 
 Scenarios ship as Markdown with YAML front matter so they can be reviewed and
@@ -257,24 +258,32 @@ overwrite it, and "Auf Original zurücksetzen" restores the Markdown version.
 ### 7. Context material
 
 A scenario says who the tutor is and where. What it cannot say is what is lying
-on the table — so a scenario can carry material: photos of a shelf or a menu, a
+on the table — so you can bring material along: photos of a shelf or a menu, a
 map excerpt, a piece of text. You see it on screen during the session and the
 tutor gets a description of it, which is what makes これをください、その赤いの
 and この先 mean something instead of being vocabulary you never get to use.
+
+**Material is picked per run, on the setup screen.** It lives in a library that
+belongs to no scenario, because the scenario is the role and the role is the
+part that repeats: what changes between two runs of the same konbini is what is
+on the shelf. The same photo works in the supermarket scenario too. A scenario
+can star entries it should pre-select, which only decides what is ticked when
+you pick it.
 
 Uploading and evaluating are one step. The image goes to the model configured
 as `SCENARIO_ASSISTANT_MODEL` (it has to be one that reads images), which
 writes an English description of what is *on* the material — items, prices,
 readings, what is next to what — for the tutor's prompt, plus a German label
-for you. The realtime model never sees the image itself: the default
-`gpt-realtime-2.1-mini` is the weakest link in coherence already, a description
-written once is the same in every session, and it is a plain text field you can
-correct when a price comes out wrong. If the evaluation fails, the upload is
-kept and you can retry or write the description yourself.
+for you. The scenario currently selected frames that description without
+filing the material under it. The realtime model never sees the image itself:
+the default `gpt-realtime-2.1-mini` is the weakest link in coherence already,
+a description written once is the same in every session, and it is a plain text
+field you can correct when a price comes out wrong. If the evaluation fails,
+the upload is kept and you can retry or write the description yourself.
 
 Each piece is either there from the first turn or handed over during the
-conversation — the waiter bringing the menu — which you choose per scenario and
-can override for a single run on the setup screen.
+conversation — the waiter bringing the menu — which you set per item and can
+override for a single run.
 
 The one thing the descriptions must not become is a running order. A menu *is*
 a list, and a list in the prompt gets worked through from the top in the same
@@ -417,6 +426,7 @@ transcript normalisation end to end.
 - Evaluating context material, like the analysis and the scenario assistant, is
   real spending that the cost counter does not report — it only counts the
   realtime session.
-- Context material belongs to a saved scenario, so the free-text scenario field
-  on the setup screen cannot carry any.
+- The material library has no separate management screen — it is edited where
+  it is picked, on the setup screen, which is fine for a handful of photos and
+  would not be for a hundred.
 - The WaniKani vocabulary list is cached in process for 15 minutes.

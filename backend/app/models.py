@@ -274,15 +274,14 @@ class ScenarioAssistantReply(BaseModel):
 
 
 class AttachmentView(BaseModel):
-    """One piece of scenario material, without its bytes.
+    """One piece of material from the library, without its bytes.
 
     The image itself is fetched separately from ``/api/attachments/{id}/file``
-    so that listing a scenario's material does not drag several megabytes of
-    base64 through every request that only needs the labels.
+    so that listing the library does not drag several megabytes of base64
+    through every request that only needs the labels.
     """
 
     id: int
-    scenario_id: int
     kind: Literal["image", "text"]
     title: str
     description: str
@@ -291,6 +290,13 @@ class AttachmentView(BaseModel):
     byte_size: int
     available_from_start: bool
     sort_order: int
+    default_for_scenario: bool = Field(
+        default=False,
+        description=(
+            "Whether the scenario named in the query ticks this item by "
+            "default. Always false when no scenario was named."
+        ),
+    )
     analysis_error: str | None = Field(
         default=None,
         description=(
@@ -318,6 +324,10 @@ class TextAttachmentCreate(BaseModel):
     title: str = Field(default="", max_length=120)
     hint: str = Field(default="", max_length=500)
     available_from_start: bool = True
+    # Only frames the evaluation -- "describe this for a waiter in an izakaya"
+    # reads a menu differently from "describe this". It does not link the
+    # material to the scenario; that is what the pre-selection is for.
+    scenario_id: int | None = None
 
 
 # --- Sessions ----------------------------------------------------------------

@@ -434,11 +434,26 @@ retried or simply written. An attachment with an empty description is left out
 of the prompt entirely — announcing a menu and then saying nothing about it is
 worse than not mentioning it.
 
-**Material belongs to a scenario**, because the scenario is the repeatable
-exercise and the evaluation is then paid once instead of per session. Deleting
-the scenario cascades. The free-text scenario on the setup screen owns no row,
-so it has no material — the setup screen simply hides the section. The bytes
-live in the database (`scenario_attachments.data`) rather than on disk, which
+**Material belongs to nobody.** The scenario is the role, and the role is the
+part that repeats: what varies between two runs of the same konbini is what is
+on the shelf. So `attachments` is a library, picked per run on the setup
+screen, and the same shelf photo is reusable in the supermarket scenario. A
+scenario may *pre-select* entries (`scenario_material`), which decides only
+what gets ticked when you pick it — never what is available. Both sides of
+that link CASCADE, because the row records a preference about two things and
+means nothing once either is gone.
+
+An early version had material owned by the scenario and managed in the
+scenario editor. That reads plausibly and is wrong: it makes the material the
+fixed part and the role the variable one, which is backwards, and it means
+practising the same setting with different goods is impossible without editing
+the scenario. Do not put it back.
+
+The scenario currently picked still travels with an upload and a
+re-evaluation, but only to *frame* the description — a shelf reads differently
+in a konbini than in a supermarket. It does not file the material anywhere.
+
+The bytes live in the database (`attachments.data`) rather than on disk, which
 keeps the SQLite deployment a single file and the Postgres one inside the
 existing backup; the cap is `ATTACHMENT_MAX_BYTES`, and **nginx's
 `client_max_body_size` has to be at least as large** or the proxy rejects a
@@ -447,9 +462,9 @@ can be shown.
 
 **"At the start or during the exercise"** is `available_from_start`: material
 either sits in the prompt from the first turn or waits until the learner hands
-it over from the session screen. The setup screen seeds the choice from the
-flag and lets it be overridden per run — the same menu can be on the table
-today and brought over by the waiter tomorrow. A handover sends
+it over from the session screen. It is the item's own default — a shelf is
+simply there, a menu gets brought to the table — and the setup screen
+overrides it per run. A handover sends
 `app.session.context` with nothing but an id; the relay reads the row and
 rebuilds the *whole* instructions into a `session.update`. Sending a
 conversation item instead would be lighter and wrong: `response.instructions`
@@ -458,6 +473,13 @@ the learner is most stuck would be the one that had forgotten the menu they
 are holding. It also does not ask for a reply — the learner clicked because
 they want to look at the thing and then speak, and a tutor turn fired at that
 moment talks over them.
+
+**The library is managed where it is used**, on the setup screen
+(`MaterialPicker`): ticking what comes along, the from-the-start toggle, the
+star that pre-selects for the current scenario, and behind the expander the
+description, a re-evaluation and delete. One screen, because picking material
+and fixing a misread price are the same moment — you notice the wrong price
+while deciding whether to bring it.
 
 The material travels with the session record (`sessions.context_items`) and
 with the analysis request, both for the same reason: これを二つください is

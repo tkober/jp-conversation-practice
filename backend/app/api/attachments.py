@@ -1,10 +1,15 @@
-"""Context material: upload, evaluate, edit and serve one scenario's material.
+"""The context material library: upload, evaluate, edit, and serve.
+
+Material belongs to nobody. The scenario is the role, and the role is the part
+that repeats -- what varies between two runs of the same konbini is what is on
+the shelf, so the material is picked per run rather than owned by the setting.
+A scenario can still *pre-select* library entries (`ScenarioMaterial`), which
+is a convenience about what gets ticked for you and nothing more.
 
 Uploading and evaluating are one request on purpose. The material is only
 useful to the tutor once it has been described (see
 :mod:`app.context_material`), and an attachment sitting there undescribed is a
-scenario that quietly practises without it. Doing both here means the user
-picks a file and gets something usable, or gets told why not.
+session that quietly practises without it.
 
 What is *not* one request is failing: an evaluation that goes wrong keeps the
 attachment and reports ``analysis_error``, because losing the upload would mean
@@ -27,20 +32,30 @@ from ..context_material import (
     ContextMaterialService,
     MaterialAnalysis,
 )
-from ..db import Scenario, ScenarioAttachment, load_scenario_attachments
+from ..db import (
+    Attachment,
+    Scenario,
+    ScenarioMaterial,
+    load_attachments,
+    load_scenario_material_ids,
+)
 from ..models import AttachmentUpdate, AttachmentView, TextAttachmentCreate
 from ..runtime_config import RuntimeConfig
 from .deps import db_session, runtime_config
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["attachments"])
+router = APIRouter(prefix="/api/attachments", tags=["attachments"])
 
 
-def to_view(row: ScenarioAttachment, analysis_error: str | None = None) -> AttachmentView:
+def to_view(
+    row: Attachment,
+    *,
+    analysis_error: str | None = None,
+    default_for_scenario: bool = False,
+) -> AttachmentView:
     return AttachmentView(
         id=row.id,
-        scenario_id=row.scenario_id,
         kind=row.kind,  # type: ignore[arg-type]
         title=row.title,
         description=row.description,
@@ -49,36 +64,39 @@ def to_view(row: ScenarioAttachment, analysis_error: str | None = None) -> Attac
         byte_size=len(row.data or b""),
         available_from_start=row.available_from_start,
         sort_order=row.sort_order,
+        default_for_scenario=default_for_scenario,
         analysis_error=analysis_error,
     )
 
 
-async def scenario_or_404(session: AsyncSession, scenario_id: int) -> Scenario:
-    row = await session.get(Scenario, scenario_id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Scenario not found.")
-    return row
-
-
-async def attachment_or_404(session: AsyncSession, attachment_id: int) -> ScenarioAttachment:
-    row = await session.get(ScenarioAttachment, attachment_id)
+async def attachment_or_404(session: AsyncSession, attachment_id: int) -> Attachment:
+    row = await session.get(Attachment, attachment_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Attachment not found.")
     return row
 
 
-async def _next_sort_order(session: AsyncSession, scenario_id: int) -> int:
-    highest = await session.scalar(
-        select(func.max(ScenarioAttachment.sort_order)).where(
-            ScenarioAttachment.scenario_id == scenario_id
-        )
-    )
+async def _scenario_prompt(session: AsyncSession, scenario_id: int | None) -> str:
+    """The role the evaluation should read this material for, if one is named.
+
+    A shelf photo reads differently in a konbini than in a supermarket, so the
+    scenario currently picked on the setup screen frames the description --
+    without the material becoming a property of it.
+    """
+    if scenario_id is None:
+        return ""
+    row = await session.get(Scenario, scenario_id)
+    return row.prompt if row is not None else ""
+
+
+async def _next_sort_order(session: AsyncSession) -> int:
+    highest = await session.scalar(select(func.max(Attachment.sort_order)))
     return (highest or 0) + 1
 
 
 async def _evaluate(
     config: RuntimeConfig,
-    scenario: Scenario,
+    scenario_prompt: str,
     *,
     hint: str,
     media_type: str = "",
@@ -92,41 +110,50 @@ async def _evaluate(
             result = await service.describe_image(
                 media_type=media_type,
                 data=data,
-                scenario_prompt=scenario.prompt,
+                scenario_prompt=scenario_prompt,
                 hint=hint,
             )
         else:
             result = await service.describe_text(
-                body=body, scenario_prompt=scenario.prompt, hint=hint
+                body=body, scenario_prompt=scenario_prompt, hint=hint
             )
     except ContextMaterialError as exc:
-        logger.warning("Could not evaluate material for scenario %s: %s", scenario.id, exc)
+        logger.warning("Could not evaluate context material: %s", exc)
         return None, str(exc)
     return result, None
 
 
-# --- nested under the scenario that owns the material ----------------------
+# --- the library -----------------------------------------------------------
 
 
-@router.get("/api/scenarios/{scenario_id}/attachments", response_model=list[AttachmentView])
+@router.get("", response_model=list[AttachmentView])
 async def list_attachments(
-    scenario_id: int, session: AsyncSession = Depends(db_session)
+    scenario_id: int | None = None, session: AsyncSession = Depends(db_session)
 ) -> list[AttachmentView]:
-    await scenario_or_404(session, scenario_id)
-    return [to_view(row) for row in await load_scenario_attachments(session, scenario_id)]
+    """Everything in the library.
+
+    ``scenario_id`` does not filter: the whole library stays available for
+    every scenario. It only marks which entries that scenario pre-selects, so
+    the setup screen can tick them without a second request.
+    """
+    defaults = (
+        await load_scenario_material_ids(session, scenario_id)
+        if scenario_id is not None
+        else set()
+    )
+    return [
+        to_view(row, default_for_scenario=row.id in defaults)
+        for row in await load_attachments(session)
+    ]
 
 
-@router.post(
-    "/api/scenarios/{scenario_id}/attachments/image",
-    response_model=AttachmentView,
-    status_code=201,
-)
+@router.post("/image", response_model=AttachmentView, status_code=201)
 async def upload_image(
-    scenario_id: int,
     file: UploadFile = File(...),
     title: str = Form(""),
     hint: str = Form(""),
     available_from_start: bool = Form(True),
+    scenario_id: int | None = Form(None),
     session: AsyncSession = Depends(db_session),
     config: RuntimeConfig = Depends(runtime_config),
 ) -> AttachmentView:
@@ -153,34 +180,31 @@ async def upload_image(
             ),
         )
 
-    scenario = await scenario_or_404(session, scenario_id)
     analysis, error = await _evaluate(
-        config, scenario, hint=hint, media_type=media_type, data=data
+        config,
+        await _scenario_prompt(session, scenario_id),
+        hint=hint,
+        media_type=media_type,
+        data=data,
     )
 
-    row = ScenarioAttachment(
-        scenario_id=scenario_id,
+    row = Attachment(
         kind="image",
         title=(title.strip() or (analysis.title if analysis else ""))[:120],
         description=analysis.description if analysis else "",
         media_type=media_type,
         data=data,
         available_from_start=available_from_start,
-        sort_order=await _next_sort_order(session, scenario_id),
+        sort_order=await _next_sort_order(session),
     )
     session.add(row)
     await session.commit()
     await session.refresh(row)
-    return to_view(row, error)
+    return to_view(row, analysis_error=error)
 
 
-@router.post(
-    "/api/scenarios/{scenario_id}/attachments/text",
-    response_model=AttachmentView,
-    status_code=201,
-)
+@router.post("/text", response_model=AttachmentView, status_code=201)
 async def add_text(
-    scenario_id: int,
     payload: TextAttachmentCreate,
     session: AsyncSession = Depends(db_session),
     config: RuntimeConfig = Depends(runtime_config),
@@ -201,11 +225,14 @@ async def add_text(
             ),
         )
 
-    scenario = await scenario_or_404(session, scenario_id)
-    analysis, error = await _evaluate(config, scenario, hint=payload.hint, body=body)
+    analysis, error = await _evaluate(
+        config,
+        await _scenario_prompt(session, payload.scenario_id),
+        hint=payload.hint,
+        body=body,
+    )
 
-    row = ScenarioAttachment(
-        scenario_id=scenario_id,
+    row = Attachment(
         kind="text",
         title=(payload.title.strip() or (analysis.title if analysis else ""))[:120],
         # Without an evaluation the raw text is still better than nothing: the
@@ -214,18 +241,18 @@ async def add_text(
         description=analysis.description if analysis else body,
         body=body,
         available_from_start=payload.available_from_start,
-        sort_order=await _next_sort_order(session, scenario_id),
+        sort_order=await _next_sort_order(session),
     )
     session.add(row)
     await session.commit()
     await session.refresh(row)
-    return to_view(row, error)
+    return to_view(row, analysis_error=error)
 
 
 # --- one attachment --------------------------------------------------------
 
 
-@router.get("/api/attachments/{attachment_id}/file")
+@router.get("/{attachment_id}/file")
 async def read_attachment_file(
     attachment_id: int, session: AsyncSession = Depends(db_session)
 ) -> Response:
@@ -242,7 +269,7 @@ async def read_attachment_file(
     )
 
 
-@router.put("/api/attachments/{attachment_id}", response_model=AttachmentView)
+@router.put("/{attachment_id}", response_model=AttachmentView)
 async def update_attachment(
     attachment_id: int,
     payload: AttachmentUpdate,
@@ -270,43 +297,42 @@ async def update_attachment(
         values["sort_order"] = int(provided["sort_order"])
 
     await session.execute(
-        update(ScenarioAttachment)
-        .where(ScenarioAttachment.id == row.id)
-        .values(**values)
+        update(Attachment).where(Attachment.id == row.id).values(**values)
     )
     await session.commit()
     return to_view(await attachment_or_404(session, attachment_id))
 
 
-@router.post("/api/attachments/{attachment_id}/evaluate", response_model=AttachmentView)
+@router.post("/{attachment_id}/evaluate", response_model=AttachmentView)
 async def evaluate_attachment(
     attachment_id: int,
+    scenario_id: int | None = None,
     session: AsyncSession = Depends(db_session),
     config: RuntimeConfig = Depends(runtime_config),
 ) -> AttachmentView:
     """Run the evaluation again, replacing the description.
 
-    Needed after an upload whose evaluation failed, and useful after editing
-    the scenario prompt -- the description is written for a particular role,
-    and a shelf photo reads differently in a konbini than in a supermarket.
+    Needed after an upload whose evaluation failed, and useful when the same
+    photo is about to be used in a different role -- a shelf reads differently
+    in a konbini than in a supermarket, so the scenario currently picked is
+    passed along to frame it.
     """
     row = await attachment_or_404(session, attachment_id)
-    scenario = await scenario_or_404(session, row.scenario_id)
 
     analysis, error = await _evaluate(
         config,
-        scenario,
+        await _scenario_prompt(session, scenario_id),
         hint="",
         media_type=row.media_type,
         data=row.data if row.kind == "image" else None,
         body=row.body,
     )
     if analysis is None:
-        return to_view(row, error)
+        return to_view(row, analysis_error=error)
 
     await session.execute(
-        update(ScenarioAttachment)
-        .where(ScenarioAttachment.id == row.id)
+        update(Attachment)
+        .where(Attachment.id == row.id)
         .values(
             description=analysis.description,
             title=row.title or analysis.title[:120],
@@ -317,12 +343,41 @@ async def evaluate_attachment(
     return to_view(await attachment_or_404(session, attachment_id))
 
 
-@router.delete("/api/attachments/{attachment_id}", status_code=204)
+@router.delete("/{attachment_id}", status_code=204)
 async def delete_attachment(
     attachment_id: int, session: AsyncSession = Depends(db_session)
 ) -> None:
     await attachment_or_404(session, attachment_id)
+    await session.execute(delete(Attachment).where(Attachment.id == attachment_id))
+    await session.commit()
+
+
+# --- what a scenario ticks for you -----------------------------------------
+
+
+@router.put("/{attachment_id}/default/{scenario_id}", status_code=204)
+async def add_default(
+    attachment_id: int, scenario_id: int, session: AsyncSession = Depends(db_session)
+) -> None:
+    """Pre-select this material whenever that scenario is picked."""
+    await attachment_or_404(session, attachment_id)
+    if await session.get(Scenario, scenario_id) is None:
+        raise HTTPException(status_code=404, detail="Scenario not found.")
+    if attachment_id not in await load_scenario_material_ids(session, scenario_id):
+        session.add(
+            ScenarioMaterial(scenario_id=scenario_id, attachment_id=attachment_id)
+        )
+        await session.commit()
+
+
+@router.delete("/{attachment_id}/default/{scenario_id}", status_code=204)
+async def remove_default(
+    attachment_id: int, scenario_id: int, session: AsyncSession = Depends(db_session)
+) -> None:
     await session.execute(
-        delete(ScenarioAttachment).where(ScenarioAttachment.id == attachment_id)
+        delete(ScenarioMaterial).where(
+            ScenarioMaterial.scenario_id == scenario_id,
+            ScenarioMaterial.attachment_id == attachment_id,
+        )
     )
     await session.commit()

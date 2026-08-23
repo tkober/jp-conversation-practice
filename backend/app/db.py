@@ -221,11 +221,16 @@ class Scenario(Base):
     )
 
 
-class ScenarioAttachment(Base):
-    """One piece of context material a scenario puts in front of the learner.
+class Attachment(Base):
+    """One piece of context material, belonging to nobody.
 
-    An image (a shelf, a menu, a map excerpt) or a piece of text. Two things
-    come out of it and they go to different places:
+    A library rather than a property of a scenario: the scenario is the role,
+    and the role is the part that repeats. What varies between two runs of the
+    same konbini is what is on the shelf, so the material has to be picked per
+    run — and the same shelf photo is worth reusing in the supermarket
+    scenario too.
+
+    Two things come out of it and they go to different places:
 
     * the bytes -- or ``body`` for a text item -- are shown to the *learner*
       during the session, which is what makes deictic reference possible at
@@ -237,23 +242,18 @@ class ScenarioAttachment(Base):
 
     Storing the bytes in the database rather than on disk keeps the SQLite
     deployment a single file and the Postgres one inside the existing backup;
-    the material is a handful of photos per scenario, not a media library.
+    the material is a handful of photos, not a media library.
 
-    ``available_from_start`` decides whether the item is in the prompt from the
-    first turn or held back until the learner introduces it mid-session -- the
-    difference between walking into a restaurant that has a menu on the wall
-    and being handed one.
+    ``available_from_start`` is the item's own default for whether it sits in
+    the prompt from the first turn or waits until the learner hands it over --
+    a shelf is simply there, a menu gets brought to the table. The setup screen
+    overrides it per run.
     """
 
-    __tablename__ = "scenario_attachments"
-    __table_args__ = (Index("idx_attachments_scenario", "scenario_id", "sort_order"),)
+    __tablename__ = "attachments"
+    __table_args__ = (Index("idx_attachments_sort", "sort_order", "id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # CASCADE, unlike sessions.scenario_id: material has no meaning without the
-    # scenario it describes, while a session records something that happened.
-    scenario_id: Mapped[int] = mapped_column(
-        ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False
-    )
     kind: Mapped[str] = mapped_column(String, nullable=False, server_default="image")
     title: Mapped[str] = mapped_column(String, nullable=False, server_default="")
     description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
@@ -270,6 +270,30 @@ class ScenarioAttachment(Base):
         UtcDateTime, nullable=False, server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
+        UtcDateTime, nullable=False, server_default=func.now()
+    )
+
+
+class ScenarioMaterial(Base):
+    """Material a scenario brings along by default.
+
+    A convenience, not ownership: it only decides what the setup screen ticks
+    for you when you pick that scenario. Everything in the library stays
+    available for every scenario, and the pre-tick is undone with one click.
+
+    Both sides CASCADE -- the row records a preference about two things, and
+    means nothing once either is gone.
+    """
+
+    __tablename__ = "scenario_material"
+
+    scenario_id: Mapped[int] = mapped_column(
+        ForeignKey("scenarios.id", ondelete="CASCADE"), primary_key=True
+    )
+    attachment_id: Mapped[int] = mapped_column(
+        ForeignKey("attachments.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
         UtcDateTime, nullable=False, server_default=func.now()
     )
 
@@ -577,24 +601,27 @@ async def seed_scenarios(session: AsyncSession) -> None:
     log.info("Seeded %d built-in scenario(s)", len(files))
 
 
-async def load_scenario_attachments(
-    session: AsyncSession, scenario_id: int, ids: set[int] | None = None
-) -> list[ScenarioAttachment]:
-    """A scenario's context material, in display order.
-
-    ``ids`` narrows the result to a chosen subset, and the scenario filter is
-    kept even then: the browser names which material a session runs with, and
-    an id belonging to a different scenario is a bug rather than a request.
-    """
-    query = select(ScenarioAttachment).where(ScenarioAttachment.scenario_id == scenario_id)
+async def load_attachments(
+    session: AsyncSession, ids: set[int] | None = None
+) -> list[Attachment]:
+    """The material library, or the subset named by ``ids``, in display order."""
+    query = select(Attachment)
     if ids is not None:
         if not ids:
             return []
-        query = query.where(ScenarioAttachment.id.in_(ids))
-    rows = await session.scalars(
-        query.order_by(ScenarioAttachment.sort_order, ScenarioAttachment.id)
-    )
+        query = query.where(Attachment.id.in_(ids))
+    rows = await session.scalars(query.order_by(Attachment.sort_order, Attachment.id))
     return list(rows)
+
+
+async def load_scenario_material_ids(session: AsyncSession, scenario_id: int) -> set[int]:
+    """Which library entries this scenario ticks for you."""
+    rows = await session.scalars(
+        select(ScenarioMaterial.attachment_id).where(
+            ScenarioMaterial.scenario_id == scenario_id
+        )
+    )
+    return set(rows)
 
 
 async def load_settings(session: AsyncSession) -> AppSettings | None:

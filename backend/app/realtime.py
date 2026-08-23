@@ -34,7 +34,7 @@ from starlette.websockets import WebSocketState
 from websockets.asyncio.client import connect as ws_connect
 
 from .context_material import to_context_item
-from .db import get_sessionmaker, load_scenario_attachments
+from .db import get_sessionmaker, load_attachments
 from .furigana import annotate
 from .models import ContextEvent, ContextItem, HelpEvent, SessionEvent, SpeechEvent
 from .pricing import CostTracker
@@ -219,7 +219,7 @@ class RealtimeSession:
         self.scenario_id = _as_int(message.get("scenario_id"))
         requested = _as_ids(message.get("context_ids"))
         self.context_items = await self._load_context(requested)
-        if requested and self.scenario_id is not None and not self.context_items:
+        if requested and not self.context_items:
             # Ticking a menu on the setup screen and then not having it is
             # confusing enough to be worth a line, whether the cause was the
             # database or a row that is no longer there.
@@ -240,15 +240,13 @@ class RealtimeSession:
         No ids means no database work at all, which is what keeps a session
         without material (and the relay's own tests) off the database entirely.
         """
-        if not ids or self.scenario_id is None:
+        if not ids:
             return []
         try:
             async with get_sessionmaker()() as session:
-                rows = await load_scenario_attachments(session, self.scenario_id, ids)
+                rows = await load_attachments(session, ids)
         except Exception:  # noqa: BLE001 - material must not sink the session
-            logger.exception(
-                "Could not load context material for scenario %s", self.scenario_id
-            )
+            logger.exception("Could not load context material %s", sorted(ids))
             # Reported by the caller, which knows whether this was the session
             # starting up or the learner handing something over.
             return []
@@ -265,7 +263,7 @@ class RealtimeSession:
         rebuilds the frame from scratch, and would otherwise be the one turn
         that has forgotten the menu the learner is holding.
         """
-        if attachment_id is None or self.scenario_id is None:
+        if attachment_id is None:
             return
         if any(item.id == attachment_id for item in self.context_items):
             return
