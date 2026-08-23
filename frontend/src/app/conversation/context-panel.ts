@@ -18,7 +18,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 @Component({
   selector: 'app-context-panel',
   imports: [],
-  template: `@if (visible().length || pending().length) {
+  template: `@if (ready() && (visible().length || pending().length)) {
     <section class="material">
       @if (visible().length) {
         <div class="shown">
@@ -185,6 +185,14 @@ export class ContextPanel {
   });
 
   protected readonly pending = this.session.pendingMaterial;
+
+  /**
+   * Nothing is drawn until the backend has said what the tutor knows about.
+   * Between going live and that message arriving, `contextItems` is still
+   * empty, so every piece — including the ones that started in the prompt —
+   * would briefly show up under "noch nicht dabei".
+   */
+  protected readonly ready = computed(() => this.session.sessionInfo() !== null);
 
   protected readonly canHandOver = computed(() => this.session.phase() === 'live');
 
