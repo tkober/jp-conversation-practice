@@ -77,13 +77,17 @@
               </div>
 
               <div class="transcript">
-                @for (turn of full.transcript; track $index) {
-                  <p class="line">
-                    <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-                    <span class="jp">
-                      <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
-                    </span>
-                  </p>
+                @for (event of full.transcript; track $index) {
+                  @if (asSpeech(event); as turn) {
+                    <p class="line">
+                      <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+                      <span class="jp">
+                        <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+                      </span>
+                    </p>
+                  } @else if (asMarker(event); as marker) {
+                    <app-transcript-marker [event]="marker" />
+                  }
                 }
               </div>
 

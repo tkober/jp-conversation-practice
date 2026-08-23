@@ -10,7 +10,7 @@
     </div>
     <div>
       <span class="bar-label">Redebeiträge</span>
-      <span class="bar-value">{{ transcript().length }}</span>
+      <span class="bar-value">{{ speechCount() }}</span>
     </div>
   </div>
 
@@ -151,13 +151,17 @@
 
     @if (showTranscript()) {
       <section class="card transcript">
-        @for (turn of transcript(); track $index) {
-          <p class="line">
-            <span class="line-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-            <span class="jp">
-              <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
-            </span>
-          </p>
+        @for (event of transcript(); track $index) {
+          @if (asSpeech(event); as turn) {
+            <p class="line">
+              <span class="line-role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+              <span class="jp">
+                <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+              </span>
+            </p>
+          } @else if (asMarker(event); as marker) {
+            <app-transcript-marker [event]="marker" />
+          }
         }
       </section>
     }

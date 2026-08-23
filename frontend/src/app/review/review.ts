@@ -5,18 +5,22 @@ import {
   AnalysisResponse,
   SessionExport,
   SessionInfo,
-  TranscriptTurn,
+  SessionEvent,
   UsageSnapshot,
+  asMarker,
+  asSpeech,
+  isSpeech,
   withoutFurigana,
 } from '../core/models';
 import { FuriganaText } from '../shared/furigana-text';
 import { FuriganaToggle } from '../shared/furigana-toggle';
+import { TranscriptMarker } from '../shared/transcript-marker';
 
 type ExportState = 'idle' | 'running' | 'done' | 'error';
 
 @Component({
   selector: 'app-review',
-  imports: [FuriganaText, FuriganaToggle],
+  imports: [FuriganaText, FuriganaToggle, TranscriptMarker],
   templateUrl: './review.html',
   styleUrl: './review.scss',
 })
@@ -27,7 +31,7 @@ export class Review {
   readonly analysisError = input<string | null>(null);
   readonly loading = input(false);
   readonly usage = input.required<UsageSnapshot>();
-  readonly transcript = input.required<TranscriptTurn[]>();
+  readonly transcript = input.required<SessionEvent[]>();
   readonly elapsedSeconds = input(0);
   readonly sessionInfo = input<SessionInfo | null>(null);
 
@@ -36,6 +40,13 @@ export class Review {
 
   /** Expressions the user unticked; everything else is exported. */
   private readonly deselected = signal<ReadonlySet<string>>(new Set());
+
+  // Template narrowing for the transcript's event union; see models.ts.
+  protected readonly asSpeech = asSpeech;
+  protected readonly asMarker = asMarker;
+
+  /** A press is not a Redebeitrag, so the header counts what was said. */
+  readonly speechCount = computed(() => this.transcript().filter(isSpeech).length);
 
   readonly exportState = signal<ExportState>('idle');
   readonly exportMessage = signal<string | null>(null);

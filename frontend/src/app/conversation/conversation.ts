@@ -10,16 +10,24 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { EAGERNESS_OPTIONS, VadEagerness } from '../core/models';
+import { EAGERNESS_OPTIONS, VadEagerness, asMarker, asSpeech } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
 import { FuriganaText } from '../shared/furigana-text';
 import { FuriganaToggle } from '../shared/furigana-toggle';
+import { TranscriptMarker } from '../shared/transcript-marker';
 import { ContextPanel } from './context-panel';
 import { WakaranaiButton } from './wakaranai-button';
 
 @Component({
   selector: 'app-conversation',
-  imports: [ContextPanel, DecimalPipe, FuriganaText, FuriganaToggle, WakaranaiButton],
+  imports: [
+    ContextPanel,
+    DecimalPipe,
+    FuriganaText,
+    FuriganaToggle,
+    TranscriptMarker,
+    WakaranaiButton,
+  ],
   templateUrl: './conversation.html',
   styleUrl: './conversation.scss',
 })
@@ -44,6 +52,10 @@ export class Conversation {
   readonly sessionInfo = this.session.sessionInfo;
 
   readonly showTokenDetails = signal(false);
+
+  // Template narrowing for the transcript's event union; see models.ts.
+  protected readonly asSpeech = asSpeech;
+  protected readonly asMarker = asMarker;
 
   private readonly scrollBox = viewChild<ElementRef<HTMLElement>>('scrollBox');
 

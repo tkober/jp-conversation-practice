@@ -9,7 +9,7 @@ import {
   JlptLevel,
   SessionInfo,
   SessionPhase,
-  TranscriptTurn,
+  SessionEvent,
   UsageSnapshot,
   VadEagerness,
 } from './models';
@@ -37,7 +37,8 @@ interface StartOptions {
 export class RealtimeSessionService {
   readonly phase = signal<SessionPhase>('setup');
   readonly usage = signal<UsageSnapshot>(EMPTY_USAGE);
-  readonly transcript = signal<TranscriptTurn[]>([]);
+  /** Everything that happened, in order — speech, presses, handovers. */
+  readonly transcript = signal<SessionEvent[]>([]);
   readonly elapsedSeconds = signal(0);
   readonly micLevel = signal(0);
   readonly muted = signal(false);
@@ -346,8 +347,9 @@ export class RealtimeSessionService {
         this.usage.set(message['usage'] as UsageSnapshot);
         break;
 
-      case 'app.transcript.turn':
-        this.transcript.update((turns) => [...turns, message['turn'] as TranscriptTurn]);
+      case 'app.transcript.event':
+        // The backend owns the order, so this only ever appends.
+        this.transcript.update((events) => [...events, message['event'] as SessionEvent]);
         break;
 
       case 'app.session.ended':

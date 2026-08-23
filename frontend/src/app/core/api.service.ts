@@ -21,7 +21,7 @@ import {
   SessionDetail,
   SessionStats,
   SessionSummary,
-  TranscriptTurn,
+  SessionEvent,
   UsageSnapshot,
   VoicesResponse,
 } from './models';
@@ -49,7 +49,7 @@ export class ApiService {
   analyse(request: {
     scenario: string;
     jlpt_level: JlptLevel;
-    transcript: TranscriptTurn[];
+    transcript: SessionEvent[];
     use_wanikani_filter: boolean;
     context_items: ContextItem[];
   }): Observable<AnalysisResponse> {
@@ -182,7 +182,7 @@ export class ApiService {
     duration_seconds: number;
     cost_usd: number;
     usage: UsageSnapshot;
-    transcript: TranscriptTurn[];
+    transcript: SessionEvent[];
     context_items: ContextItem[];
   }): Observable<SessionSummary> {
     return this.http.post<SessionSummary>('/api/sessions', payload);
