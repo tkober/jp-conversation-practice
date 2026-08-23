@@ -1,4 +1,47 @@
 // Context material belonging to one scenario.
+//
+// The form styles are repeated here rather than inherited: `.field` and the
+// input rules live in the scenario editor's own stylesheet, and component
+// styles are scoped, so pulling this section into its own component left the
+// hint field rendering as a browser-default white box.
+.field {
+  display: block;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+
+  em {
+    font-style: normal;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+}
+
+input[type='text'],
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  &::placeholder {
+    color: var(--text-faint);
+  }
+}
+
 .material,
 .material-list {
   display: flex;
