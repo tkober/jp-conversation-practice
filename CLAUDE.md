@@ -131,7 +131,7 @@ Realtime WebSocket. `RealtimeSession.run()` waits for an `app.session.start`
 handshake carrying scenario and JLPT level, builds the tutor instructions from
 `prompts.py`, sends `session.update`, then pumps both directions concurrently.
 Everything the relay adds itself is namespaced `app.*` (`app.cost.update`,
-`app.transcript.turn`, `app.session.ended`, `app.error`); raw upstream events
+`app.transcript.event`, `app.session.ended`, `app.error`); raw upstream events
 pass through unchanged so the frontend can react to VAD events directly.
 
 **Analysis** (`backend/app/analysis.py`) runs after the session: Chat Completions
@@ -363,13 +363,15 @@ never has to guess).
 background noise as a user turn too, and those transcribe to nothing; resetting
 on one left a learner who sat silent and kept pressing stuck on stage 1 forever
 — invisibly, because an empty turn never reaches the transcript either. So
-`_emit_turn` resets only after `_record_turn` kept the turn.
+`_emit_turn` resets only after `_record_speech` kept the turn.
 
-**The turn a press produces is marked** (`TranscriptTurn.help_stage`, set while
-that response is being generated). It is the one piece of derived-looking state
-that *is* stored: an export is how a bad conversation gets analysed, and without
-it there is no way to tell a help turn from an ordinary reply — which is the
-first thing you need to know when the help did not help. Each stage offers *several* tactics and tells the model to
+**A press is an event in the transcript** (`HelpEvent`), and the reply it
+produced carries `SpeechEvent.help_stage` on top. The two are not redundant:
+the event says the learner asked, the marker says which reply actually carried
+the help — and a press cancels a running response that may still emit its
+partial transcript, so something can come between them. Both are stored,
+because an export is how a bad conversation gets analysed and telling a help
+turn from an ordinary reply is the first thing you need there. Each stage offers *several* tactics and tells the model to
 pick one that fits and not to repeat the previous one — a tutor that answers
 the same signal with the same move teaches the learner the pattern instead of
 the language, which is the "roles generalise, checklists fossilise" rule
@@ -463,6 +465,47 @@ unreadable — as history and as feedback — without the menu これ pointed at
 The stored `instructions` cannot stand in for it, since they were built before
 anything handed over mid-session arrived.
 
+## The transcript is a stream of events
+
+`sessions.transcript` is not a list of utterances. A learner who pressed
+わからない three times at one spot and then got handed the menu had a session
+that a list of utterances describes badly — and badly in exactly the place you
+go looking when the conversation went wrong. So the transcript carries three
+kinds of event (`models.py`), ordered by when they happened:
+
+| | what it records |
+|---|---|
+| `SpeechEvent` | something that was said, plus its furigana and the help stage it answered |
+| `HelpEvent` | a わからない press, at the stage it escalated to |
+| `ContextEvent` | a piece of material handed over mid-conversation |
+
+`_emit_event` in the relay is the single place the transcript grows, so the
+browser's copy and the one that gets stored are built from the same list in the
+same order.
+
+**A press used to leave a trace only on the reply it produced**, so a press
+whose reply never arrived — cancelled, errored, answered with silence — left no
+record at all. That is the case the whole button exists for, and it was the one
+the transcript could not show. It also means a session of nothing but presses
+is now worth storing, and `Practice.storeSession` does; the *analysis* still
+needs speech, and gates on that separately.
+
+**Non-speech events reach the analysis as bracketed stage directions**
+(`format_transcript`), never as dialogue lines. The brackets are load-bearing:
+the analysis is told to quote the learner verbatim, so a line it mistook for an
+utterance would come back as a grammar note about something nobody said. The
+system prompt says what the brackets are and tells it to use them — repeated
+presses at one spot are the clearest signal it has about what to cover.
+
+**Old rows are upgraded on read, not rewritten** (`parse_event`): an entry with
+no `type` is speech. Existing databases carry real practice history, and this
+is the same trade the furigana makes. Only the read path is forgiving — nothing
+writes that shape any more, so `POST /api/sessions` rejects it.
+
+**Anything that counts "Redebeiträge" counts speech**, in the history summary
+and on the review screen. A press is not a turn, and a number inflated by
+presses is worse than no number.
+
 ## Furigana
 
 The transcript carries its readings. `annotate()` in `furigana.py` cuts a line
@@ -479,8 +522,7 @@ dictionary is the price — roughly 250 MB in the backend image, memory-mapped,
 so the resident footprint stays small. If it cannot be loaded, `annotate()`
 returns None and the UI shows plain text, the same degradation WaniKani has.
 
-**Furigana is derived, never stored.** The session row keeps the plain
-transcript and `/api/sessions/{id}` annotates on the way out, so sessions
+**Furigana is derived, never stored.** The session row keeps the plain speech and `/api/sessions/{id}` annotates on the way out, so sessions
 recorded before this feature have readings too, and both JSON exports strip
 them again (`withoutFurigana()`) — an export is meant to be read, and segment
 arrays bury the conversation in it.

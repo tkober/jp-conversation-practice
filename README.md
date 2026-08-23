@@ -290,6 +290,22 @@ transcript alone rarely explains why a conversation went sideways; the prompt
 usually does, which makes the export directly useful as input for a coding
 agent working on the prompts.
 
+The transcript is a stream of events rather than a list of utterances, because
+a conversation is not only what was said:
+
+```jsonc
+{ "type": "speech",  "role": "assistant", "text": "ご注文はお決まりですか。" },
+{ "type": "help",    "stage": 1, "max_stage": 4 },
+{ "type": "context", "item": { "title": "Speisekarte des Izakaya" } },
+{ "type": "speech",  "role": "user", "text": "これをください。", "help_stage": null }
+```
+
+That ordering is the point: "the tutor started talking nonsense right after the
+menu arrived" and "she pressed わからない three times at this one spot" are the
+first things you want to see, and neither was visible when the transcript only
+held speech. Sessions recorded before this are read back as speech events, so
+the history keeps working.
+
 ### 9. Anki export
 
 Tick the cards you want and hit export. `/api/anki/export` talks to AnkiConnect
