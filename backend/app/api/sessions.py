@@ -12,8 +12,9 @@ from ..models import (
     ContextItem,
     SessionCreate,
     SessionDetail,
+    SessionEvent,
     SessionSummary,
-    TranscriptTurn,
+    parse_event,
 )
 from .deps import db_session
 
@@ -22,16 +23,19 @@ router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 MAX_PAGE_SIZE = 200
 
 
-def with_furigana(transcript: list[dict]) -> list[TranscriptTurn]:
-    """Annotate a stored transcript on the way out.
+def with_furigana(transcript: list[dict]) -> list[SessionEvent]:
+    """Read a stored transcript back, annotating the speech on the way out.
 
     The rows hold the plain text the session produced; the readings are added
     here so a conversation recorded before this existed shows them too.
+    ``parse_event`` does the same for the event shape, so a session recorded
+    when the transcript was a plain list of turns still reads.
     """
-    turns = [TranscriptTurn.model_validate(turn) for turn in transcript]
-    for turn in turns:
-        turn.ruby = annotate(turn.text)
-    return turns
+    events = [parse_event(raw) for raw in transcript]
+    for event in events:
+        if event.type == "speech":
+            event.ruby = annotate(event.text)
+    return events
 
 
 def to_summary(row: SessionRow) -> SessionSummary:
@@ -44,7 +48,11 @@ def to_summary(row: SessionRow) -> SessionSummary:
         started_at=row.started_at,
         duration_seconds=row.duration_seconds,
         cost_usd=row.cost_usd,
-        turn_count=len(row.transcript or []),
+        # Speech only: a history row saying "12 Redebeiträge" must not be
+        # inflated by わからない presses.
+        turn_count=sum(
+            1 for raw in row.transcript or [] if raw.get("type", "speech") == "speech"
+        ),
         has_analysis=row.analysis is not None,
     )
 
@@ -130,7 +138,9 @@ async def create_session(
         # Furigana is derived from the text, so the row keeps the plain turn:
         # a stored copy would freeze today's readings and bloat every export,
         # while annotating on read gives older sessions furigana too.
-        transcript=[turn.model_dump(exclude={"ruby"}) for turn in payload.transcript],
+        transcript=[
+            event.model_dump(exclude={"ruby"}) for event in payload.transcript
+        ],
         context_items=[item.model_dump() for item in payload.context_items],
         analysis=payload.analysis,
     )

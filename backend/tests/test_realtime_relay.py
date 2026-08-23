@@ -180,6 +180,21 @@ def material(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(realtime, "load_scenario_attachments", load)
 
 
+def next_of(websocket: Any, event_type: str, limit: int = 12) -> dict[str, Any]:
+    """The next message of one type, skipping whatever else is in flight.
+
+    The relay sends several things per action -- a press produces an
+    `app.help.stage` and an `app.transcript.event`, and every upstream event is
+    relayed on top -- so asserting on a strict sequence ties each test to the
+    exact message set of the day. This asks for what the test is about.
+    """
+    for _ in range(limit):
+        message = websocket.receive_json()
+        if message.get("type") == event_type:
+            return message
+    raise AssertionError(f"no {event_type} arrived within {limit} messages")
+
+
 def responses(upstream: FakeRealtimeServer) -> list[dict[str, Any]]:
     """Only the response.create messages, in order.
 
@@ -432,11 +447,11 @@ def test_pressing_again_escalates_and_speaking_resets_it(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()
+        next_of(websocket, "app.help.stage")
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(5)
-        assert websocket.receive_json()["stage"] == 2
+        assert next_of(websocket, "app.help.stage")["stage"] == 2
         assert HELP_STAGES[1] in responses(upstream)[1]["response"]["instructions"]
 
         # Saying something means the learner is past the spot they were stuck
@@ -447,17 +462,15 @@ def test_pressing_again_escalates_and_speaking_resets_it(
                 "transcript": "これください",
             }
         )
-        assert websocket.receive_json() == {
+        assert next_of(websocket, "app.help.stage") == {
             "type": "app.help.stage",
             "stage": 0,
             "max_stage": MAX_HELP_STAGE,
         }
-        websocket.receive_json()  # app.transcript.turn
-        websocket.receive_json()  # the relayed raw event
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(7)
-        assert websocket.receive_json()["stage"] == 1
+        assert next_of(websocket, "app.help.stage")["stage"] == 1
 
 
 def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
@@ -474,7 +487,7 @@ def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        assert websocket.receive_json()["stage"] == 1
+        assert next_of(websocket, "app.help.stage")["stage"] == 1
 
         upstream.send_event(
             {"type": USER_TRANSCRIPT_EVENT, "transcript": "   "}
@@ -483,7 +496,7 @@ def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(5)
-        assert websocket.receive_json()["stage"] == 2
+        assert next_of(websocket, "app.help.stage")["stage"] == 2
 
 
 def test_a_help_turn_is_marked_in_the_transcript(
@@ -496,21 +509,23 @@ def test_a_help_turn_is_marked_in_the_transcript(
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "何にしますか"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] is None
-        websocket.receive_json()  # the relayed raw event
+        assert next_of(websocket, "app.transcript.event")["event"]["help_stage"] is None
         upstream.send_event({"type": "response.done", "response": {}})
         websocket.receive_json()  # the relayed raw event
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()  # app.help.stage
 
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "飲み物ですか"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] == 1
+        # The press itself is an event of its own now; this is the reply it
+        # produced, and the marker says which press it answered.
+        press = next_of(websocket, "app.transcript.event")["event"]
+        assert press["type"] == "help" and press["stage"] == 1
+        reply = next_of(websocket, "app.transcript.event")["event"]
+        assert reply["type"] == "speech" and reply["help_stage"] == 1
 
-        websocket.receive_json()  # the relayed raw event
         upstream.send_event({"type": "response.done", "response": {}})
         websocket.receive_json()  # the relayed raw event
 
@@ -518,7 +533,7 @@ def test_a_help_turn_is_marked_in_the_transcript(
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "はい"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] is None
+        assert next_of(websocket, "app.transcript.event")["event"]["help_stage"] is None
 
 
 def test_the_last_stage_is_german_and_does_not_run_past_it(
@@ -534,7 +549,7 @@ def test_the_last_stage_is_german_and_does_not_run_past_it(
         # One slowdown plus one response.create per press, after the setup.
         upstream.wait_for_messages(1 + 2 * presses)
 
-        stages = [websocket.receive_json()["stage"] for _ in range(presses)]
+        stages = [next_of(websocket, "app.help.stage")["stage"] for _ in range(presses)]
         assert stages == list(range(1, MAX_HELP_STAGE + 1)) + [MAX_HELP_STAGE] * 2
 
         last = responses(upstream)[-1]["response"]["instructions"]
@@ -611,10 +626,13 @@ def test_a_slider_move_during_a_help_turn_lands_when_it_ends(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()
+        next_of(websocket, "app.help.stage")
 
         websocket.send_text(json.dumps({"type": "app.session.speed", "speed": 1.2}))
-        assert websocket.receive_json() == {"type": "app.speed.changed", "speed": 1.2}
+        assert next_of(websocket, "app.speed.changed") == {
+            "type": "app.speed.changed",
+            "speed": 1.2,
+        }
 
         upstream.send_event({"type": "response.done", "response": {}})
         upstream.wait_for_messages(4)
@@ -728,9 +746,9 @@ def test_transcripts_are_normalised_into_app_events(
                 "transcript": "これください",
             }
         )
-        turn = websocket.receive_json()
-        assert turn["type"] == "app.transcript.turn"
-        assert turn["turn"] == {
+        turn = next_of(websocket, "app.transcript.event")
+        assert turn["event"] == {
+            "type": "speech",
             "role": "user",
             "text": "これください",
             "timestamp": pytest.approx(0, abs=10),
@@ -740,16 +758,14 @@ def test_transcripts_are_normalised_into_app_events(
             "help_stage": None,
         }
 
-        websocket.receive_json()  # the relayed raw event
-
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "はい、お水をどうぞ"}
         )
-        assistant_turn = websocket.receive_json()
-        assert assistant_turn["turn"]["role"] == "assistant"
-        assert assistant_turn["turn"]["text"] == "はい、お水をどうぞ"
+        assistant_turn = next_of(websocket, "app.transcript.event")["event"]
+        assert assistant_turn["role"] == "assistant"
+        assert assistant_turn["text"] == "はい、お水をどうぞ"
         # Furigana rides along with the turn, so the UI needs no second call.
-        assert {"text": "水", "reading": "みず"} in assistant_turn["turn"]["ruby"]
+        assert {"text": "水", "reading": "みず"} in assistant_turn["ruby"]
 
 
 def test_session_end_reports_transcript_and_totals(
@@ -928,3 +944,34 @@ def test_a_wakaranai_turn_knows_about_the_material(
         instructions = responses(upstream)[0]["response"]["instructions"]
         assert "唐揚げ (からあげ) – 600円" in instructions
         assert HELP_STAGES[0] in instructions
+
+
+def test_the_transcript_records_presses_and_handovers_next_to_the_speech(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """What makes the transcript worth reading when a session went wrong.
+
+    A press used to leave a trace only on the reply it produced, and a piece of
+    material handed over left none at all -- so a transcript could not show
+    that the tutor started talking nonsense right after the menu arrived.
+    """
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        upstream.send_event({"type": USER_TRANSCRIPT_EVENT, "transcript": "すみません"})
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.send_text(json.dumps({"type": "app.session.context", "attachment_id": 8}))
+        upstream.wait_for_messages(4)
+        websocket.send_text(json.dumps({"type": "app.session.stop"}))
+
+        ended = next_of(websocket, "app.session.ended", limit=30)
+        events = ended["transcript"]
+
+        assert [event["type"] for event in events] == ["speech", "help", "context"]
+        assert events[1]["stage"] == 1
+        assert events[2]["item"]["title"] == "Kartenausschnitt"
+        # Ordered by when they happened, so "right after" is readable.
+        assert [event["timestamp"] for event in events] == sorted(
+            event["timestamp"] for event in events
+        )

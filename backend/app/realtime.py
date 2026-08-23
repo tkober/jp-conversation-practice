@@ -5,8 +5,10 @@ one upstream WebSocket to OpenAI per session and pumps events in both
 directions. On the way through, the relay
   * injects the scenario/level system prompt into ``session.update``,
   * accounts exact token cost from every ``response.done`` event,
-  * normalises the various transcript events into a single ``transcript.turn``
-    event and annotates it with furigana,
+  * normalises the various upstream transcript events into a single
+    ``app.transcript.event`` and annotates it with furigana, alongside the
+    events the relay records itself (a わからない press, a piece of material
+    handed over),
   * turns a わからない press into one scaffolded response, escalating with
     every press until the learner speaks again,
   * folds the scenario's context material into the prompt, both at the start
@@ -34,7 +36,7 @@ from websockets.asyncio.client import connect as ws_connect
 from .context_material import to_context_item
 from .db import get_sessionmaker, load_scenario_attachments
 from .furigana import annotate
-from .models import ContextItem, TranscriptTurn
+from .models import ContextEvent, ContextItem, HelpEvent, SessionEvent, SpeechEvent
 from .pricing import CostTracker
 from .prompts import (
     DEFAULT_JLPT_LEVEL,
@@ -110,7 +112,9 @@ class RealtimeSession:
         self.settings = settings
         self.model = settings.realtime_model
         self.cost = CostTracker(self.model)
-        self.transcript: list[TranscriptTurn] = []
+        # Everything that happened, in order: speech, わからない presses,
+        # material handed over. See models.py for why it is not just turns.
+        self.transcript: list[SessionEvent] = []
         self.scenario = ""
         self.scenario_id: int | None = None
         self.jlpt_level = DEFAULT_JLPT_LEVEL
@@ -155,22 +159,34 @@ class RealtimeSession:
     async def send_error(self, message: str, *, fatal: bool = False) -> None:
         await self.send_json({"type": "app.error", "message": message, "fatal": fatal})
 
-    def _record_turn(self, role: str, text: str) -> TranscriptTurn | None:
+    def _elapsed(self) -> float:
+        return time.time() - self.started_at
+
+    def _record_speech(self, role: str, text: str) -> SpeechEvent | None:
         text = (text or "").strip()
         if not text:
             return None
-        turn = TranscriptTurn(
-            role=role,
+        return SpeechEvent(
+            role=role,  # type: ignore[arg-type]
             text=text,
-            timestamp=time.time() - self.started_at,
+            timestamp=self._elapsed(),
             ruby=annotate(text),
             # Which わからない press this answers, if any. Without it an export
             # cannot tell a help turn from an ordinary one -- which is exactly
             # what you need to know when the help was not helpful.
             help_stage=self._help_turn_stage if role == "assistant" else None,
         )
-        self.transcript.append(turn)
-        return turn
+
+    async def _emit_event(self, event: SessionEvent) -> None:
+        """Append one event to the transcript and push it to the browser.
+
+        The single place the transcript grows, so the browser's copy and the
+        one that gets stored are built from the same list in the same order.
+        """
+        self.transcript.append(event)
+        await self.send_json(
+            {"type": "app.transcript.event", "event": event.model_dump()}
+        )
 
     # --- session setup ---------------------------------------------------
 
@@ -260,7 +276,10 @@ class RealtimeSession:
             return
 
         item = items[0]
-        item.introduced_at = round(time.time() - self.started_at, 1)
+        # The same number the ContextEvent below carries, unrounded, so the two
+        # records of one handover cannot disagree and the transcript stays in
+        # order against the speech around it. Formatting is the UI's job.
+        item.introduced_at = self._elapsed()
         self.context_items.append(item)
 
         await upstream.send(
@@ -275,6 +294,13 @@ class RealtimeSession:
             )
         )
         await self.send_json({"type": "app.context.added", "item": item.model_dump()})
+        # A separate message from the one above: that one moves the panel, this
+        # one goes into the transcript and therefore into the export. When a
+        # tutor starts talking nonsense right after a menu arrives, the export
+        # is where you find out that the two are next to each other.
+        await self._emit_event(
+            ContextEvent(timestamp=item.introduced_at, item=item)
+        )
 
     def _instructions(self) -> str:
         """The tutor's system prompt as it stands right now."""
@@ -482,6 +508,16 @@ class RealtimeSession:
                 "max_stage": MAX_HELP_STAGE,
             }
         )
+        # Recorded even when the escalation is already at its last stage: the
+        # learner pressing a fifth time is the loudest thing in the session,
+        # and a transcript that shows only four presses hides it.
+        await self._emit_event(
+            HelpEvent(
+                timestamp=self._elapsed(),
+                stage=self.help_stage,
+                max_stage=MAX_HELP_STAGE,
+            )
+        )
 
         if self._response_active:
             self._help_pending = True
@@ -595,7 +631,7 @@ class RealtimeSession:
             logger.warning("Ignored undecodable audio delta")
 
     async def _emit_turn(self, role: str, text: str) -> None:
-        turn = self._record_turn(role, text)
+        turn = self._record_speech(role, text)
         if turn is None:
             return
         if role == "user":
@@ -604,7 +640,7 @@ class RealtimeSession:
             # transcribe to nothing -- resetting on one would silently undo the
             # escalation while the learner sits there pressing the button.
             await self._reset_help()
-        await self.send_json({"type": "app.transcript.turn", "turn": turn.model_dump()})
+        await self._emit_event(turn)
 
     async def _handle_response_done(self, event: dict[str, Any]) -> None:
         """Extract the exact usage object and push updated costs downstream."""

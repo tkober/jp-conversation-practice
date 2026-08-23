@@ -267,6 +267,12 @@ down the list, and do not reuse the tactic from the previous attempt."""
 ANALYSIS_SYSTEM_PROMPT = """You are a Japanese language teacher analysing a transcript of a
 spoken practice conversation between a learner and an AI tutor.
 
+Lines in [square brackets] are not speech. They record what else happened: the
+learner pressing a button to say they were stuck, or being handed a menu or a
+map they can then point at. Never quote one as something the learner said, and
+never write a grammar note about one. Do use them -- repeated presses at the
+same spot are the clearest signal you have about what to cover in the summary.
+
 Produce three things:
 
 1. `summary`: 2-4 sentences of warm, specific feedback on the learner's
