@@ -31,8 +31,18 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
-            ]
+              "src/styles.scss",
+              {
+                "input": "sumi-ui/projects/sumi-ui/styles/sumi-fonts.scss",
+                "bundleName": "sumi-fonts",
+                "inject": false
+              }
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "."
+              ]
+            }
           },
           "configurations": {
             "production": {

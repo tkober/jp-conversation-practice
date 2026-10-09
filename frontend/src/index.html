@@ -5,7 +5,18 @@
     <title>Practice — Japanese Conversation</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Same mark as the shell's brand: 話 on the accent. Inline SVG, so there
+         is no asset to ship and nothing to keep in sync. The fill is the
+         asagi accent preset's light value (#1f7a80, see sumi-ui's
+         core/accent.ts) — it follows the placeholder accent provideSumi() is
+         given in app.config.ts until tkober/sumi-ui#25, so update it by hand
+         if that accent ever changes. -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%231f7a80%22/><text x=%2250%22 y=%2274%22 font-size=%2266%22 text-anchor=%22middle%22 fill=%22%23ffffff%22 font-family=%22system-ui,sans-serif%22>話</text></svg>" />
+    <!-- Sumi UI's font-face rules, loaded as their own non-blocking
+         stylesheet (not injected into styles.scss) — see sumi-ui's README,
+         "Using Sumi UI in an app", step 6. -->
+    <link rel="stylesheet" href="sumi-fonts.css" />
   </head>
   <body>
     <app-root></app-root>
