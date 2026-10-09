@@ -10,6 +10,13 @@ import {
   untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  SumiButtonDirective,
+  SumiCheckboxDirective,
+  SumiInputDirective,
+  SumiTextareaDirective,
+} from 'sumi-ui/forms';
+import { SumiBanner } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { Attachment } from '../core/models';
@@ -32,7 +39,14 @@ import { Attachment } from '../core/models';
  */
 @Component({
   selector: 'app-material-picker',
-  imports: [FormsModule],
+  imports: [
+    FormsModule,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCheckboxDirective,
+    SumiInputDirective,
+    SumiTextareaDirective,
+  ],
   templateUrl: './material-picker.html',
   styleUrl: './material-picker.scss',
 })

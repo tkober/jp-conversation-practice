@@ -1,9 +1,7 @@
-// The material library and what this run takes along.
-//
-// The form styles are repeated here rather than inherited: `.field` and the
-// input rules live in the scenario editor's own stylesheet, and component
-// styles are scoped, so pulling this section into its own component left the
-// hint field rendering as a browser-default white box.
+// The material library and what this run takes along. Inputs/textareas,
+// buttons and the checkbox look all come from sumi-ui/forms now — only
+// layout (grid/flex/gaps/widths) stays here.
+
 .field {
   display: block;
 }
@@ -17,27 +15,6 @@
   em {
     font-style: normal;
     font-weight: 400;
-    color: var(--sumi-muted);
-  }
-}
-
-input[type='text'],
-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--sumi-radius-sm);
-  border: 1px solid var(--sumi-line);
-  background: var(--sumi-sunken);
-  color: inherit;
-  font-family: inherit;
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--sumi-accent-ink);
-  }
-
-  &::placeholder {
     color: var(--sumi-muted);
   }
 }
@@ -62,11 +39,17 @@ textarea {
   color: var(--sumi-retry);
 }
 
+// Was shared globally with the scenario editor in styles.scss (#18: that
+// editor never actually used it — the only consumer is this picker — so it
+// moved here with the rest of the local layout).
 .material-item {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px;
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
+  border-radius: 8px;
 }
 
 .material-head {
@@ -79,6 +62,20 @@ textarea {
     width: 60px;
     height: 60px;
     font-size: 20px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1px solid var(--sumi-line);
+  }
+
+  .material-thumb {
+    object-fit: cover;
+  }
+
+  .material-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sumi-muted);
   }
 }
 
@@ -88,7 +85,18 @@ textarea {
 
 .material-pick input {
   margin-top: 4px;
-  accent-color: var(--sumi-accent);
+}
+
+// Moved out of `.material-info` (#18): at 360px the info column left under
+// the thumbnail/actions row is too narrow for this sentence, squeezing it
+// into a tall, cramped strip. A full-width block under the head row lets it
+// wrap like ordinary text instead.
+.material-from-start {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--sumi-muted);
   cursor: pointer;
 }
 
@@ -105,22 +113,10 @@ textarea {
 }
 
 // A star rather than a checkbox: it is not part of this run, it is a note to
-// the app about what to tick next time.
-.pin {
-  padding: 4px 8px;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--sumi-muted);
-  background: none;
-  border: 1px solid transparent;
-
-  &.on {
-    color: var(--sumi-retry);
-  }
-
-  &:hover {
-    color: var(--sumi-retry);
-  }
+// the app about what to tick next time. Layered on `sumiButton` ghost/sm —
+// only the "on" tint is app-specific, everything else is the library's.
+.pin.on {
+  color: var(--sumi-retry);
 }
 
 .material-info {
@@ -133,6 +129,10 @@ textarea {
 
 .material-title {
   font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .material-actions,
@@ -144,39 +144,6 @@ textarea {
   gap: 8px;
 }
 
-.material-actions .danger:hover:not(:disabled) {
-  color: var(--sumi-wrong);
-}
-
-.material-description {
-  margin: 0;
-  padding: 10px 12px;
-  max-height: 220px;
-  overflow: auto;
-  white-space: pre-wrap;
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: 6px;
-}
-
-.material-item textarea,
-.material-text-form textarea,
-.material-description {
-  width: 100%;
-  font-family: inherit;
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-
-.material-add label.btn {
-  cursor: pointer;
-
-  &.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-}
-
 .material-busy {
   font-size: 12.5px;
   color: var(--sumi-muted);
@@ -186,7 +153,7 @@ textarea {
   flex-direction: column;
   align-items: stretch;
 
-  .btn {
+  button {
     align-self: flex-start;
   }
 }
