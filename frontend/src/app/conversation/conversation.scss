@@ -6,107 +6,25 @@
 }
 
 /* HUD ------------------------------------------------------------------- */
+/* Cost/Duration are sumi-stat-tile, the status is a sumi-badge — only the
+   compact 360px layout (2 tiles + a centred badge below) is app-specific. */
 
 .hud {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 15px 18px;
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: var(--sumi-radius);
-}
-
-.hud-metric {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 10px;
+  align-items: center;
 }
 
-.hud-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sumi-muted);
-}
-
-.hud-value {
-  font-family: var(--sumi-font-mono);
-  font-size: 24px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-
-  small {
-    font-size: 12px;
-    color: var(--sumi-muted);
-    margin-left: 5px;
-    font-weight: 400;
-  }
-}
-
-.cost {
-  color: var(--sumi-accent-ink);
-}
-
-.hud-sub {
-  font-size: 11.5px;
-  color: var(--sumi-muted);
-  font-variant-numeric: tabular-nums;
+.hud-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
 }
 
 .hud-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: var(--sumi-sunken);
-  border: 1px solid var(--sumi-line);
-  font-size: 13px;
-  color: var(--sumi-text-2);
-  white-space: nowrap;
-
-  // Speaking/listening are live indicator states, not a correct/wrong
-  // judgement — but still need two theme-aware colours rather than a
-  // literal rgba(). Borrowing the wrong/correct hues keeps the same
-  // distinction the app had before Sumi UI.
-  &.speaking {
-    border-color: var(--sumi-wrong);
-    color: var(--sumi-wrong);
-  }
-
-  &.listening {
-    border-color: var(--sumi-correct);
-    color: var(--sumi-correct);
-  }
-}
-
-.pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.45;
-
-  .speaking &,
-  .listening & {
-    opacity: 1;
-    animation: pulse 1.1s ease-in-out infinite;
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.5);
-    opacity: 0.45;
-  }
+  align-self: center;
 }
 
 /* Transcript ------------------------------------------------------------ */
@@ -205,22 +123,14 @@
     font-variant-numeric: tabular-nums;
   }
 
+  // Colour/border/track styling is sumiSlider/sumiSelect's job now; only
+  // layout (sizing within the wrapping row) stays app-side.
   input[type='range'] {
     flex: 1 1 160px;
-    accent-color: var(--sumi-accent);
-    cursor: pointer;
   }
 
   select {
     margin-left: auto;
-    padding: 4px 8px;
-    font: inherit;
-    font-size: 13px;
-    color: var(--sumi-text);
-    background: var(--sumi-bg);
-    border: 1px solid var(--sumi-line);
-    border-radius: 6px;
-    cursor: pointer;
   }
 }
 
@@ -298,15 +208,6 @@
 }
 
 @media (max-width: 620px) {
-  .hud {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .hud-status {
-    grid-column: 1 / -1;
-    justify-content: center;
-  }
-
   .controls {
     flex-wrap: wrap;
   }

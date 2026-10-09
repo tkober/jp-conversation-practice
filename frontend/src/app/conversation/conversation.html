@@ -1,42 +1,27 @@
 <div class="conversation">
   <div class="hud">
-    <div class="hud-metric">
-      <span class="hud-label">Cost</span>
-      <span class="hud-value cost">{{ formattedCost() }}<small>USD</small></span>
-      @if (costPerMinute(); as rate) {
-        <span class="hud-sub">≈ ${{ rate.toFixed(3) }} / min</span>
-      }
+    <div class="hud-tiles">
+      <sumi-stat-tile [value]="formattedCost()" label="Cost" [hint]="costHint()" />
+      <sumi-stat-tile [value]="formattedTime()" label="Duration" [hint]="durationHint()" />
     </div>
-
-    <div class="hud-metric">
-      <span class="hud-label">Duration</span>
-      <span class="hud-value">{{ formattedTime() }}</span>
-      <span class="hud-sub">{{ usage().response_count }} responses</span>
-    </div>
-
-    <div class="hud-status" [class.speaking]="tutorSpeaking()" [class.listening]="userSpeaking()">
-      <span class="pulse"></span>
-      <span>{{ statusLabel() }}</span>
-    </div>
+    <sumi-badge class="hud-status" [tone]="statusTone()">{{ statusLabel() }}</sumi-badge>
   </div>
 
   @if (!usage().rates_known && usage().model) {
-    <div class="banner banner-warning">
-      <span>
-        No prices are on file for <code>{{ usage().model }}</code> — the cost is being
-        estimated with <code>gpt-realtime-2.1-mini</code> rates.
-      </span>
-    </div>
+    <sumi-banner tone="notice">
+      No prices are on file for <code>{{ usage().model }}</code> — the cost is being
+      estimated with <code>gpt-realtime-2.1-mini</code> rates.
+    </sumi-banner>
   }
 
   @if (errorMessage(); as error) {
-    <div class="banner banner-error"><span>{{ error }}</span></div>
+    <sumi-banner tone="error">{{ error }}</sumi-banner>
   }
 
   <app-context-panel />
 
   <div class="transcript-tools">
-    <app-furigana-toggle />
+    <sumi-furigana-toggle />
   </div>
 
   <div class="transcript" #scrollBox>
@@ -56,7 +41,7 @@
             }
           </span>
           <p class="turn-text" lang="ja">
-            <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+            <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
           </p>
         </div>
       } @else if (asMarker(event); as marker) {
@@ -75,6 +60,7 @@
     <input
       id="speed-slider"
       type="range"
+      sumiSlider
       [min]="speedMin()"
       [max]="speedMax()"
       step="0.05"
@@ -90,6 +76,7 @@
     </label>
     <select
       id="eagerness-select"
+      sumiSelect
       [value]="eagerness()"
       (change)="onEagernessChange($any($event.target).value)"
     >
@@ -106,16 +93,22 @@
       </div>
     </div>
 
-    <button type="button" class="btn btn-secondary" (click)="toggleMute()">
+    <button type="button" sumiButton variant="secondary" (click)="toggleMute()">
       {{ muted() ? 'Unmute microphone' : 'Mute microphone' }}
     </button>
 
-    <button type="button" class="btn btn-primary" (click)="onFinish()">
-      End session &amp; review
+    <button type="button" sumiButton variant="primary" (click)="onFinish()">
+      End session
     </button>
   </div>
 
-  <button type="button" class="btn btn-ghost token-toggle" (click)="showTokenDetails.set(!showTokenDetails())">
+  <button
+    type="button"
+    sumiButton
+    variant="ghost"
+    class="token-toggle"
+    (click)="showTokenDetails.set(!showTokenDetails())"
+  >
     {{ showTokenDetails() ? 'Hide token details' : 'Show token details' }}
   </button>
 

@@ -71,7 +71,7 @@
               }
 
               <div class="transcript-tools">
-                <app-furigana-toggle />
+                <sumi-furigana-toggle />
               </div>
 
               <div class="transcript">
@@ -80,7 +80,7 @@
                     <p class="line">
                       <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
                       <span lang="ja">
-                        <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+                        <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
                       </span>
                     </p>
                   } @else if (asMarker(event); as marker) {

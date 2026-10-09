@@ -9,11 +9,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { SUMI_KEYS, injectHotkey } from 'sumi-ui/core';
+import { SumiBadge, type SumiBadgeTone, SumiBanner } from 'sumi-ui/layout';
+import { SumiStatTile } from 'sumi-ui/charts';
+import { SumiButtonDirective, SumiSelectDirective, SumiSliderDirective } from 'sumi-ui/forms';
+import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
-import { EAGERNESS_OPTIONS, VadEagerness, asMarker, asSpeech } from '../core/models';
+import { EAGERNESS_OPTIONS, VadEagerness, asMarker, asSpeech, toFuriganaSegments } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
-import { FuriganaText } from '../shared/furigana-text';
-import { FuriganaToggle } from '../shared/furigana-toggle';
 import { TranscriptMarker } from '../shared/transcript-marker';
 import { ContextPanel } from './context-panel';
 import { WakaranaiButton } from './wakaranai-button';
@@ -23,8 +26,14 @@ import { WakaranaiButton } from './wakaranai-button';
   imports: [
     ContextPanel,
     DecimalPipe,
-    FuriganaText,
-    FuriganaToggle,
+    SumiBadge,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiFuriganaText,
+    SumiFuriganaToggle,
+    SumiSelectDirective,
+    SumiSliderDirective,
+    SumiStatTile,
     TranscriptMarker,
     WakaranaiButton,
   ],
@@ -56,6 +65,7 @@ export class Conversation {
   // Template narrowing for the transcript's event union; see models.ts.
   protected readonly asSpeech = asSpeech;
   protected readonly asMarker = asMarker;
+  protected readonly toFuriganaSegments = toFuriganaSegments;
 
   private readonly scrollBox = viewChild<ElementRef<HTMLElement>>('scrollBox');
 
@@ -78,6 +88,13 @@ export class Conversation {
     return (this.usage().cost_usd / seconds) * 60;
   });
 
+  readonly costHint = computed(() => {
+    const rate = this.costPerMinute();
+    return rate === null ? undefined : `≈ $${rate.toFixed(3)} / min`;
+  });
+
+  readonly durationHint = computed(() => `${this.usage().response_count} responses`);
+
   readonly statusLabel = computed(() => {
     if (this.phase() === 'connecting') {
       return 'Connecting…';
@@ -94,6 +111,22 @@ export class Conversation {
     return 'Listening…';
   });
 
+  /**
+   * Borrows the wrong/correct hues for a live indicator, not a judgement —
+   * same trade-off `.hud-status`'s `.speaking`/`.listening` classes made
+   * before this screen moved onto `sumi-badge` (see the removed rule's
+   * comment in `conversation.scss`'s history).
+   */
+  readonly statusTone = computed<SumiBadgeTone>(() => {
+    if (this.tutorSpeaking()) {
+      return 'wrong';
+    }
+    if (this.userSpeaking()) {
+      return 'correct';
+    }
+    return 'neutral';
+  });
+
   readonly micBarWidth = computed(() => `${Math.round(this.micLevel() * 100)}%`);
 
   constructor() {
@@ -106,6 +139,13 @@ export class Conversation {
           element.scrollTop = element.scrollHeight;
         });
       }
+    });
+
+    injectHotkey({
+      keys: SUMI_KEYS.mute,
+      label: 'Mute / unmute microphone',
+      scope: 'practice',
+      handler: () => this.toggleMute(),
     });
   }
 
