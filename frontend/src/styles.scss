@@ -159,3 +159,49 @@ select {
   border-color: rgba(62, 207, 142, 0.3);
   color: #86e0b6;
 }
+
+/* Context material — shared by the setup screen and the scenario editor, which
+   show the same attachments at different sizes. */
+.material-thumb,
+.material-icon {
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.material-thumb {
+  object-fit: cover;
+}
+
+.material-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+}
+
+.material-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.material-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.material-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.material-toggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}

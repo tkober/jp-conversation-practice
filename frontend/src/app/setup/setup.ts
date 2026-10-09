@@ -5,7 +5,8 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { microphoneBlockedReason } from '../core/audio-recorder';
 import { RealtimeSessionService } from '../core/realtime-session.service';
-import { HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
+import { MaterialPicker } from './material-picker';
+import { Attachment, HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
 const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
   { level: 'N5', label: 'Anfänger — einfache Sätze, langsames Tempo' },
@@ -23,11 +24,15 @@ export interface SessionSetup {
   jlptLevel: JlptLevel;
   voice: string;
   speed: number;
+  /** Everything the scenario has, so the session screen can show it. */
+  material: Attachment[];
+  /** The subset the tutor knows about from the first turn. */
+  contextIds: number[];
 }
 
 @Component({
   selector: 'app-setup',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, MaterialPicker, RouterLink],
   templateUrl: './setup.html',
   styleUrl: './setup.scss',
 })
@@ -61,6 +66,15 @@ export class Setup {
   readonly selectedScenarioId = signal<number | null>(null);
   readonly customScenario = signal('');
   readonly jlptLevel = signal<JlptLevel>('N5');
+
+  /**
+   * What this run takes along, and which of it starts in the tutor's prompt.
+   * Owned here rather than in the picker so `onStart` can read it, seeded by
+   * the picker from the scenario's pre-selection.
+   */
+  readonly pickedMaterial = signal<ReadonlySet<number>>(new Set());
+  readonly startingIds = signal<ReadonlySet<number>>(new Set());
+  readonly material = signal<Attachment[]>([]);
 
   readonly selectedScenario = computed(() =>
     this.scenarios().find((item) => item.id === this.selectedScenarioId()) ?? null,
@@ -152,6 +166,12 @@ export class Setup {
     }
   }
 
+  /** Material the tutor gets, in the order the picker shows it. */
+  private takenMaterial(): Attachment[] {
+    const picked = this.pickedMaterial();
+    return this.material().filter((item) => picked.has(item.id));
+  }
+
   selectScenario(scenario: Scenario): void {
     this.selectedScenarioId.set(scenario.id);
     // Picking a scenario replaces whatever free text was there before.
@@ -171,6 +191,10 @@ export class Setup {
       jlptLevel: this.jlptLevel(),
       voice: this.selectedVoice(),
       speed: this.speed(),
+      material: this.takenMaterial(),
+      contextIds: this.takenMaterial()
+        .filter((item) => this.startingIds().has(item.id))
+        .map((item) => item.id),
     });
   }
 }

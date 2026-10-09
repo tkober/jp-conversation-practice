@@ -131,7 +131,7 @@ Realtime WebSocket. `RealtimeSession.run()` waits for an `app.session.start`
 handshake carrying scenario and JLPT level, builds the tutor instructions from
 `prompts.py`, sends `session.update`, then pumps both directions concurrently.
 Everything the relay adds itself is namespaced `app.*` (`app.cost.update`,
-`app.transcript.turn`, `app.session.ended`, `app.error`); raw upstream events
+`app.transcript.event`, `app.session.ended`, `app.error`); raw upstream events
 pass through unchanged so the frontend can react to VAD events directly.
 
 **Analysis** (`backend/app/analysis.py`) runs after the session: Chat Completions
@@ -260,16 +260,16 @@ chosen at setup time and travels in the `app.session.start` handshake. The
 speaking rate and the VAD eagerness are not fixed, so the session screen changes
 both live.
 
-Those two live changes are the only places the browser influences
-`session.update`, and they deliberately do *not* go through the allow-list: the
-client sends `app.session.speed` / `app.session.eagerness`, and
-`RealtimeSession` translates each into a `session.update` carrying nothing but
-`audio.output.speed` / `audio.input.turn_detection`. Keep it that way —
-allow-listing `session.update` itself would hand the browser the instructions
-field. Both values are validated server-side (`_clamp_speed`,
-`normalise_eagerness`, `is_valid_voice`) rather than trusted from the client;
-`voices.py` validates the voice id before it is used in a filesystem path for
-the preview cache.
+Those two live changes are two of the three places the browser influences
+`session.update` (handing over context material is the third), and they
+deliberately do *not* go through the allow-list: the client sends
+`app.session.speed` / `app.session.eagerness`, and `RealtimeSession` translates
+each into a `session.update` carrying nothing but `audio.output.speed` /
+`audio.input.turn_detection`. Keep it that way — allow-listing `session.update`
+itself would hand the browser the instructions field. Both values are validated
+server-side (`_clamp_speed`, `normalise_eagerness`, `is_valid_voice`) rather
+than trusted from the client; `voices.py` validates the voice id before it is
+used in a filesystem path for the preview cache.
 
 **Eagerness decides how long a pause may last before the tutor answers**
 (`turn_detection.py`). The default is `low`, the most patient setting, because a
@@ -363,13 +363,15 @@ never has to guess).
 background noise as a user turn too, and those transcribe to nothing; resetting
 on one left a learner who sat silent and kept pressing stuck on stage 1 forever
 — invisibly, because an empty turn never reaches the transcript either. So
-`_emit_turn` resets only after `_record_turn` kept the turn.
+`_emit_turn` resets only after `_record_speech` kept the turn.
 
-**The turn a press produces is marked** (`TranscriptTurn.help_stage`, set while
-that response is being generated). It is the one piece of derived-looking state
-that *is* stored: an export is how a bad conversation gets analysed, and without
-it there is no way to tell a help turn from an ordinary reply — which is the
-first thing you need to know when the help did not help. Each stage offers *several* tactics and tells the model to
+**A press is an event in the transcript** (`HelpEvent`), and the reply it
+produced carries `SpeechEvent.help_stage` on top. The two are not redundant:
+the event says the learner asked, the marker says which reply actually carried
+the help — and a press cancels a running response that may still emit its
+partial transcript, so something can come between them. Both are stored,
+because an export is how a bad conversation gets analysed and telling a help
+turn from an ordinary reply is the first thing you need there. Each stage offers *several* tactics and tells the model to
 pick one that fits and not to repeat the previous one — a tutor that answers
 the same signal with the same move teaches the learner the pattern instead of
 the language, which is the "roles generalise, checklists fossilise" rule
@@ -389,6 +391,143 @@ The German stage has to say it **overrides** the "speak ONLY Japanese" rule
 sitting above it in the same prompt. Appending a permission is not enough; the
 earlier absolute wins, and the escalation just never arrives at German.
 
+## Context material
+
+A scenario says who the tutor is and where. What it cannot say is what is
+lying on the table — and without that, a learner cannot practise the sentences
+they will actually need, because これ, その赤いの and この先 have nothing to
+point at. Context material fills that in: images or text attached to a
+scenario, shown to the learner and described to the tutor.
+
+**The learner sees it. That is half the feature, not decoration.** Deixis works
+in both directions or not at all: a menu only the tutor knows about is a menu
+nobody can point at. So the session screen renders every attachment
+(`ContextPanel`) alongside the transcript, and the tutor's prompt is told
+explicitly that the learner is looking at it and must not have it read out.
+
+**The material is evaluated once, not sent to the realtime model.** The ticket
+asked for it "aufgearbeitet" and that is the right way round here for three
+reasons: the default `gpt-realtime-2.1-mini` is already the weakest link in
+coherence and reading a photographed menu mid-conversation is exactly the load
+it fails under; a description written once is identical in every session, is
+what the export shows, and can be corrected by hand when a price is misread;
+and it keeps the prompt text-only, so `build_help_instructions()` picks the
+material up for free. `context_material.py` makes that call against
+`scenario_assistant_model` — the same slot that already writes English prose
+for a scenario's prompt, only from a photo instead of a draft. It has to be a
+model that can read images.
+
+**A menu is a list, and this project already knows what a list in the prompt
+does.** Both the evaluation prompt and the `# Context material` block that
+consumes it say the same thing twice over: this describes a thing that EXISTS,
+it is not a plan for the conversation. Without that sentence the model works
+through the menu from the top, in the same order every session — the konbini
+checklist failure with different words. `CONTEXT_RULES` in `prompts.py` carries
+the rest: never invent an item the learner cannot see on their screen, use the
+names and prices exactly as written, and say so when the description calls
+something unreadable.
+
+**The description is an ordinary editable field.** The evaluation is a first
+draft, not an oracle, and a failed one keeps the upload rather than losing the
+file: `analysis_error` reports why, the attachment stays, and the text can be
+retried or simply written. An attachment with an empty description is left out
+of the prompt entirely — announcing a menu and then saying nothing about it is
+worse than not mentioning it.
+
+**Material belongs to nobody.** The scenario is the role, and the role is the
+part that repeats: what varies between two runs of the same konbini is what is
+on the shelf. So `attachments` is a library, picked per run on the setup
+screen, and the same shelf photo is reusable in the supermarket scenario. A
+scenario may *pre-select* entries (`scenario_material`), which decides only
+what gets ticked when you pick it — never what is available. Both sides of
+that link CASCADE, because the row records a preference about two things and
+means nothing once either is gone.
+
+An early version had material owned by the scenario and managed in the
+scenario editor. That reads plausibly and is wrong: it makes the material the
+fixed part and the role the variable one, which is backwards, and it means
+practising the same setting with different goods is impossible without editing
+the scenario. Do not put it back.
+
+The scenario currently picked still travels with an upload and a
+re-evaluation, but only to *frame* the description — a shelf reads differently
+in a konbini than in a supermarket. It does not file the material anywhere.
+
+The bytes live in the database (`attachments.data`) rather than on disk, which
+keeps the SQLite deployment a single file and the Postgres one inside the
+existing backup; the cap is `ATTACHMENT_MAX_BYTES`, and **nginx's
+`client_max_body_size` has to be at least as large** or the proxy rejects a
+phone photo with its own 413 before the backend's message about the real limit
+can be shown.
+
+**"At the start or during the exercise"** is `available_from_start`: material
+either sits in the prompt from the first turn or waits until the learner hands
+it over from the session screen. It is the item's own default — a shelf is
+simply there, a menu gets brought to the table — and the setup screen
+overrides it per run. A handover sends
+`app.session.context` with nothing but an id; the relay reads the row and
+rebuilds the *whole* instructions into a `session.update`. Sending a
+conversation item instead would be lighter and wrong: `response.instructions`
+for a わからない turn rebuilds the frame from scratch, so the one turn where
+the learner is most stuck would be the one that had forgotten the menu they
+are holding. It also does not ask for a reply — the learner clicked because
+they want to look at the thing and then speak, and a tutor turn fired at that
+moment talks over them.
+
+**The library is managed where it is used**, on the setup screen
+(`MaterialPicker`): ticking what comes along, the from-the-start toggle, the
+star that pre-selects for the current scenario, and behind the expander the
+description, a re-evaluation and delete. One screen, because picking material
+and fixing a misread price are the same moment — you notice the wrong price
+while deciding whether to bring it.
+
+The material travels with the session record (`sessions.context_items`) and
+with the analysis request, both for the same reason: これを二つください is
+unreadable — as history and as feedback — without the menu これ pointed at.
+The stored `instructions` cannot stand in for it, since they were built before
+anything handed over mid-session arrived.
+
+## The transcript is a stream of events
+
+`sessions.transcript` is not a list of utterances. A learner who pressed
+わからない three times at one spot and then got handed the menu had a session
+that a list of utterances describes badly — and badly in exactly the place you
+go looking when the conversation went wrong. So the transcript carries three
+kinds of event (`models.py`), ordered by when they happened:
+
+| | what it records |
+|---|---|
+| `SpeechEvent` | something that was said, plus its furigana and the help stage it answered |
+| `HelpEvent` | a わからない press, at the stage it escalated to |
+| `ContextEvent` | a piece of material handed over mid-conversation |
+
+`_emit_event` in the relay is the single place the transcript grows, so the
+browser's copy and the one that gets stored are built from the same list in the
+same order.
+
+**A press used to leave a trace only on the reply it produced**, so a press
+whose reply never arrived — cancelled, errored, answered with silence — left no
+record at all. That is the case the whole button exists for, and it was the one
+the transcript could not show. It also means a session of nothing but presses
+is now worth storing, and `Practice.storeSession` does; the *analysis* still
+needs speech, and gates on that separately.
+
+**Non-speech events reach the analysis as bracketed stage directions**
+(`format_transcript`), never as dialogue lines. The brackets are load-bearing:
+the analysis is told to quote the learner verbatim, so a line it mistook for an
+utterance would come back as a grammar note about something nobody said. The
+system prompt says what the brackets are and tells it to use them — repeated
+presses at one spot are the clearest signal it has about what to cover.
+
+**Old rows are upgraded on read, not rewritten** (`parse_event`): an entry with
+no `type` is speech. Existing databases carry real practice history, and this
+is the same trade the furigana makes. Only the read path is forgiving — nothing
+writes that shape any more, so `POST /api/sessions` rejects it.
+
+**Anything that counts "Redebeiträge" counts speech**, in the history summary
+and on the review screen. A press is not a turn, and a number inflated by
+presses is worse than no number.
+
 ## Furigana
 
 The transcript carries its readings. `annotate()` in `furigana.py` cuts a line
@@ -405,8 +544,7 @@ dictionary is the price — roughly 250 MB in the backend image, memory-mapped,
 so the resident footprint stays small. If it cannot be loaded, `annotate()`
 returns None and the UI shows plain text, the same degradation WaniKani has.
 
-**Furigana is derived, never stored.** The session row keeps the plain
-transcript and `/api/sessions/{id}` annotates on the way out, so sessions
+**Furigana is derived, never stored.** The session row keeps the plain speech and `/api/sessions/{id}` annotates on the way out, so sessions
 recorded before this feature have readings too, and both JSON exports strip
 them again (`withoutFurigana()`) — an export is meant to be read, and segment
 arrays bury the conversation in it.
@@ -447,6 +585,11 @@ Two GHCR images, built by GitHub Actions on push to `main`. Only the frontend
 publishes a port (8085); its nginx serves the SPA and reverse-proxies `/api`
 and `/ws` to the backend over the internal network, which is why no CORS is
 involved and the backend port stays unpublished.
+
+**`/api/` raises two nginx defaults.** `client_max_body_size` (1 MB by
+default) has to cover `ATTACHMENT_MAX_BYTES`, or a material upload dies at the
+proxy; `proxy_read_timeout` has to cover the vision call that answers inside
+that upload, and inside a voice preview's first render.
 
 **The `/ws/` location is not a copy of `/api/`.** It carries the `Upgrade`
 handshake and sets `proxy_read_timeout 3600s` with `proxy_buffering off` — a

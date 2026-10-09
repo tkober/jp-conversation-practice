@@ -3,7 +3,15 @@
 from __future__ import annotations
 
 from app.analysis import _strict_schema, filter_known_cards, format_transcript
-from app.models import AnkiCard, GrammarNote, SessionAnalysis, TranscriptTurn
+from app.models import (
+    AnkiCard,
+    ContextEvent,
+    ContextItem,
+    GrammarNote,
+    HelpEvent,
+    SessionAnalysis,
+    SpeechEvent,
+)
 
 
 def make_analysis(*expressions: tuple[str, str]) -> SessionAnalysis:
@@ -24,13 +32,32 @@ def make_analysis(*expressions: tuple[str, str]) -> SessionAnalysis:
 
 def test_format_transcript_labels_roles_and_skips_blanks() -> None:
     transcript = [
-        TranscriptTurn(role="assistant", text="いらっしゃいませ。"),
-        TranscriptTurn(role="user", text="  "),
-        TranscriptTurn(role="user", text="これ ください。"),
+        SpeechEvent(role="assistant", text="いらっしゃいませ。"),
+        SpeechEvent(role="user", text="  "),
+        SpeechEvent(role="user", text="これ ください。"),
     ]
 
     assert format_transcript(transcript) == (
         "Tutor: いらっしゃいませ。\nLearner: これ ください。"
+    )
+
+
+def test_non_speech_events_become_bracketed_stage_directions() -> None:
+    transcript = [
+        SpeechEvent(role="assistant", text="ご注文は？"),
+        HelpEvent(stage=2, max_stage=4),
+        ContextEvent(item=ContextItem(id=1, title="Speisekarte", description="…")),
+        SpeechEvent(role="user", text="これください。"),
+    ]
+
+    # The brackets keep them out of the dialogue: the analysis is told to quote
+    # the learner verbatim, and a line it read as an utterance would come back
+    # as a grammar note about something nobody said.
+    assert format_transcript(transcript) == (
+        "Tutor: ご注文は？\n"
+        "[the learner signalled that they were stuck -- help attempt 2 of 4]\n"
+        "[the learner was handed: Speisekarte]\n"
+        "Learner: これください。"
     )
 
 

@@ -3,11 +3,13 @@ import { Injectable, computed, signal } from '@angular/core';
 import { AudioPlayer } from './audio-player';
 import { AudioRecorder } from './audio-recorder';
 import {
+  Attachment,
+  ContextItem,
   EMPTY_USAGE,
   JlptLevel,
   SessionInfo,
   SessionPhase,
-  TranscriptTurn,
+  SessionEvent,
   UsageSnapshot,
   VadEagerness,
 } from './models';
@@ -17,9 +19,14 @@ const LEVEL_POLL_MS = 100;
 
 interface StartOptions {
   scenario: string;
+  scenarioId: number | null;
   jlptLevel: JlptLevel;
   voice: string;
   speed: number;
+  /** Material the tutor knows about from the first turn. */
+  contextIds: number[];
+  /** Everything the scenario has, so the panel can show and hand over the rest. */
+  material: Attachment[];
 }
 
 /**
@@ -30,7 +37,8 @@ interface StartOptions {
 export class RealtimeSessionService {
   readonly phase = signal<SessionPhase>('setup');
   readonly usage = signal<UsageSnapshot>(EMPTY_USAGE);
-  readonly transcript = signal<TranscriptTurn[]>([]);
+  /** Everything that happened, in order — speech, presses, handovers. */
+  readonly transcript = signal<SessionEvent[]>([]);
   readonly elapsedSeconds = signal(0);
   readonly micLevel = signal(0);
   readonly muted = signal(false);
@@ -56,6 +64,24 @@ export class RealtimeSessionService {
   /** True between pressing the button and the backend confirming the stage. */
   readonly helpPending = signal(false);
 
+  /**
+   * Every piece of material this session may use, for the panel the learner
+   * looks at. Deixis only works if they can see what the tutor was told about,
+   * so this is not a nicety — it is the other half of the feature.
+   */
+  readonly material = signal<Attachment[]>([]);
+  /**
+   * What the tutor currently knows about. The backend owns this list and
+   * pushes every change, so this only ever mirrors it.
+   */
+  readonly contextItems = signal<ContextItem[]>([]);
+
+  /** Material the learner can still hand over during the conversation. */
+  readonly pendingMaterial = computed(() => {
+    const known = new Set(this.contextItems().map((item) => item.id));
+    return this.material().filter((item) => !known.has(item.id));
+  });
+
   readonly costUsd = computed(() => this.usage().cost_usd);
   readonly isLive = computed(() => this.phase() === 'live');
 
@@ -70,6 +96,7 @@ export class RealtimeSessionService {
   /** Open the relay socket, start capturing audio and go live. */
   async start(options: StartOptions): Promise<void> {
     this.reset();
+    this.material.set(options.material);
     this.phase.set('connecting');
 
     try {
@@ -166,6 +193,23 @@ export class RealtimeSessionService {
     this.socket.send(JSON.stringify({ type: 'app.session.help' }));
   }
 
+  /**
+   * Hand the tutor one more piece of material mid-conversation — the map, the
+   * menu the waiter brings over.
+   *
+   * Deliberately does not ask for a reply: the learner clicked because they
+   * want to look at it and then say something, and a tutor turn fired at that
+   * moment would talk over them.
+   */
+  addContext(attachmentId: number): void {
+    if (this.socket?.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    this.socket.send(
+      JSON.stringify({ type: 'app.session.context', attachment_id: attachmentId }),
+    );
+  }
+
   /** Clear everything so a new session can start from the setup screen. */
   reset(): void {
     this.usage.set(EMPTY_USAGE);
@@ -177,6 +221,8 @@ export class RealtimeSessionService {
     this.speed.set(1);
     this.helpStage.set(0);
     this.helpPending.set(false);
+    this.material.set([]);
+    this.contextItems.set([]);
   }
 
   // --- socket ------------------------------------------------------------
@@ -198,6 +244,10 @@ export class RealtimeSessionService {
             jlpt_level: options.jlptLevel,
             voice: options.voice,
             speed: options.speed,
+            scenario_id: options.scenarioId,
+            // Ids only. The text the tutor is told travels no further than the
+            // backend, which reads it from the row each id points at.
+            context_ids: options.contextIds,
           }),
         );
         settled = true;
@@ -253,7 +303,9 @@ export class RealtimeSessionService {
           speed,
           vad_eagerness: eagerness,
           instructions: String(message['instructions'] ?? ''),
+          context_items: (message['context_items'] ?? []) as ContextItem[],
         });
+        this.contextItems.set((message['context_items'] ?? []) as ContextItem[]);
         this.speed.set(speed);
         this.eagerness.set(eagerness);
         this.maxHelpStage.set(Number(message['help_stages'] ?? 1));
@@ -279,16 +331,32 @@ export class RealtimeSessionService {
         this.helpPending.set(false);
         break;
 
+      case 'app.context.added': {
+        const item = message['item'] as ContextItem;
+        this.contextItems.update((items) => [...items, item]);
+        // sessionInfo records what the tutor actually ran with, and handing
+        // material over changed exactly that — the instructions echoed at the
+        // start predate it, so the export would otherwise not show it.
+        this.sessionInfo.update((info) =>
+          info ? { ...info, context_items: [...info.context_items, item] } : info,
+        );
+        break;
+      }
+
       case 'app.cost.update':
         this.usage.set(message['usage'] as UsageSnapshot);
         break;
 
-      case 'app.transcript.turn':
-        this.transcript.update((turns) => [...turns, message['turn'] as TranscriptTurn]);
+      case 'app.transcript.event':
+        // The backend owns the order, so this only ever appends.
+        this.transcript.update((events) => [...events, message['event'] as SessionEvent]);
         break;
 
       case 'app.session.ended':
         this.usage.set(message['usage'] as UsageSnapshot);
+        // Carries anything handed over mid-session, which the instructions
+        // echoed at the start cannot know about.
+        this.contextItems.set((message['context_items'] ?? this.contextItems()) as ContextItem[]);
         break;
 
       case 'app.error':

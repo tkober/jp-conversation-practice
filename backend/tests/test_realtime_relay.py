@@ -10,12 +10,14 @@ import asyncio
 import base64
 import json
 import threading
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from websockets.asyncio.server import serve
 
+from app import realtime
 from app.api import practice
 from app.config import get_settings
 from app.pricing import MODEL_RATES
@@ -128,15 +130,69 @@ def practice_app() -> Any:
     return app
 
 
-def start_session(websocket: Any, upstream: FakeRealtimeServer) -> dict[str, Any]:
+def start_session(
+    websocket: Any, upstream: FakeRealtimeServer, **extra: Any
+) -> dict[str, Any]:
     websocket.send_text(
         json.dumps(
-            {"type": "app.session.start", "scenario": "Kombini", "jlpt_level": "N4"}
+            {
+                "type": "app.session.start",
+                "scenario": "Kombini",
+                "jlpt_level": "N4",
+                **extra,
+            }
         )
     )
     upstream.wait_for_connection()
     upstream.wait_for_messages(1)
     return websocket.receive_json()
+
+
+# Stand-ins for `scenario_attachments` rows. The relay only ever reads the
+# four fields `to_context_item` maps, and the query itself is covered against a
+# real database in test_api_attachments; going through one here would mean
+# using the shared engine from TestClient's worker thread, which it cannot be.
+MATERIAL = {
+    7: SimpleNamespace(
+        id=7, kind="image", title="Speisekarte", description="唐揚げ (からあげ) – 600円"
+    ),
+    8: SimpleNamespace(
+        id=8, kind="image", title="Kartenausschnitt", description="A map of the station area."
+    ),
+}
+
+
+@pytest.fixture(autouse=True)
+def material(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Serve the fake material without touching a database."""
+
+    class _Session:
+        async def __aenter__(self) -> Any:
+            return self
+
+        async def __aexit__(self, *_: Any) -> bool:
+            return False
+
+    async def load(_session: Any, ids: set[int] | None = None) -> list[Any]:
+        return [MATERIAL[key] for key in sorted(ids or ()) if key in MATERIAL]
+
+    monkeypatch.setattr(realtime, "get_sessionmaker", lambda: _Session)
+    monkeypatch.setattr(realtime, "load_attachments", load)
+
+
+def next_of(websocket: Any, event_type: str, limit: int = 12) -> dict[str, Any]:
+    """The next message of one type, skipping whatever else is in flight.
+
+    The relay sends several things per action -- a press produces an
+    `app.help.stage` and an `app.transcript.event`, and every upstream event is
+    relayed on top -- so asserting on a strict sequence ties each test to the
+    exact message set of the day. This asks for what the test is about.
+    """
+    for _ in range(limit):
+        message = websocket.receive_json()
+        if message.get("type") == event_type:
+            return message
+    raise AssertionError(f"no {event_type} arrived within {limit} messages")
 
 
 def responses(upstream: FakeRealtimeServer) -> list[dict[str, Any]]:
@@ -391,11 +447,11 @@ def test_pressing_again_escalates_and_speaking_resets_it(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()
+        next_of(websocket, "app.help.stage")
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(5)
-        assert websocket.receive_json()["stage"] == 2
+        assert next_of(websocket, "app.help.stage")["stage"] == 2
         assert HELP_STAGES[1] in responses(upstream)[1]["response"]["instructions"]
 
         # Saying something means the learner is past the spot they were stuck
@@ -406,17 +462,15 @@ def test_pressing_again_escalates_and_speaking_resets_it(
                 "transcript": "これください",
             }
         )
-        assert websocket.receive_json() == {
+        assert next_of(websocket, "app.help.stage") == {
             "type": "app.help.stage",
             "stage": 0,
             "max_stage": MAX_HELP_STAGE,
         }
-        websocket.receive_json()  # app.transcript.turn
-        websocket.receive_json()  # the relayed raw event
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(7)
-        assert websocket.receive_json()["stage"] == 1
+        assert next_of(websocket, "app.help.stage")["stage"] == 1
 
 
 def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
@@ -433,7 +487,7 @@ def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        assert websocket.receive_json()["stage"] == 1
+        assert next_of(websocket, "app.help.stage")["stage"] == 1
 
         upstream.send_event(
             {"type": USER_TRANSCRIPT_EVENT, "transcript": "   "}
@@ -442,7 +496,7 @@ def test_noise_that_transcribes_to_nothing_does_not_reset_the_escalation(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(5)
-        assert websocket.receive_json()["stage"] == 2
+        assert next_of(websocket, "app.help.stage")["stage"] == 2
 
 
 def test_a_help_turn_is_marked_in_the_transcript(
@@ -455,21 +509,23 @@ def test_a_help_turn_is_marked_in_the_transcript(
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "何にしますか"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] is None
-        websocket.receive_json()  # the relayed raw event
+        assert next_of(websocket, "app.transcript.event")["event"]["help_stage"] is None
         upstream.send_event({"type": "response.done", "response": {}})
         websocket.receive_json()  # the relayed raw event
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()  # app.help.stage
 
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "飲み物ですか"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] == 1
+        # The press itself is an event of its own now; this is the reply it
+        # produced, and the marker says which press it answered.
+        press = next_of(websocket, "app.transcript.event")["event"]
+        assert press["type"] == "help" and press["stage"] == 1
+        reply = next_of(websocket, "app.transcript.event")["event"]
+        assert reply["type"] == "speech" and reply["help_stage"] == 1
 
-        websocket.receive_json()  # the relayed raw event
         upstream.send_event({"type": "response.done", "response": {}})
         websocket.receive_json()  # the relayed raw event
 
@@ -477,7 +533,7 @@ def test_a_help_turn_is_marked_in_the_transcript(
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "はい"}
         )
-        assert websocket.receive_json()["turn"]["help_stage"] is None
+        assert next_of(websocket, "app.transcript.event")["event"]["help_stage"] is None
 
 
 def test_the_last_stage_is_german_and_does_not_run_past_it(
@@ -493,7 +549,7 @@ def test_the_last_stage_is_german_and_does_not_run_past_it(
         # One slowdown plus one response.create per press, after the setup.
         upstream.wait_for_messages(1 + 2 * presses)
 
-        stages = [websocket.receive_json()["stage"] for _ in range(presses)]
+        stages = [next_of(websocket, "app.help.stage")["stage"] for _ in range(presses)]
         assert stages == list(range(1, MAX_HELP_STAGE + 1)) + [MAX_HELP_STAGE] * 2
 
         last = responses(upstream)[-1]["response"]["instructions"]
@@ -570,10 +626,13 @@ def test_a_slider_move_during_a_help_turn_lands_when_it_ends(
 
         websocket.send_text(json.dumps({"type": "app.session.help"}))
         upstream.wait_for_messages(3)
-        websocket.receive_json()
+        next_of(websocket, "app.help.stage")
 
         websocket.send_text(json.dumps({"type": "app.session.speed", "speed": 1.2}))
-        assert websocket.receive_json() == {"type": "app.speed.changed", "speed": 1.2}
+        assert next_of(websocket, "app.speed.changed") == {
+            "type": "app.speed.changed",
+            "speed": 1.2,
+        }
 
         upstream.send_event({"type": "response.done", "response": {}})
         upstream.wait_for_messages(4)
@@ -687,9 +746,9 @@ def test_transcripts_are_normalised_into_app_events(
                 "transcript": "これください",
             }
         )
-        turn = websocket.receive_json()
-        assert turn["type"] == "app.transcript.turn"
-        assert turn["turn"] == {
+        turn = next_of(websocket, "app.transcript.event")
+        assert turn["event"] == {
+            "type": "speech",
             "role": "user",
             "text": "これください",
             "timestamp": pytest.approx(0, abs=10),
@@ -699,16 +758,14 @@ def test_transcripts_are_normalised_into_app_events(
             "help_stage": None,
         }
 
-        websocket.receive_json()  # the relayed raw event
-
         upstream.send_event(
             {"type": "response.output_audio_transcript.done", "transcript": "はい、お水をどうぞ"}
         )
-        assistant_turn = websocket.receive_json()
-        assert assistant_turn["turn"]["role"] == "assistant"
-        assert assistant_turn["turn"]["text"] == "はい、お水をどうぞ"
+        assistant_turn = next_of(websocket, "app.transcript.event")["event"]
+        assert assistant_turn["role"] == "assistant"
+        assert assistant_turn["text"] == "はい、お水をどうぞ"
         # Furigana rides along with the turn, so the UI needs no second call.
-        assert {"text": "水", "reading": "みず"} in assistant_turn["turn"]["ruby"]
+        assert {"text": "水", "reading": "みず"} in assistant_turn["ruby"]
 
 
 def test_session_end_reports_transcript_and_totals(
@@ -751,3 +808,164 @@ def test_missing_api_key_is_reported_to_the_client(
     assert error["type"] == "app.error"
     assert error["fatal"] is True
     assert "OPENAI_API_KEY" in error["message"]
+
+
+def test_context_material_from_the_handshake_reaches_the_prompt(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        instructions = upstream.received[0]["session"]["instructions"]
+        assert "# Context material" in instructions
+        assert "唐揚げ (からあげ) – 600円" in instructions
+        # Echoed back so the session screen can show the learner the same thing
+        # the tutor was told about -- without that, deixis has nothing to point
+        # at.
+        assert [item["id"] for item in started["context_items"]] == [7]
+
+
+def test_material_ids_are_looked_up_not_taken_from_the_browser(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(
+            websocket,
+            upstream,
+            scenario_id=1,
+            context_ids=[7, 999, "not-an-id"],
+        )
+
+        instructions = upstream.received[0]["session"]["instructions"]
+        # The browser names which material, never what it says: an id with no
+        # row behind it contributes nothing, and a non-id is dropped.
+        assert "唐揚げ" in instructions
+        assert "not-an-id" not in instructions
+
+
+def test_material_needs_no_scenario_behind_it(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        started = start_session(websocket, upstream, context_ids=[7])
+
+        # The library belongs to nobody, so a free-text scenario can bring
+        # material along just as a saved one can.
+        assert [item["id"] for item in started["context_items"]] == [7]
+        assert "唐揚げ" in upstream.received[0]["session"]["instructions"]
+
+
+def test_material_that_cannot_be_found_is_reported(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        websocket.send_text(
+            json.dumps(
+                {"type": "app.session.start", "scenario": "Kombini", "context_ids": [999]}
+            )
+        )
+        upstream.wait_for_connection()
+        upstream.wait_for_messages(1)
+
+        # Ticking a menu on the setup screen and then not having it is worth a
+        # line; the session still starts without it.
+        error = websocket.receive_json()
+        assert error["type"] == "app.error"
+        assert error["fatal"] is False
+        assert websocket.receive_json()["type"] == "app.session.started"
+
+
+def test_handing_material_over_mid_session_rebuilds_the_instructions(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(
+            json.dumps({"type": "app.session.context", "attachment_id": 8})
+        )
+        upstream.wait_for_messages(2)
+
+        update = upstream.received[1]
+        assert update["type"] == "session.update"
+        # Only the instructions travel this path, and they are rebuilt here
+        # from the trusted frame rather than sent by the browser.
+        assert set(update["session"]) == {"type", "instructions"}
+        instructions = update["session"]["instructions"]
+        assert "A map of the station area." in instructions
+        # The material that was already there stays.
+        assert "唐揚げ" in instructions
+
+        added = websocket.receive_json()
+        assert added["type"] == "app.context.added"
+        assert added["item"]["id"] == 8
+        assert added["item"]["introduced_at"] is not None
+
+
+def test_handing_the_same_material_over_twice_changes_nothing(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(
+            json.dumps({"type": "app.session.context", "attachment_id": 7})
+        )
+        websocket.send_text(json.dumps({"type": "input_audio_buffer.commit"}))
+        upstream.wait_for_messages(2)
+
+        # No second session.update: the material is already in the prompt, and
+        # re-sending it would only claim it had just been handed over.
+        assert [message["type"] for message in upstream.received] == [
+            "session.update",
+            "input_audio_buffer.commit",
+        ]
+
+
+def test_a_wakaranai_turn_knows_about_the_material(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.receive_json()
+
+        # `response.instructions` replaces the session prompt, so the material
+        # has to be rebuilt into it -- pointing at the menu is one of the
+        # better ways out of a spot where words are not landing.
+        instructions = responses(upstream)[0]["response"]["instructions"]
+        assert "唐揚げ (からあげ) – 600円" in instructions
+        assert HELP_STAGES[0] in instructions
+
+
+def test_the_transcript_records_presses_and_handovers_next_to_the_speech(
+    client: TestClient, upstream: FakeRealtimeServer
+) -> None:
+    """What makes the transcript worth reading when a session went wrong.
+
+    A press used to leave a trace only on the reply it produced, and a piece of
+    material handed over left none at all -- so a transcript could not show
+    that the tutor started talking nonsense right after the menu arrived.
+    """
+    with client.websocket_connect("/ws/realtime") as websocket:
+        start_session(websocket, upstream, scenario_id=1, context_ids=[7])
+
+        upstream.send_event({"type": USER_TRANSCRIPT_EVENT, "transcript": "すみません"})
+        websocket.send_text(json.dumps({"type": "app.session.help"}))
+        upstream.wait_for_messages(3)
+        websocket.send_text(json.dumps({"type": "app.session.context", "attachment_id": 8}))
+        upstream.wait_for_messages(4)
+        websocket.send_text(json.dumps({"type": "app.session.stop"}))
+
+        ended = next_of(websocket, "app.session.ended", limit=30)
+        events = ended["transcript"]
+
+        assert [event["type"] for event in events] == ["speech", "help", "context"]
+        assert events[1]["stage"] == 1
+        assert events[2]["item"]["title"] == "Kartenausschnitt"
+        # Ordered by when they happened, so "right after" is readable.
+        assert [event["timestamp"] for event in events] == sorted(
+            event["timestamp"] for event in events
+        )

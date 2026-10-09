@@ -77,13 +77,15 @@ DB_URL=sqlite:///./data/jp_conversation.db
 
 ## Data
 
-The database holds three things, all of which survive an image update:
+The database holds five things, all of which survive an image update:
 
 | Table | Contents |
 |---|---|
 | `app_settings` | One row. API keys and model choices from the Settings screen. Every column is nullable — a NULL falls back to the environment variable, so the app boots from its `.env` alone. |
 | `scenarios` | Seeded on first start from `backend/scenarios/*.md`. Editing one in the UI marks it `is_customized`, which stops the next boot from seeding the file version back over it. |
-| `sessions` | Finished conversations: transcript, exact cost, the analysis, and the prompt the tutor actually ran with. |
+| `attachments` | The context material library: image bytes or text, plus the English description the tutor is given. Belongs to no scenario. |
+| `scenario_material` | Which library entries a scenario ticks for you by default. A convenience, not ownership. |
+| `sessions` | Finished conversations: transcript, exact cost, the analysis, the context material that was on the table, and the prompt the tutor actually ran with. |
 
 Scenarios ship as Markdown with YAML front matter so they can be reviewed and
 diffed as prose:
@@ -253,7 +255,42 @@ from the live tutor, because it writes prose rather than driving a conversation.
 Editing a built-in scenario marks it as customised; a redeploy will not
 overwrite it, and "Auf Original zurücksetzen" restores the Markdown version.
 
-### 7. Session export
+### 7. Context material
+
+A scenario says who the tutor is and where. What it cannot say is what is lying
+on the table — so you can bring material along: photos of a shelf or a menu, a
+map excerpt, a piece of text. You see it on screen during the session and the
+tutor gets a description of it, which is what makes これをください、その赤いの
+and この先 mean something instead of being vocabulary you never get to use.
+
+**Material is picked per run, on the setup screen.** It lives in a library that
+belongs to no scenario, because the scenario is the role and the role is the
+part that repeats: what changes between two runs of the same konbini is what is
+on the shelf. The same photo works in the supermarket scenario too. A scenario
+can star entries it should pre-select, which only decides what is ticked when
+you pick it.
+
+Uploading and evaluating are one step. The image goes to the model configured
+as `SCENARIO_ASSISTANT_MODEL` (it has to be one that reads images), which
+writes an English description of what is *on* the material — items, prices,
+readings, what is next to what — for the tutor's prompt, plus a German label
+for you. The scenario currently selected frames that description without
+filing the material under it. The realtime model never sees the image itself:
+the default `gpt-realtime-2.1-mini` is the weakest link in coherence already,
+a description written once is the same in every session, and it is a plain text
+field you can correct when a price comes out wrong. If the evaluation fails,
+the upload is kept and you can retry or write the description yourself.
+
+Each piece is either there from the first turn or handed over during the
+conversation — the waiter bringing the menu — which you set per item and can
+override for a single run.
+
+The one thing the descriptions must not become is a running order. A menu *is*
+a list, and a list in the prompt gets worked through from the top in the same
+sequence every session; both the evaluation prompt and the block that consumes
+it say so explicitly. See the scenario section above for why.
+
+### 8. Session export
 
 The review screen offers the session as JSON, either to the clipboard or as a
 download. It contains the transcript, exact usage and cost, the analysis result
@@ -262,7 +299,23 @@ transcript alone rarely explains why a conversation went sideways; the prompt
 usually does, which makes the export directly useful as input for a coding
 agent working on the prompts.
 
-### 8. Anki export
+The transcript is a stream of events rather than a list of utterances, because
+a conversation is not only what was said:
+
+```jsonc
+{ "type": "speech",  "role": "assistant", "text": "ご注文はお決まりですか。" },
+{ "type": "help",    "stage": 1, "max_stage": 4 },
+{ "type": "context", "item": { "title": "Speisekarte des Izakaya" } },
+{ "type": "speech",  "role": "user", "text": "これをください。", "help_stage": null }
+```
+
+That ordering is the point: "the tutor started talking nonsense right after the
+menu arrived" and "she pressed わからない three times at this one spot" are the
+first things you want to see, and neither was visible when the transcript only
+held speech. Sessions recorded before this are read back as speech events, so
+the history keeps working.
+
+### 9. Anki export
 
 Tick the cards you want and hit export. `/api/anki/export` talks to AnkiConnect
 on `localhost:8765`, creates the deck and a four-field note type
@@ -328,8 +381,11 @@ are environment-only.
 | `OPENAI_API_KEY` | — | Required unless set in Settings. |
 | `REALTIME_MODEL` | `gpt-realtime-2.1-mini` | Live conversation model. |
 | `ANALYSIS_MODEL` | `gpt-4o-mini` | Post-session analysis model. |
-| `SCENARIO_ASSISTANT_MODEL` | `gpt-4o` | Writing assistant in the scenario editor. |
+| `SCENARIO_ASSISTANT_MODEL` | `gpt-4o` | Writing assistant in the scenario editor, and the evaluation of context material. Must be able to read images. |
 | `SCENARIOS_DIR` | `scenarios` | Markdown scenarios seeded on first start. |
+| `ATTACHMENT_MAX_BYTES` | `8388608` | Largest uploadable image. Raise `client_max_body_size` in `frontend/nginx.conf` with it. |
+| `ATTACHMENT_MAX_TEXT_CHARS` | `20000` | Largest pasted text attachment. |
+| `ATTACHMENT_DESCRIPTION_MAX_CHARS` | `4000` | How much of a description may reach the tutor's prompt. |
 | `REALTIME_VOICE` | `marin` | Default voice. |
 | `REALTIME_SPEED` | `1.0` | Default speaking rate. |
 | `REALTIME_SPEED_MIN` / `_MAX` | `0.6` / `1.4` | Slider bounds. |
@@ -367,4 +423,10 @@ transcript normalisation end to end.
 - The relay holds one upstream socket per browser connection — fine for one
   person, not for many concurrent users.
 - Pricing is hard-coded and must be updated when OpenAI changes its rates.
+- Evaluating context material, like the analysis and the scenario assistant, is
+  real spending that the cost counter does not report — it only counts the
+  realtime session.
+- The material library has no separate management screen — it is edited where
+  it is picked, on the setup screen, which is fine for a handful of photos and
+  would not be for a hundred.
 - The WaniKani vocabulary list is cached in process for 15 minutes.

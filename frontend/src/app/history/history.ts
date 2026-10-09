@@ -7,19 +7,26 @@ import {
   SessionDetail,
   SessionStats,
   SessionSummary,
+  asMarker,
+  asSpeech,
   withoutFurigana,
 } from '../core/models';
 import { FuriganaText } from '../shared/furigana-text';
 import { FuriganaToggle } from '../shared/furigana-toggle';
+import { TranscriptMarker } from '../shared/transcript-marker';
 
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle],
+  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle, TranscriptMarker],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })
 export class History {
   private readonly api = inject(ApiService);
+
+  // Template narrowing for the transcript's event union; see models.ts.
+  protected readonly asSpeech = asSpeech;
+  protected readonly asMarker = asMarker;
 
   readonly sessions = signal<SessionSummary[]>([]);
   readonly stats = signal<SessionStats | null>(null);

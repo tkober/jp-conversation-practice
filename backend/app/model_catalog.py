@@ -172,8 +172,10 @@ SLOTS: tuple[ModelSlot, ...] = (
         key="scenario_assistant_model",
         label="Szenario-Assistent",
         hint=(
-            "Hilft im Szenario-Editor beim Formulieren. Schreibt Prosa statt zu "
-            "sprechen — ein stärkeres Modell lohnt sich hier eher."
+            "Hilft im Szenario-Editor beim Formulieren und wertet das Material "
+            "eines Szenarios aus. Schreibt Prosa statt zu sprechen — ein "
+            "stärkeres Modell lohnt sich hier eher. Für Bild-Material muss es "
+            "Bilder lesen können."
         ),
         curated=(
             CuratedModel("gpt-4o", "gpt-4o", "Standard. Schreibt brauchbare Szenario-Prosa."),

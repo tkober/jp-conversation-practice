@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 from pydantic import ValidationError
 
-from .models import SessionAnalysis, TranscriptTurn
+from .models import ContextItem, SessionAnalysis, SessionEvent
 from .prompts import ANALYSIS_SYSTEM_PROMPT, build_analysis_user_prompt
 from .runtime_config import RuntimeConfig
 
@@ -26,14 +26,33 @@ class AnalysisError(RuntimeError):
     """Raised when the analysis model call fails."""
 
 
-def format_transcript(transcript: list[TranscriptTurn]) -> str:
-    """Render the transcript as a readable dialogue for the analysis prompt."""
+def format_transcript(transcript: list[SessionEvent]) -> str:
+    """Render the session as a readable dialogue for the analysis prompt.
+
+    Speech becomes a dialogue line; everything else becomes a bracketed stage
+    direction. The brackets are load-bearing -- the analysis is told to quote
+    the learner verbatim, and a line it mistakes for an utterance would come
+    back as a grammar note about something nobody said.
+
+    The non-speech lines are worth their space: a learner who pressed
+    わからない three times in one spot is telling the feedback exactly where
+    to look, and a demonstrative is unreadable without the material it points
+    at arriving in the same place.
+    """
     lines = []
-    for turn in transcript:
-        label = ROLE_LABELS.get(turn.role, turn.role)
-        text = turn.text.strip()
-        if text:
-            lines.append(f"{label}: {text}")
+    for event in transcript:
+        if event.type == "speech":
+            text = event.text.strip()
+            if text:
+                lines.append(f"{ROLE_LABELS.get(event.role, event.role)}: {text}")
+        elif event.type == "help":
+            lines.append(
+                f"[the learner signalled that they were stuck -- "
+                f"help attempt {event.stage} of {event.max_stage}]"
+            )
+        elif event.type == "context":
+            label = event.item.title.strip() or "context material"
+            lines.append(f"[the learner was handed: {label}]")
     return "\n".join(lines)
 
 
@@ -70,8 +89,9 @@ class AnalysisService:
         *,
         scenario: str,
         jlpt_level: str,
-        transcript: list[TranscriptTurn],
+        transcript: list[SessionEvent],
         excluded_words: list[str],
+        context_items: list[ContextItem] | None = None,
     ) -> SessionAnalysis:
         if not self.settings.openai_api_key:
             raise AnalysisError("OPENAI_API_KEY is not configured on the server.")
@@ -83,7 +103,11 @@ class AnalysisService:
                 {
                     "role": "user",
                     "content": build_analysis_user_prompt(
-                        scenario, jlpt_level, format_transcript(transcript), excluded_words
+                        scenario,
+                        jlpt_level,
+                        format_transcript(transcript),
+                        excluded_words,
+                        context_items or [],
                     ),
                 },
             ],

@@ -10,6 +10,9 @@ import {
   AppSettingsView,
   AssistantMessage,
   AssistantReply,
+  Attachment,
+  AttachmentPatch,
+  ContextItem,
   HealthResponse,
   JlptLevel,
   ModelCatalogResponse,
@@ -18,7 +21,7 @@ import {
   SessionDetail,
   SessionStats,
   SessionSummary,
-  TranscriptTurn,
+  SessionEvent,
   UsageSnapshot,
   VoicesResponse,
 } from './models';
@@ -46,8 +49,9 @@ export class ApiService {
   analyse(request: {
     scenario: string;
     jlpt_level: JlptLevel;
-    transcript: TranscriptTurn[];
+    transcript: SessionEvent[];
     use_wanikani_filter: boolean;
+    context_items: ContextItem[];
   }): Observable<AnalysisResponse> {
     return this.http.post<AnalysisResponse>('/api/analysis', request);
   }
@@ -84,6 +88,77 @@ export class ApiService {
     messages: AssistantMessage[];
   }): Observable<AssistantReply> {
     return this.http.post<AssistantReply>('/api/scenarios/assistant', request);
+  }
+
+  // --- context material ---
+
+  /**
+   * The whole material library. `scenarioId` does not filter — it only marks
+   * which entries that scenario pre-selects, so the setup screen can tick them
+   * without a second request.
+   */
+  attachments(scenarioId: number | null = null): Observable<Attachment[]> {
+    const query = scenarioId === null ? '' : `?scenario_id=${scenarioId}`;
+    return this.http.get<Attachment[]>(`/api/attachments${query}`);
+  }
+
+  /**
+   * Upload an image and have it described in one request.
+   *
+   * Multipart rather than base64 JSON: a phone photo is megabytes, and base64
+   * would add a third on top of that for no gain. `scenarioId` only frames the
+   * evaluation — it does not file the material under that scenario.
+   */
+  uploadAttachmentImage(
+    file: File,
+    options: { title?: string; hint?: string; scenarioId?: number | null } = {},
+  ): Observable<Attachment> {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('title', options.title ?? '');
+    form.append('hint', options.hint ?? '');
+    if (options.scenarioId != null) {
+      form.append('scenario_id', String(options.scenarioId));
+    }
+    return this.http.post<Attachment>('/api/attachments/image', form);
+  }
+
+  addAttachmentText(payload: {
+    body: string;
+    title?: string;
+    hint?: string;
+    scenario_id?: number | null;
+  }): Observable<Attachment> {
+    return this.http.post<Attachment>('/api/attachments/text', payload);
+  }
+
+  updateAttachment(id: number, patch: AttachmentPatch): Observable<Attachment> {
+    return this.http.put<Attachment>(`/api/attachments/${id}`, patch);
+  }
+
+  /** Describe the material again, framed by the scenario currently picked. */
+  evaluateAttachment(id: number, scenarioId: number | null = null): Observable<Attachment> {
+    const query = scenarioId === null ? '' : `?scenario_id=${scenarioId}`;
+    return this.http.post<Attachment>(`/api/attachments/${id}/evaluate${query}`, {});
+  }
+
+  deleteAttachment(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/attachments/${id}`);
+  }
+
+  /** Pre-select this material whenever that scenario is picked, or stop. */
+  setAttachmentDefault(
+    id: number,
+    scenarioId: number,
+    isDefault: boolean,
+  ): Observable<void> {
+    const url = `/api/attachments/${id}/default/${scenarioId}`;
+    return isDefault ? this.http.put<void>(url, {}) : this.http.delete<void>(url);
+  }
+
+  /** Where the image itself lives — used directly as an `<img>` source. */
+  attachmentFileUrl(id: number): string {
+    return `/api/attachments/${id}/file`;
   }
 
   // --- settings ---
@@ -128,7 +203,8 @@ export class ApiService {
     duration_seconds: number;
     cost_usd: number;
     usage: UsageSnapshot;
-    transcript: TranscriptTurn[];
+    transcript: SessionEvent[];
+    context_items: ContextItem[];
   }): Observable<SessionSummary> {
     return this.http.post<SessionSummary>('/api/sessions', payload);
   }

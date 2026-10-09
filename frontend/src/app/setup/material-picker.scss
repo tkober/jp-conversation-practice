@@ -1,0 +1,192 @@
+// The material library and what this run takes along.
+//
+// The form styles are repeated here rather than inherited: `.field` and the
+// input rules live in the scenario editor's own stylesheet, and component
+// styles are scoped, so pulling this section into its own component left the
+// hint field rendering as a browser-default white box.
+.field {
+  display: block;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+
+  em {
+    font-style: normal;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+}
+
+input[type='text'],
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: inherit;
+  font-family: inherit;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  &::placeholder {
+    color: var(--text-faint);
+  }
+}
+
+.material,
+.material-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.material-intro,
+.material-empty,
+.material-missing {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.material-missing {
+  color: var(--warning);
+}
+
+.material-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+
+.material-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .material-thumb,
+  .material-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 20px;
+  }
+}
+
+.material-item.picked {
+  border-color: var(--accent);
+}
+
+.material-pick input {
+  margin-top: 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.material-warning {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--warning);
+}
+
+.material-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// A star rather than a checkbox: it is not part of this run, it is a note to
+// the app about what to tick next time.
+.pin {
+  padding: 4px 8px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-faint);
+  background: none;
+  border: 1px solid transparent;
+
+  &.on {
+    color: var(--warning);
+  }
+
+  &:hover {
+    color: var(--warning);
+  }
+}
+
+.material-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.material-title {
+  font-size: 14px;
+}
+
+.material-actions,
+.material-add,
+.material-text-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.material-actions .danger:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.material-description {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.material-item textarea,
+.material-text-form textarea,
+.material-description {
+  width: 100%;
+  font-family: inherit;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.material-add label.btn {
+  cursor: pointer;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.material-busy {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.material-text-form {
+  flex-direction: column;
+  align-items: stretch;
+
+  .btn {
+    align-self: flex-start;
+  }
+}

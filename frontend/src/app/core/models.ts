@@ -50,6 +50,53 @@ export interface ScenarioDraft {
   prompt: string;
 }
 
+/**
+ * One piece of context material belonging to a scenario.
+ *
+ * The library belongs to nobody: the scenario is the role, and the role is the
+ * part that repeats, so what is on the shelf is picked per run. A scenario can
+ * pre-select entries, which is only about what gets ticked for you.
+ *
+ * `description` is the English prose the tutor gets; `title` is the German
+ * label the learner sees. The image bytes are not in here — they come from
+ * `ApiService.attachmentFileUrl()` — so the list stays small.
+ */
+export interface Attachment {
+  id: number;
+  kind: 'image' | 'text';
+  title: string;
+  description: string;
+  body: string;
+  media_type: string;
+  byte_size: number;
+  available_from_start: boolean;
+  sort_order: number;
+  /** Whether the scenario currently picked ticks this one for you. */
+  default_for_scenario: boolean;
+  /** Set only on an upload or re-evaluation whose description could not be produced. */
+  analysis_error: string | null;
+}
+
+export interface AttachmentPatch {
+  title?: string;
+  description?: string;
+  available_from_start?: boolean;
+  sort_order?: number;
+}
+
+/**
+ * Material as the tutor knows it, which is what a session records.
+ * `introduced_at` holds the elapsed seconds for anything handed over
+ * mid-conversation, and is null for material that was there from the start.
+ */
+export interface ContextItem {
+  id: number;
+  kind: 'image' | 'text';
+  title: string;
+  description: string;
+  introduced_at: number | null;
+}
+
 export interface AssistantMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -149,7 +196,8 @@ export interface SessionDetail extends SessionSummary {
   vad_eagerness: string;
   instructions: string;
   usage: UsageSnapshot;
-  transcript: TranscriptTurn[];
+  transcript: SessionEvent[];
+  context_items: ContextItem[];
   analysis: AnalysisResponse | null;
 }
 
@@ -165,10 +213,18 @@ export interface RubySegment {
   reading: string | null;
 }
 
-export interface TranscriptTurn {
+/**
+ * The session transcript is a stream of events, of which speech is one kind.
+ *
+ * A learner who pressed わからない three times at one spot and then got handed
+ * the menu had a session that a list of utterances describes badly — and badly
+ * in exactly the place you go looking when the conversation went wrong.
+ */
+export interface SpeechEvent {
+  type: 'speech';
+  timestamp?: number | null;
   role: 'user' | 'assistant';
   text: string;
-  timestamp?: number;
   /**
    * Furigana for `text`, segment by segment — null when there is nothing to
    * annotate. The backend derives it; joining the segments gives `text` back.
@@ -176,19 +232,58 @@ export interface TranscriptTurn {
   ruby?: RubySegment[] | null;
   /**
    * Set on an assistant turn that answers a わからない press, to the stage it
-   * was given at. Unlike `ruby` it is kept in exports — it records what
-   * happened, and a transcript full of unhelpful help is unreadable without it.
+   * was given at. The HelpEvent says the learner asked; this says which reply
+   * actually carried the help.
    */
   help_stage?: number | null;
+}
+
+/** The learner pressed わからない. */
+export interface HelpEvent {
+  type: 'help';
+  timestamp?: number | null;
+  stage: number;
+  max_stage: number;
+}
+
+/** Context material was put in front of the learner mid-conversation. */
+export interface ContextEvent {
+  type: 'context';
+  timestamp?: number | null;
+  item: ContextItem;
+}
+
+export type SessionEvent = SpeechEvent | HelpEvent | ContextEvent;
+
+export function isSpeech(event: SessionEvent): event is SpeechEvent {
+  return event.type === 'speech';
+}
+
+/**
+ * Narrowing for templates. Angular's `@switch` does not narrow a discriminated
+ * union, so the two halves are split by functions a component can expose and
+ * `@if (…; as x)` can bind: one returns the event when it is speech, the other
+ * when it is anything else.
+ */
+export function asSpeech(event: SessionEvent): SpeechEvent | null {
+  return event.type === 'speech' ? event : null;
+}
+
+export function asMarker(event: SessionEvent): HelpEvent | ContextEvent | null {
+  return event.type === 'speech' ? null : event;
 }
 
 /**
  * Strip the readings again. They are derived data: an export is meant to be
  * read (by a human or another agent), and segment arrays only bury the
- * conversation in it.
+ * conversation in it. Only speech carries any.
  */
-export function withoutFurigana(turns: TranscriptTurn[]): TranscriptTurn[] {
-  return turns.map(({ ruby, ...turn }) => turn);
+export function withoutFurigana(events: SessionEvent[]): SessionEvent[] {
+  return events.map((event) => (isSpeech(event) ? stripRuby(event) : event));
+}
+
+function stripRuby({ ruby, ...event }: SpeechEvent): SpeechEvent {
+  return event;
 }
 
 export interface TokenBucket {
@@ -261,6 +356,8 @@ export interface SessionInfo {
   vad_eagerness: VadEagerness;
   /** The system prompt the tutor actually ran with. */
   instructions: string;
+  /** The context material it was given, in the order it arrived. */
+  context_items: ContextItem[];
 }
 
 /** Self-contained dump of one session, for sharing or debugging. */
@@ -273,9 +370,15 @@ export interface SessionExport {
   speed: number;
   vad_eagerness: string;
   system_instructions: string;
+  /**
+   * Kept even though the start-active material is already inside
+   * `system_instructions`: anything handed over mid-session is not, and the
+   * export is how a conversation that went wrong gets read.
+   */
+  context_material: ContextItem[];
   duration_seconds: number;
   usage: UsageSnapshot;
-  transcript: TranscriptTurn[];
+  transcript: SessionEvent[];
   analysis: AnalysisResponse | null;
 }
 

@@ -18,8 +18,13 @@ def session_payload(**overrides: object) -> dict:
         "cost_usd": 0.0663,
         "usage": {"cost_usd": 0.0663, "response_count": 3},
         "transcript": [
-            {"role": "assistant", "text": "お会計は千円です。", "timestamp": 1.0},
-            {"role": "user", "text": "こんばんは。", "timestamp": 4.0},
+            {
+                "type": "speech",
+                "role": "assistant",
+                "text": "お会計は千円です。",
+                "timestamp": 1.0,
+            },
+            {"type": "speech", "role": "user", "text": "こんばんは。", "timestamp": 4.0},
         ],
     }
     payload.update(overrides)
@@ -30,7 +35,7 @@ async def test_storing_a_session_returns_a_summary(api: AsyncClient) -> None:
     body = (await api.post("/api/sessions", json=session_payload())).json()
 
     assert body["scenario_title"] == "Einkaufen im Kombini"
-    assert body["turn_count"] == 2
+    assert body["turn_count"] == 2  # speech only, see below
     assert body["has_analysis"] is False
     assert body["cost_usd"] == 0.0663
 
@@ -57,6 +62,69 @@ async def test_stored_transcripts_stay_plain(api: AsyncClient) -> None:
     body = (await api.get(f"/api/sessions/{created['id']}")).json()
 
     assert {"text": "会計", "reading": "かいけい"} in body["transcript"][0]["ruby"]
+
+
+async def test_presses_and_handovers_are_stored_alongside_the_speech(
+    api: AsyncClient,
+) -> None:
+    payload = session_payload()
+    payload["transcript"] = [
+        {"type": "speech", "role": "assistant", "text": "ご注文は？", "timestamp": 1.0},
+        {"type": "help", "stage": 1, "max_stage": 4, "timestamp": 3.0},
+        {
+            "type": "context",
+            "timestamp": 5.0,
+            "item": {"id": 7, "kind": "image", "title": "Speisekarte", "description": "…"},
+        },
+        {"type": "speech", "role": "user", "text": "これください。", "timestamp": 9.0},
+    ]
+
+    created = (await api.post("/api/sessions", json=payload)).json()
+    detail = (await api.get(f"/api/sessions/{created['id']}")).json()
+
+    assert [event["type"] for event in detail["transcript"]] == [
+        "speech",
+        "help",
+        "context",
+        "speech",
+    ]
+    assert detail["transcript"][2]["item"]["title"] == "Speisekarte"
+    # A press is not a Redebeitrag: the history header counts what was said.
+    assert created["turn_count"] == 2
+
+
+async def test_a_transcript_stored_before_events_still_reads(api: AsyncClient) -> None:
+    """Rows written when the transcript was a plain list of turns.
+
+    Those carry real practice history, so they are upgraded on the way out
+    rather than rewritten in place -- the same trade the furigana makes.
+    """
+    created = (await api.post("/api/sessions", json=session_payload())).json()
+
+    # Put the row back the way the old code would have written it. Only the
+    # read path has to cope with this shape -- nothing writes it any more, so
+    # POST rejects it, which is why the row is rewritten underneath. Through
+    # the ORM rather than raw SQL: the column is JSONB on one backend and JSON
+    # on the other, and a bound string only lands on one of them.
+    from app import db
+
+    async with db.get_sessionmaker()() as session:
+        row = await session.get(db.Session, created["id"])
+        row.transcript = [{"role": "user", "text": "こんばんは。"}]
+        await session.commit()
+
+    detail = (await api.get(f"/api/sessions/{created['id']}")).json()
+
+    assert detail["transcript"] == [
+        {
+            "type": "speech",
+            "timestamp": None,
+            "role": "user",
+            "text": "こんばんは。",
+            "ruby": None,
+            "help_stage": None,
+        }
+    ]
 
 
 async def test_list_is_newest_first_and_omits_transcripts(api: AsyncClient) -> None:

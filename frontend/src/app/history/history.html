@@ -58,18 +58,36 @@
                 <p class="muted">Für diese Session gibt es keine Auswertung.</p>
               }
 
+              @if (full.context_items.length > 0) {
+                <div class="context">
+                  <span class="context-label">Material</span>
+                  @for (item of full.context_items; track item.id) {
+                    <span class="context-item" [title]="item.description">
+                      {{ item.title || 'Material' }}
+                      @if (item.introduced_at !== null) {
+                        <em>ab {{ duration(item.introduced_at) }}</em>
+                      }
+                    </span>
+                  }
+                </div>
+              }
+
               <div class="transcript-tools">
                 <app-furigana-toggle />
               </div>
 
               <div class="transcript">
-                @for (turn of full.transcript; track $index) {
-                  <p class="line">
-                    <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
-                    <span class="jp">
-                      <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
-                    </span>
-                  </p>
+                @for (event of full.transcript; track $index) {
+                  @if (asSpeech(event); as turn) {
+                    <p class="line">
+                      <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+                      <span class="jp">
+                        <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
+                      </span>
+                    </p>
+                  } @else if (asMarker(event); as marker) {
+                    <app-transcript-marker [event]="marker" />
+                  }
                 }
               </div>
 

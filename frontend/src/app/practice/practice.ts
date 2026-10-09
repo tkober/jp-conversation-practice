@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 
 import { Conversation } from '../conversation/conversation';
 import { ApiService } from '../core/api.service';
-import { AnalysisResponse, JlptLevel } from '../core/models';
+import { AnalysisResponse, JlptLevel, isSpeech } from '../core/models';
 import { RealtimeSessionService } from '../core/realtime-session.service';
 import { Review } from '../review/review';
 import { SessionSetup, Setup } from '../setup/setup';
@@ -43,9 +43,12 @@ export class Practice {
     this.analysisError.set(null);
     await this.session.start({
       scenario: setup.scenario,
+      scenarioId: setup.scenarioId,
       jlptLevel: setup.jlptLevel,
       voice: setup.voice,
       speed: setup.speed,
+      contextIds: setup.contextIds,
+      material: setup.material,
     });
   }
 
@@ -61,6 +64,10 @@ export class Practice {
    *
    * Storing first means a failed or slow analysis cannot cost the user their
    * transcript; the result is attached afterwards when it arrives.
+   *
+   * Any event is enough to be worth storing, not just speech. A learner who
+   * pressed わからない four times and never managed to say anything had the
+   * session most worth looking at, and it used to leave no trace at all.
    */
   private storeSession(): void {
     const transcript = this.session.transcript();
@@ -84,6 +91,9 @@ export class Practice {
         cost_usd: this.session.usage().cost_usd,
         usage: this.session.usage(),
         transcript,
+        // Anything handed over mid-session is not in `instructions`, which
+        // were built before it arrived, so the row needs it separately.
+        context_items: this.session.contextItems(),
       })
       .subscribe({
         next: (stored) => {
@@ -109,7 +119,10 @@ export class Practice {
 
   protected runAnalysis(): void {
     const transcript = this.session.transcript();
-    if (transcript.length === 0) {
+    // Speech, not events: a session of nothing but わからない presses is worth
+    // storing (see storeSession) but there is nothing in it to give feedback
+    // on.
+    if (!transcript.some(isSpeech)) {
       this.analysisError.set(
         'Es wurde nichts aufgezeichnet. Für eine Auswertung braucht es mindestens einen Redebeitrag.',
       );
@@ -126,6 +139,8 @@ export class Practice {
         jlpt_level: this.jlptLevel,
         transcript,
         use_wanikani_filter: true,
+        // これください is unreadable feedback without the menu これ pointed at.
+        context_items: this.session.contextItems(),
       })
       .subscribe({
         next: (result) => {
