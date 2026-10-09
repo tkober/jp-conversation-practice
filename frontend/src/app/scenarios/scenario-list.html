@@ -1,14 +1,14 @@
 <div class="list">
   <header>
     <div>
-      <h1>Szenarien</h1>
+      <h1>Scenarios</h1>
       <p>
-        Ein Szenario beschreibt eine Rolle und eine Situation — keine Abfolge von
-        Fragen. Das ist der Unterschied zwischen einem Gespräch und einem Formular.
+        A scenario describes a role and a situation — not a sequence of
+        questions. That's the difference between a conversation and a form.
       </p>
     </div>
     <button type="button" class="btn btn-primary" [disabled]="busy()" (click)="createScenario()">
-      Neues Szenario
+      New scenario
     </button>
   </header>
 
@@ -24,7 +24,7 @@
             <span class="title">{{ scenario.title }}</span>
             @if (scenario.is_builtin) {
               <span class="tag" [class.edited]="scenario.is_customized">
-                {{ scenario.is_customized ? 'angepasst' : 'mitgeliefert' }}
+                {{ scenario.is_customized ? 'customized' : 'built-in' }}
               </span>
             }
           </div>
@@ -33,19 +33,19 @@
 
         <div class="tools">
           @if (confirmingDelete() === scenario.id) {
-            <span class="confirm">Wirklich löschen?</span>
+            <span class="confirm">Really delete?</span>
             <button type="button" class="btn btn-ghost danger" (click)="confirmDelete(scenario)">
-              Ja, löschen
+              Yes, delete
             </button>
-            <button type="button" class="btn btn-ghost" (click)="cancelDelete()">Abbrechen</button>
+            <button type="button" class="btn btn-ghost" (click)="cancelDelete()">Cancel</button>
           } @else {
-            <a class="btn btn-ghost" [routerLink]="['/scenarios', scenario.id]">Bearbeiten</a>
-            <button type="button" class="btn btn-ghost" (click)="askDelete(scenario)">Löschen</button>
+            <a class="btn btn-ghost" [routerLink]="['/scenarios', scenario.id]">Edit</a>
+            <button type="button" class="btn btn-ghost" (click)="askDelete(scenario)">Delete</button>
           }
         </div>
       </li>
     } @empty {
-      <li class="empty">Noch keine Szenarien vorhanden.</li>
+      <li class="empty">No scenarios yet.</li>
     }
   </ul>
 </div>

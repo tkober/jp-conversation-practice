@@ -115,7 +115,7 @@ export class History {
     URL.revokeObjectURL(url);
   }
 
-  /** The stored eagerness is the API's wording; the UI shows the German label. */
+  /** The stored eagerness is the API's wording; the UI shows the English label. */
   eagernessLabel(eagerness: string): string {
     return EAGERNESS_OPTIONS.find((option) => option.id === eagerness)?.label ?? eagerness;
   }
@@ -132,6 +132,6 @@ export class History {
 
   private describe(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
-    return detail ? `Fehler: ${detail}` : 'Der Verlauf konnte nicht geladen werden.';
+    return detail ? `Error: ${detail}` : 'The history could not be loaded.';
   }
 }

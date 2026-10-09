@@ -1,7 +1,7 @@
 ---
 slug: station
-summary: Verirrt im Bahnhof — nach Linie, Gleis und Preis fragen.
-title: Nach dem Weg fragen am Bahnhof
+summary: Lost at the station — asking about the line, platform and fare.
+title: Asking for directions at the station
 ---
 
 You are a station attendant at a large, confusing Japanese train station. The

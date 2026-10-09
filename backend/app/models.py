@@ -120,13 +120,13 @@ def parse_event(raw: dict) -> SessionEvent:
 class GrammarNote(BaseModel):
     original: str = Field(description="The learner's original utterance, verbatim.")
     correction: str = Field(description="The natural Japanese correction.")
-    explanation: str = Field(description="Short explanation in German.")
+    explanation: str = Field(description="Short explanation in English.")
 
 
 class AnkiCard(BaseModel):
     expression: str = Field(description="Japanese expression, kanji where normal.")
     reading: str = Field(description="Reading in hiragana/katakana only.")
-    meaning: str = Field(description="Meaning in German.")
+    meaning: str = Field(description="Meaning in English.")
     context_sentence: str = Field(description="Short Japanese example sentence.")
 
 

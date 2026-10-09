@@ -1,9 +1,9 @@
 <section class="material">
   <p class="material-intro">
-    Bilder oder Texte, die du mit ins Gespräch nimmst — eine Speisekarte, ein Regal,
-    ein Kartenausschnitt. Du siehst sie während der Session auf dem Bildschirm, und
-    die Lehrkraft bekommt eine Beschreibung davon. Erst dadurch funktionieren Sätze
-    wie <span class="jp">これをください</span>.
+    Images or text you bring into the conversation — a menu, a shelf, a map
+    clipping. You see them on screen during the session, and the tutor gets a
+    description of them. That's what makes sentences like
+    <span class="jp">これをください</span> work in the first place.
   </p>
 
   @if (error(); as message) {
@@ -29,7 +29,7 @@
           }
 
           <div class="material-info">
-            <span class="material-title">{{ item.title || 'Ohne Titel' }}</span>
+            <span class="material-title">{{ item.title || 'Untitled' }}</span>
 
             @if (isSelected(item.id)) {
               <label class="material-toggle">
@@ -38,11 +38,11 @@
                   [checked]="startsInPrompt(item.id)"
                   (change)="toggleFromStart(item.id)"
                 />
-                Von Anfang an — sonst reichst du es im Gespräch nach
+                From the start — otherwise you hand it over during the conversation
               </label>
             } @else if (!item.description.trim()) {
               <span class="material-warning">
-                Noch nicht ausgewertet — die Lehrkraft erführe davon nichts.
+                Not evaluated yet — the tutor would not learn anything from it.
               </span>
             }
           </div>
@@ -55,8 +55,8 @@
                 [class.on]="item.default_for_scenario"
                 [title]="
                   item.default_for_scenario
-                    ? 'Wird bei diesem Szenario nicht mehr vorausgewählt'
-                    : 'Bei diesem Szenario künftig vorauswählen'
+                    ? 'Will no longer be preselected for this scenario'
+                    : 'Preselect for this scenario from now on'
                 "
                 (click)="toggleDefault(item)"
               >
@@ -66,7 +66,7 @@
             <button
               type="button"
               class="btn btn-ghost"
-              [title]="expandedId() === item.id ? 'Zuklappen' : 'Beschreibung ansehen'"
+              [title]="expandedId() === item.id ? 'Collapse' : 'View description'"
               (click)="toggleExpanded(item)"
             >
               {{ expandedId() === item.id ? '▴' : '▾' }}
@@ -78,7 +78,7 @@
           <div class="material-detail">
             <label class="field">
               <span class="field-label">
-                Beschreibung für die Lehrkraft <em>(englisch — das liest das Modell)</em>
+                Description for the tutor <em>(English — this is what the model reads)</em>
               </span>
               <textarea
                 rows="8"
@@ -89,7 +89,7 @@
             </label>
             <div class="material-actions">
               <button type="button" class="btn btn-primary" (click)="saveDescription(item)">
-                Beschreibung speichern
+                Save description
               </button>
               <button
                 type="button"
@@ -97,25 +97,25 @@
                 [disabled]="busy()"
                 (click)="evaluate(item)"
               >
-                Neu auswerten
+                Re-evaluate
               </button>
               <button type="button" class="btn btn-ghost danger" (click)="remove(item)">
-                Entfernen
+                Remove
               </button>
             </div>
           </div>
         }
       </article>
     } @empty {
-      <p class="material-empty">Noch kein Material.</p>
+      <p class="material-empty">No material yet.</p>
     }
   </div>
 
   <label class="field">
-    <span class="field-label">Hinweis für die Auswertung <em>(optional)</em></span>
+    <span class="field-label">Hint for the evaluation <em>(optional)</em></span>
     <input
       type="text"
-      placeholder="z. B. „Nur die linke Spalte ist relevant“"
+      placeholder='e.g. "Only the left column is relevant"'
       [ngModel]="hint()"
       (ngModelChange)="hint.set($event)"
     />
@@ -123,7 +123,7 @@
 
   <div class="material-add">
     <label class="btn btn-secondary" [class.disabled]="busy()">
-      Bild hochladen
+      Upload image
       <input
         type="file"
         accept="image/png,image/jpeg,image/webp,image/gif"
@@ -138,10 +138,10 @@
       [disabled]="busy()"
       (click)="showTextForm.set(!showTextForm())"
     >
-      Text hinzufügen
+      Add text
     </button>
     @if (busy()) {
-      <span class="material-busy">wird ausgewertet …</span>
+      <span class="material-busy">evaluating…</span>
     }
   </div>
 
@@ -149,7 +149,7 @@
     <div class="material-text-form">
       <textarea
         rows="5"
-        placeholder="Text einfügen — z. B. die Speisekarte abgetippt"
+        placeholder="Paste text — e.g. the menu typed out"
         [ngModel]="textDraft()"
         (ngModelChange)="textDraft.set($event)"
       ></textarea>
@@ -159,7 +159,7 @@
         [disabled]="busy() || !textDraft().trim()"
         (click)="addText()"
       >
-        Hinzufügen
+        Add
       </button>
     </div>
   }

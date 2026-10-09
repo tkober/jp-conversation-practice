@@ -7,7 +7,7 @@ from httpx import AsyncClient
 
 def session_payload(**overrides: object) -> dict:
     payload = {
-        "scenario_title": "Einkaufen im Kombini",
+        "scenario_title": "Shopping at the konbini",
         "scenario_prompt": "You are the clerk ...",
         "jlpt_level": "N5",
         "model": "gpt-realtime-2.1-mini",
@@ -34,7 +34,7 @@ def session_payload(**overrides: object) -> dict:
 async def test_storing_a_session_returns_a_summary(api: AsyncClient) -> None:
     body = (await api.post("/api/sessions", json=session_payload())).json()
 
-    assert body["scenario_title"] == "Einkaufen im Kombini"
+    assert body["scenario_title"] == "Shopping at the konbini"
     assert body["turn_count"] == 2  # speech only, see below
     assert body["has_analysis"] is False
     assert body["cost_usd"] == 0.0663
@@ -181,7 +181,7 @@ async def test_deleting_the_scenario_keeps_the_session(api: AsyncClient) -> None
 
     detail = (await api.get(f"/api/sessions/{created['id']}")).json()
     assert detail["id"] == created["id"]
-    assert detail["scenario_title"] == "Einkaufen im Kombini"
+    assert detail["scenario_title"] == "Shopping at the konbini"
 
 
 async def test_stats_sum_cost_and_duration(api: AsyncClient) -> None:

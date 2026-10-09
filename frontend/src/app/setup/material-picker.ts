@@ -185,8 +185,8 @@ export class MaterialPicker {
     this.busy.set(false);
     if (item.analysis_error) {
       this.error.set(
-        `Gespeichert, aber nicht ausgewertet: ${item.analysis_error} ` +
-          'Du kannst die Beschreibung selbst schreiben oder es noch einmal versuchen.',
+        `Saved, but not evaluated: ${item.analysis_error} ` +
+          'You can write the description yourself or try again.',
       );
     }
   }
@@ -202,7 +202,7 @@ export class MaterialPicker {
         }
         this.busy.set(false);
         if (updated.analysis_error) {
-          this.error.set(`Auswertung fehlgeschlagen: ${updated.analysis_error}`);
+          this.error.set(`Evaluation failed: ${updated.analysis_error}`);
         }
       },
       error: (error: unknown) => this.fail(error),
@@ -249,7 +249,7 @@ export class MaterialPicker {
 
   private describe(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
-    return detail ? `Fehler: ${detail}` : 'Die Anfrage ist fehlgeschlagen.';
+    return detail ? `Error: ${detail}` : 'The request failed.';
   }
 }
 

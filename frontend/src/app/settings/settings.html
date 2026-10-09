@@ -1,9 +1,9 @@
 <div class="settings">
   <header>
-    <h1>Einstellungen</h1>
+    <h1>Settings</h1>
     <p>
-      Alles hier wird in der Datenbank gespeichert und hat Vorrang vor den Werten aus der
-      <code>.env</code>. Ein leeres Feld heißt: es gilt wieder der Wert aus der <code>.env</code>.
+      Everything here is saved to the database and takes priority over the values from
+      <code>.env</code>. An empty field means: the value from <code>.env</code> applies again.
     </p>
   </header>
 
@@ -15,17 +15,17 @@
 
   @if (current(); as settings) {
     <section class="card">
-      <h2>Zugangsdaten</h2>
+      <h2>Credentials</h2>
 
       <div class="secret">
         <label class="field">
-          <span class="field-label">OpenAI API-Key</span>
+          <span class="field-label">OpenAI API key</span>
           <input
             type="password"
             autocomplete="off"
             [placeholder]="
               settings.openai_api_key_set
-                ? 'Gesetzt (' + settings.openai_api_key_hint + ') — zum Ändern neuen Key eingeben'
+                ? 'Set (' + settings.openai_api_key_hint + ') — enter a new key to change it'
                 : 'sk-...'
             "
             [ngModel]="openaiKeyInput()"
@@ -34,38 +34,38 @@
         </label>
         <p class="field-hint">
           @if (settings.openai_api_key_set && settings.openai_api_key_from_env) {
-            Kommt aus der <code>.env</code> des Containers. Ein Key hier überschreibt ihn.
+            Comes from the container's <code>.env</code>. A key entered here overrides it.
           } @else if (settings.openai_api_key_set) {
-            In der Datenbank gespeichert.
+            Saved in the database.
             <button type="button" class="link" (click)="clearSecret('openai_api_key')">
-              Zurücksetzen
+              Reset
             </button>
           } @else {
-            Ohne Key funktioniert weder Konversation noch Auswertung.
+            Without a key, neither conversation nor analysis works.
           }
         </p>
       </div>
 
       <div class="secret">
         <label class="field">
-          <span class="field-label">WaniKani API-Token <em>(optional)</em></span>
+          <span class="field-label">WaniKani API token <em>(optional)</em></span>
           <input
             type="password"
             autocomplete="off"
             [placeholder]="
               settings.wanikani_api_token_set
-                ? 'Gesetzt (' + settings.wanikani_api_token_hint + ')'
-                : 'Leer lassen, um den Filter zu deaktivieren'
+                ? 'Set (' + settings.wanikani_api_token_hint + ')'
+                : 'Leave empty to disable the filter'
             "
             [ngModel]="wanikaniTokenInput()"
             (ngModelChange)="wanikaniTokenInput.set($event)"
           />
         </label>
         <p class="field-hint">
-          Filtert Vokabeln, die du laut WaniKani ab Guru schon kannst, aus den Anki-Karten heraus.
+          Filters vocabulary you already know at Guru or above on WaniKani out of the Anki cards.
           @if (settings.wanikani_api_token_set && !settings.wanikani_api_token_from_env) {
             <button type="button" class="link" (click)="clearSecret('wanikani_api_token')">
-              Zurücksetzen
+              Reset
             </button>
           }
         </p>
@@ -73,13 +73,13 @@
     </section>
 
     <section class="card">
-      <h2>Modelle</h2>
+      <h2>Models</h2>
 
       @if (modelListNote(); as note) {
         <div class="banner banner-info">
           <span
-            >{{ note }} Es stehen nur die bekannten Modelle zur Auswahl — ein anderes lässt sich
-            über „Anderes Modell …“ eintragen.</span
+            >{{ note }} Only the known models are offered — a different one can be entered
+            via "Other model…".</span
           >
         </div>
       }
@@ -92,19 +92,19 @@
             [ngModel]="selectValue(slot)"
             (ngModelChange)="onSlotSelect(slot, $event)"
           >
-            <optgroup label="Empfohlen">
+            <optgroup label="Recommended">
               @for (option of curatedOptions(slot); track option.id) {
                 <option [value]="option.id">{{ optionText(option) }}</option>
               }
             </optgroup>
             @if (liveOptions(slot).length) {
-              <optgroup label="Weitere aus deinem Konto">
+              <optgroup label="More from your account">
                 @for (option of liveOptions(slot); track option.id) {
                   <option [value]="option.id">{{ optionText(option) }}</option>
                 }
               </optgroup>
             }
-            <option [value]="customValue">Anderes Modell …</option>
+            <option [value]="customValue">Other model…</option>
           </select>
 
           @if (isCustom(slot)) {
@@ -113,7 +113,7 @@
               type="text"
               spellcheck="false"
               autocapitalize="off"
-              placeholder="Modellname, z. B. gpt-realtime-3"
+              placeholder="Model name, e.g. gpt-realtime-3"
               [ngModel]="value(slot.key)"
               (ngModelChange)="set(slot.key, $event)"
             />
@@ -125,8 +125,8 @@
           }
           @if (ratesUnknown(slot)) {
             <span class="field-hint field-hint-warning">
-              Für dieses Modell sind keine Preise hinterlegt — die Kostenanzeige rechnet dann mit
-              den Raten von <code>gpt-realtime-2.1-mini</code>.
+              No prices are on file for this model — the cost display then uses the rates for
+              <code>gpt-realtime-2.1-mini</code>.
             </span>
           }
         </div>
@@ -134,23 +134,23 @@
     </section>
 
     <section class="card">
-      <h2>Stimme &amp; Tempo</h2>
+      <h2>Voice &amp; pace</h2>
 
       <label class="field">
-        <span class="field-label">Standardstimme</span>
+        <span class="field-label">Default voice</span>
         <select [ngModel]="value('realtime_voice')" (ngModelChange)="set('realtime_voice', $event)">
           @for (voice of voices(); track voice.id) {
             <option [value]="voice.id">{{ voice.label }} — {{ voice.description }}</option>
           }
         </select>
         <span class="field-hint">
-          Vorauswahl im Setup; dort lässt sie sich pro Session ändern und anhören.
+          Preselected in setup; it can be changed and previewed per session there.
         </span>
       </label>
 
       <label class="field">
         <span class="field-label">
-          Standardtempo — {{ (+value('realtime_speed') || settings.realtime_speed).toFixed(2) }}×
+          Default pace — {{ (+value('realtime_speed') || settings.realtime_speed).toFixed(2) }}×
         </span>
         <input
           type="range"
@@ -164,7 +164,7 @@
 
       <label class="field">
         <span class="field-label">
-          Verlangsamung bei „わからない“ — {{ helpFactorLabel() }}
+          Slowdown on "わからない" — {{ helpFactorLabel() }}
         </span>
         <input
           type="range"
@@ -175,15 +175,15 @@
           (ngModelChange)="set('realtime_help_speed_factor', +$event)"
         />
         <span class="field-hint">
-          Kein festes Tempo, sondern ein Faktor auf das Tempo der laufenden Session: bei
-          {{ helpBaseSpeed().toFixed(2) }}× kommt die Hilfe mit {{ helpSpeed().toFixed(2) }}×.
-          Änderst du das Tempo mitten in der Session, wandert die Hilfe mit. Ganz rechts ist
-          die Verlangsamung aus.
+          Not a fixed pace, but a factor on the running session's pace: at
+          {{ helpBaseSpeed().toFixed(2) }}× the help comes at {{ helpSpeed().toFixed(2) }}×.
+          Change the pace mid-session and the help follows along. All the way to the right
+          turns the slowdown off.
         </span>
       </label>
 
       <label class="field">
-        <span class="field-label">Geduld beim Zuhören</span>
+        <span class="field-label">Patience while listening</span>
         <select
           [ngModel]="value('realtime_vad_eagerness')"
           (ngModelChange)="set('realtime_vad_eagerness', $event)"
@@ -193,8 +193,8 @@
           }
         </select>
         <span class="field-hint">
-          Wie lange die Lehrkraft eine Pause abwartet, bevor sie antwortet. Während einer Session
-          lässt sich das jederzeit umstellen — hier steht nur, womit jede Session startet.
+          How long the tutor waits out a pause before answering. It can be changed any time
+          during a session — this only sets what each session starts with.
         </span>
       </label>
     </section>
@@ -202,7 +202,7 @@
     <section class="card">
       <h2>Anki</h2>
       <label class="field">
-        <span class="field-label">AnkiConnect-Adresse</span>
+        <span class="field-label">AnkiConnect address</span>
         <input
           type="text"
           spellcheck="false"
@@ -210,13 +210,13 @@
           (ngModelChange)="set('ankiconnect_url', $event)"
         />
         <span class="field-hint">
-          Wird vom Backend aufgerufen — die Adresse muss also aus dem Container erreichbar sein,
-          nicht aus dem Browser.
+          Called from the backend — so the address must be reachable from the container,
+          not from the browser.
         </span>
       </label>
 
       <label class="field">
-        <span class="field-label">Ziel-Deck</span>
+        <span class="field-label">Target deck</span>
         <input
           type="text"
           [ngModel]="value('anki_deck_name')"
@@ -232,7 +232,7 @@
         [disabled]="!dirty() || saveState() === 'saving'"
         (click)="save()"
       >
-        {{ saveState() === 'saving' ? 'Speichere …' : 'Speichern' }}
+        {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
       </button>
       @if (saveMessage(); as message) {
         <span

@@ -10,10 +10,10 @@ import { FuriganaService } from '../core/furigana.service';
     type="button"
     class="btn btn-ghost"
     [attr.aria-pressed]="enabled()"
-    title="Lesungen über den Kanji ein- oder ausblenden"
+    title="Show or hide the readings above the kanji"
     (click)="furigana.toggle()"
   >
-    {{ enabled() ? 'Furigana ausblenden' : 'Furigana anzeigen' }}
+    {{ enabled() ? 'Hide furigana' : 'Show furigana' }}
   </button>`,
 })
 export class FuriganaToggle {

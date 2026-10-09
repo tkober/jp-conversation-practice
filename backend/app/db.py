@@ -191,8 +191,8 @@ class AppSettings(Base):
 class Scenario(Base):
     """A role-play setting the learner can pick.
 
-    ``prompt`` is English (it goes to the model), ``title`` is German (it goes
-    to the UI). Scenarios shipped as Markdown files are re-seeded on every boot
+    ``prompt`` is English (it goes to the model), ``title`` is English too (it
+    goes to the UI). Scenarios shipped as Markdown files are re-seeded on every boot
     unless ``is_customized`` is set — editing a built-in scenario in the UI
     marks it, so a redeploy never overwrites the user's own wording.
     """
@@ -237,8 +237,8 @@ class Attachment(Base):
       all. A menu only the model can see is a menu nobody can point at.
     * ``description`` is the *model*-facing English prose produced once by
       :mod:`app.context_material`, and is what actually reaches the tutor's
-      prompt. It is English for the same reason ``Scenario.prompt`` is, while
-      ``title`` is German because the UI shows it.
+      prompt. It is English for the same reason ``Scenario.prompt`` is, and
+      ``title`` is English too because the UI shows it.
 
     Storing the bytes in the database rather than on disk keeps the SQLite
     deployment a single file and the Postgres one inside the existing backup;

@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Language convention
 
 Conversation with the user happens in **German**. Everything in the repository —
-identifiers, comments, commit messages, documentation — is **English**.
-
-The exception is user-facing UI copy, which is German because the learner is a
-German speaker: Angular templates, the German lead-in on error messages, and the
-parts of the prompts in `backend/app/prompts.py` that instruct the model to
-write feedback in German. Backend `HTTPException` details stay English and the
-frontend prefixes them with a German sentence.
+identifiers, comments, commit messages, documentation, user-facing UI copy and
+the feedback the model generates — is **English**: Angular templates, the
+lead-in on error messages, and the parts of the prompts in
+`backend/app/prompts.py` that instruct the model to write feedback in English.
+Backend `HTTPException` details are English and the frontend's lead-in matches.
+Japanese content (the tutor's speech, scenario prompts, furigana) stays
+Japanese throughout.
 
 ## Working in this repository
 
@@ -216,8 +216,8 @@ eagerness (see below).
 
 ### Where the scenario text comes from
 
-`backend/scenarios/*.md` — YAML front matter (`slug`, German `title` and
-`summary`) plus an English body that is the model-facing prompt — seeds the
+`backend/scenarios/*.md` — YAML front matter (`slug`, `title` and
+`summary`, all English) plus an English body that is the model-facing prompt — seeds the
 `scenarios` table at startup. After that the database is the source of truth:
 `seed_scenarios()` refreshes untouched rows from the files but leaves anything
 flagged `is_customized`, so an edit made in the UI survives a redeploy. The
@@ -295,7 +295,7 @@ billed, aggregated per day, which is a reconciliation tool and not a rate
 table. `MODEL_RATES` therefore stays hand-maintained whatever else changes.
 
 The `SLOTS` table answers *what is worth picking and what it costs*. It carries
-the German descriptions, the curated order, and — for the one cost-tracked slot
+the English descriptions, the curated order, and — for the one cost-tracked slot
 — the price the app will actually bill. Curated entries come first, live extras
 follow, and the merge means a model released after the last deploy is still
 selectable.
@@ -313,7 +313,7 @@ under `.voice-samples/<tts_model>/`, so the settings PUT validates the shape of
 every model field against `MODEL_ID_PATTERN`, for the same reason `voices.py`
 validates voice ids.
 
-The dropdown keeps a free-text escape hatch ("Anderes Modell …") because trying
+The dropdown keeps a free-text escape hatch ("Other model…") because trying
 a model the day it ships is the point of a PoC. It is also where a configured
 model that has since left the list resurfaces: a `<select>` renders an unknown
 value as blank, so the component falls back to the text box instead of
@@ -354,7 +354,7 @@ the model pads the sentence out with explanation instead of cutting it down, and
 the help arrives longer than the thing it was meant to clarify.
 
 `HELP_STAGES` in `prompts.py` is the escalation, one entry per press: two
-Japanese-only stages, a third that assumes nothing landed, and German as the
+Japanese-only stages, a third that assumes nothing landed, and English as the
 last resort. The stage advances with every press and resets to 0 as soon as the
 learner says something (`app.help.stage` carries both directions, so the button
 never has to guess).
@@ -387,9 +387,9 @@ dead for the rest of the session.
 The model is never told a button exists: it is told the learner signalled they
 are stuck, and to stay in character.
 
-The German stage has to say it **overrides** the "speak ONLY Japanese" rule
+The English stage has to say it **overrides** the "speak ONLY Japanese" rule
 sitting above it in the same prompt. Appending a permission is not enough; the
-earlier absolute wins, and the escalation just never arrives at German.
+earlier absolute wins, and the escalation just never arrives at English.
 
 ## Context material
 
@@ -406,7 +406,7 @@ nobody can point at. So the session screen renders every attachment
 explicitly that the learner is looking at it and must not have it read out.
 
 **The material is evaluated once, not sent to the realtime model.** The ticket
-asked for it "aufgearbeitet" and that is the right way round here for three
+asked for it to be worked up in advance, and that is the right way round here for three
 reasons: the default `gpt-realtime-2.1-mini` is already the weakest link in
 coherence and reading a photographed menu mid-conversation is exactly the load
 it fails under; a description written once is identical in every session, is
@@ -524,7 +524,7 @@ no `type` is speech. Existing databases carry real practice history, and this
 is the same trade the furigana makes. Only the read path is forgiving — nothing
 writes that shape any more, so `POST /api/sessions` rejects it.
 
-**Anything that counts "Redebeiträge" counts speech**, in the history summary
+**Anything that counts "turns" counts speech**, in the history summary
 and on the review screen. A press is not a turn, and a number inflated by
 presses is worse than no number.
 

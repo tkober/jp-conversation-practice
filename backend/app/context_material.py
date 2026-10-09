@@ -106,13 +106,13 @@ describing a THING THAT EXISTS, not an interaction. If you catch yourself
 writing a verb in the imperative, you have started writing the wrong document.
 
 # The title
-Also propose a short title for this material, IN GERMAN, of at most a handful
-of words -- the learner sees it as a label in the app. "Speisekarte des
-Izakaya", "Regal mit Getränken", "Karte um den Bahnhof"."""
+Also propose a short title for this material, IN ENGLISH, of at most a handful
+of words -- the learner sees it as a label in the app. "Izakaya menu",
+"Shelf of drinks", "Map around the station"."""
 
 
 class MaterialAnalysis(BaseModel):
-    """What the evaluation produces: a German label and English prose."""
+    """What the evaluation produces: an English label and English prose."""
 
     title: str
     description: str
@@ -127,7 +127,7 @@ _SCHEMA: dict[str, Any] = {
     "properties": {
         "title": {
             "type": "string",
-            "description": "Short label for the material, in German.",
+            "description": "Short label for the material, in English.",
         },
         "description": {
             "type": "string",

@@ -12,23 +12,23 @@ export type VadEagerness = 'low' | 'medium' | 'high' | 'auto';
 export const EAGERNESS_OPTIONS: { id: VadEagerness; label: string; hint: string }[] = [
   {
     id: 'low',
-    label: 'Viel Denkzeit',
-    hint: 'Wartet lange, bevor geantwortet wird — gut, solange du Sätze noch zusammenbaust.',
+    label: 'Lots of thinking time',
+    hint: 'Waits a long time before answering — good while you are still building sentences.',
   },
   {
     id: 'medium',
-    label: 'Mittel',
-    hint: 'Etwas kürzere Pausen, bevor geantwortet wird.',
+    label: 'Medium',
+    hint: 'Somewhat shorter pauses before answering.',
   },
   {
     id: 'high',
-    label: 'Wenig — antwortet zügig',
-    hint: 'Antwortet schnell — natürlicher, unterbricht dich aber eher mitten im Satz.',
+    label: 'Low — answers quickly',
+    hint: 'Answers quickly — more natural, but more likely to interrupt you mid-sentence.',
   },
   {
     id: 'auto',
-    label: 'Automatisch',
-    hint: 'Das Modell entscheidet selbst (Voreinstellung der API).',
+    label: 'Automatic',
+    hint: "The model decides on its own (the API's default).",
   },
 ];
 
@@ -57,7 +57,7 @@ export interface ScenarioDraft {
  * part that repeats, so what is on the shelf is picked per run. A scenario can
  * pre-select entries, which is only about what gets ticked for you.
  *
- * `description` is the English prose the tutor gets; `title` is the German
+ * `description` is the English prose the tutor gets; `title` is the English
  * label the learner sees. The image bytes are not in here — they come from
  * `ApiService.attachmentFileUrl()` — so the list stays small.
  */
@@ -151,7 +151,7 @@ export type AppSettingsPatch = Partial<{
 export interface ModelOption {
   id: string;
   label: string;
-  /** German prose for curated models; null for live extras we know nothing about. */
+  /** English prose for curated models; null for live extras we know nothing about. */
   description: string | null;
   curated: boolean;
   /** Set only on the cost-tracked slot, and only when MODEL_RATES knows the model. */

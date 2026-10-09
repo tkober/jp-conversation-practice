@@ -69,7 +69,7 @@ export class ScenarioEditor {
       next: (scenarios) => {
         const found = scenarios.find((row) => row.id === id) ?? null;
         if (!found) {
-          this.loadError.set('Dieses Szenario existiert nicht (mehr).');
+          this.loadError.set('This scenario does not exist (any more).');
           return;
         }
         this.apply(found);
@@ -103,7 +103,7 @@ export class ScenarioEditor {
         next: (scenario) => {
           this.apply(scenario);
           this.saveState.set('saved');
-          this.saveMessage.set('Gespeichert.');
+          this.saveMessage.set('Saved.');
         },
         error: (error: unknown) => {
           this.saveState.set('error');
@@ -122,7 +122,7 @@ export class ScenarioEditor {
       next: (scenario) => {
         this.apply(scenario);
         this.saveState.set('saved');
-        this.saveMessage.set('Auf die mitgelieferte Fassung zurückgesetzt.');
+        this.saveMessage.set('Reset to the built-in version.');
       },
       error: (error: unknown) => {
         this.saveState.set('error');
@@ -175,7 +175,7 @@ export class ScenarioEditor {
   applySuggestion(suggestion: string): void {
     this.prompt.set(suggestion);
     this.saveState.set('idle');
-    this.saveMessage.set('Vorschlag übernommen — noch nicht gespeichert.');
+    this.saveMessage.set('Suggestion applied — not saved yet.');
   }
 
   clearChat(): void {
@@ -193,6 +193,6 @@ export class ScenarioEditor {
 
   private describe(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
-    return detail ? `Fehler: ${detail}` : 'Die Anfrage ist fehlgeschlagen.';
+    return detail ? `Error: ${detail}` : 'The request failed.';
   }
 }

@@ -20,13 +20,13 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       class="btn jp"
       (click)="session.requestHelp()"
       [disabled]="!canRequest()"
-      title="Sag der Lehrkraft, dass du gerade nicht weiterkommst"
+      title="Tell the tutor you're stuck right now"
     >
       わからない
     </button>
     <div class="text">
       <span>{{ hint() }}</span>
-      <div class="steps" role="img" [attr.aria-label]="'Hilfestufe ' + stage() + ' von ' + max()">
+      <div class="steps" role="img" [attr.aria-label]="'Help stage ' + stage() + ' of ' + max()">
         @for (step of steps(); track step) {
           <span class="step" [class.reached]="step <= stage()"></span>
         }
@@ -114,21 +114,21 @@ export class WakaranaiButton {
       return '';
     }
     const rate = Math.max(this.session.speedMin(), this.session.speed() * factor);
-    return `; die Hilfe kommt mit ${rate.toFixed(2)}×`;
+    return `; the help comes at ${rate.toFixed(2)}×`;
   });
 
   protected readonly hint = computed(() => {
     if (this.session.helpPending()) {
-      return 'Die Lehrkraft geht gerade darauf ein …';
+      return 'The tutor is responding to that…';
     }
     const stage = this.stage();
     const max = this.max();
     if (stage === 0) {
-      return `Drücken, wenn du nicht weiterkommst${this.slower()} — du musst nicht extra nach Hilfe fragen.`;
+      return `Press when you're stuck${this.slower()} — you don't have to ask for help in words.`;
     }
     if (stage < max) {
-      return `Stufe ${stage} von ${max} — noch mal drücken, wenn das nicht gereicht hat.`;
+      return `Stage ${stage} of ${max} — press again if that wasn't enough.`;
     }
-    return `Stufe ${stage} von ${max} — mehr geht nicht, jetzt wird auf Deutsch erklärt.`;
+    return `Stage ${stage} of ${max} — that's the limit, the tutor now explains in English.`;
   });
 }

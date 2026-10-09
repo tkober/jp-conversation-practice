@@ -1,7 +1,7 @@
 ---
 slug: smalltalk
-summary: Lockeres Mittagspausen-Gespräch ohne festes Thema.
-title: Smalltalk mit Kollegen
+summary: A casual lunch-break chat with no fixed topic.
+title: Small talk with coworkers
 ---
 
 You are a Japanese colleague of the learner, sharing a table during the lunch

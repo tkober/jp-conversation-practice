@@ -93,15 +93,15 @@ diffed as prose:
 ```markdown
 ---
 slug: konbini
-title: Einkaufen im Kombini
-summary: Abendschicht an der Kasse ...
+title: Shopping at the konbini
+summary: Evening shift at the register ...
 ---
 
 You are the clerk at a Japanese convenience store ...
 ```
 
 The body is the model-facing prompt and is English; `title` and `summary` are
-user-facing and German.
+user-facing and English too.
 
 ### Postgres or SQLite
 
@@ -177,15 +177,16 @@ a plausible-sounding reply.
 **Scaffolding policy.** When the learner hesitates or stalls, the tutor escalates
 help *inside Japanese first*: repeat slower → rephrase simpler → offer a yes/no
 question → model an example answer. It only switches to German or English when
-the learner explicitly asks. Grammar is never corrected mid-conversation; that
-happens in the review step.
+the learner explicitly asks — the learner may still ask in German, since that's
+input, not UI. Grammar is never corrected mid-conversation; that happens in the
+review step.
 
 **The わからない button.** A teacher notices when you are out of your depth and
 eases off unasked; the model cannot, and asking for help *in Japanese* is
 exactly what someone who is stuck cannot do. So the session screen has a button
 that says it for you. Each press without saying anything in between escalates
 one step — make the sentence smaller, then make it easier to *answer*, then
-assume nothing landed at all, and only as a last resort explain it in German
+assume nothing landed at all, and only as a last resort explain it in English
 before switching straight back. The tutor is never told that a button exists,
 only that you signalled you are stuck, so it helps in character instead of
 breaking into teacher mode. Saying something resets the escalation — something
@@ -246,14 +247,14 @@ A WaniKani outage degrades to an unfiltered analysis instead of failing.
 ### 6. Scenario editor
 
 Scenarios are edited in the app, with a writing assistant beside the editor.
-It answers in German, proposes complete English prompts as one-click
+It answers in English, proposes complete English prompts as one-click
 replacements, and its system prompt encodes the role-not-checklist rule — so it
 argues against the failure mode described above rather than helping you
 reproduce it. It runs on its own model (`SCENARIO_ASSISTANT_MODEL`), separate
 from the live tutor, because it writes prose rather than driving a conversation.
 
 Editing a built-in scenario marks it as customised; a redeploy will not
-overwrite it, and "Auf Original zurücksetzen" restores the Markdown version.
+overwrite it, and "Reset to original" restores the Markdown version.
 
 ### 7. Context material
 
@@ -273,7 +274,7 @@ you pick it.
 Uploading and evaluating are one step. The image goes to the model configured
 as `SCENARIO_ASSISTANT_MODEL` (it has to be one that reads images), which
 writes an English description of what is *on* the material — items, prices,
-readings, what is next to what — for the tutor's prompt, plus a German label
+readings, what is next to what — for the tutor's prompt, plus an English label
 for you. The scenario currently selected frames that description without
 filing the material under it. The realtime model never sees the image itself:
 the default `gpt-realtime-2.1-mini` is the weakest link in coherence already,
@@ -305,7 +306,7 @@ a conversation is not only what was said:
 ```jsonc
 { "type": "speech",  "role": "assistant", "text": "ご注文はお決まりですか。" },
 { "type": "help",    "stage": 1, "max_stage": 4 },
-{ "type": "context", "item": { "title": "Speisekarte des Izakaya" } },
+{ "type": "context", "item": { "title": "Izakaya menu" } },
 { "type": "speech",  "role": "user", "text": "これをください。", "help_stage": null }
 ```
 

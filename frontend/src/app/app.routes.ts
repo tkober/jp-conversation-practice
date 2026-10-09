@@ -8,27 +8,27 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    title: 'Üben — Japanisch-Konversation',
+    title: 'Practice — Japanese Conversation',
     loadComponent: () => import('./practice/practice').then((m) => m.Practice),
   },
   {
     path: 'scenarios',
-    title: 'Szenarien — Japanisch-Konversation',
+    title: 'Scenarios — Japanese Conversation',
     loadComponent: () => import('./scenarios/scenario-list').then((m) => m.ScenarioList),
   },
   {
     path: 'scenarios/:id',
-    title: 'Szenario bearbeiten — Japanisch-Konversation',
+    title: 'Edit scenario — Japanese Conversation',
     loadComponent: () => import('./scenarios/scenario-editor').then((m) => m.ScenarioEditor),
   },
   {
     path: 'history',
-    title: 'Verlauf — Japanisch-Konversation',
+    title: 'History — Japanese Conversation',
     loadComponent: () => import('./history/history').then((m) => m.History),
   },
   {
     path: 'settings',
-    title: 'Einstellungen — Japanisch-Konversation',
+    title: 'Settings — Japanese Conversation',
     loadComponent: () => import('./settings/settings').then((m) => m.SettingsPage),
   },
   { path: '**', redirectTo: '' },

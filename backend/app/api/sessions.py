@@ -48,8 +48,8 @@ def to_summary(row: SessionRow) -> SessionSummary:
         started_at=row.started_at,
         duration_seconds=row.duration_seconds,
         cost_usd=row.cost_usd,
-        # Speech only: a history row saying "12 Redebeiträge" must not be
-        # inflated by わからない presses.
+        # Speech only: a history row saying "12 turns" must not be inflated
+        # by わからない presses.
         turn_count=sum(
             1 for raw in row.transcript or [] if raw.get("type", "speech") == "speech"
         ),
