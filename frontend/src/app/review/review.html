@@ -6,9 +6,11 @@
   </sumi-stat-grid>
 
   @if (loading()) {
-    <sumi-card class="loading">
-      <span class="spinner"></span>
-      <p>Analysing the session — building feedback, grammar notes and vocabulary…</p>
+    <sumi-card>
+      <div class="loading">
+        <span class="spinner"></span>
+        <p>Analysing the session — building feedback, grammar notes and vocabulary…</p>
+      </div>
     </sumi-card>
   } @else if (analysisError(); as error) {
     <sumi-banner tone="error">{{ error }}</sumi-banner>
@@ -144,19 +146,21 @@
     </div>
 
     @if (showTranscript()) {
-      <sumi-card class="transcript">
-        @for (event of transcript(); track $index) {
-          @if (asSpeech(event); as turn) {
-            <p class="line">
-              <span class="line-role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-              <span lang="ja">
-                <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
-              </span>
-            </p>
-          } @else if (asMarker(event); as marker) {
-            <app-transcript-marker [event]="marker" />
+      <sumi-card>
+        <div class="transcript">
+          @for (event of transcript(); track $index) {
+            @if (asSpeech(event); as turn) {
+              <p class="line">
+                <span class="line-role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
+                <span lang="ja">
+                  <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
+                </span>
+              </p>
+            } @else if (asMarker(event); as marker) {
+              <app-transcript-marker [event]="marker" />
+            }
           }
-        }
+        </div>
       </sumi-card>
     }
 

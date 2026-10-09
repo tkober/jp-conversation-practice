@@ -29,29 +29,10 @@ header {
 
 /* --- form ---------------------------------------------------------------- */
 
-// `sumi-card`'s own body is a plain padded block (see its scss) — these two
-// cards need a flex column that reaches down into it (the "grow" field here,
-// the scrolling chat feed in `.assistant` below), so each pierces its own
-// card's body the same way `sumi-card`'s stylesheet itself reaches into its
-// header/footer slots.
-.form {
-  display: flex;
-  flex-direction: column;
-
-  ::ng-deep .sumi-card__body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-  }
-}
-
 .field {
   display: block;
   margin-bottom: 16px;
 
-  &.grow {
-    flex: 1;
-  }
 }
 
 .field-label {
@@ -107,19 +88,6 @@ header {
 
 /* --- assistant ----------------------------------------------------------- */
 
-.assistant {
-  display: flex;
-  flex-direction: column;
-  max-height: 620px;
-
-  ::ng-deep .sumi-card__body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0; // lets .chat shrink and scroll instead of overflowing
-  }
-}
-
 .assistant-head {
   display: flex;
   align-items: center;
@@ -136,8 +104,8 @@ header {
 }
 
 .chat {
-  flex: 1;
   min-height: 220px;
+  max-height: 460px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

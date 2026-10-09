@@ -35,6 +35,13 @@
 }
 
 .row {
+  // A clickable row surface, deliberately not a sumiButton: it carries
+  // its own button reset instead of a global one.
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
   flex: 1;
   min-width: 0;
   display: grid;

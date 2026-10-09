@@ -21,42 +21,44 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
   selector: 'app-context-panel',
   imports: [SumiButtonDirective, SumiCard],
   template: `@if (ready() && (visible().length || pending().length)) {
-    <sumi-card class="material">
-      @if (visible().length) {
-        <div class="shown">
-          @for (item of visible(); track item.id) {
-            <figure class="item" [class.text]="item.kind === 'text'">
-              @if (item.kind === 'image') {
-                <button type="button" class="thumb" (click)="enlarge(item)">
-                  <img [src]="fileUrl(item.id)" [alt]="item.title" />
-                </button>
-              } @else {
-                <pre class="body" lang="ja">{{ item.body }}</pre>
-              }
-              <figcaption>{{ item.title || 'Material' }}</figcaption>
-            </figure>
-          }
-        </div>
-      }
+    <sumi-card>
+      <div class="material">
+        @if (visible().length) {
+          <div class="shown">
+            @for (item of visible(); track item.id) {
+              <figure class="item" [class.text]="item.kind === 'text'">
+                @if (item.kind === 'image') {
+                  <button type="button" class="thumb" (click)="enlarge(item)">
+                    <img [src]="fileUrl(item.id)" [alt]="item.title" />
+                  </button>
+                } @else {
+                  <pre class="body" lang="ja">{{ item.body }}</pre>
+                }
+                <figcaption>{{ item.title || 'Material' }}</figcaption>
+              </figure>
+            }
+          </div>
+        }
 
-      @if (pending().length) {
-        <div class="pending">
-          <span class="pending-label">Not shown yet:</span>
-          @for (item of pending(); track item.id) {
-            <button
-              type="button"
-              sumiButton
-              variant="secondary"
-              size="sm"
-              [disabled]="!canHandOver()"
-              [title]="'Show the tutor: ' + (item.title || 'Material')"
-              (click)="handOver(item)"
-            >
-              + {{ item.title || 'Material' }}
-            </button>
-          }
-        </div>
-      }
+        @if (pending().length) {
+          <div class="pending">
+            <span class="pending-label">Not shown yet:</span>
+            @for (item of pending(); track item.id) {
+              <button
+                type="button"
+                sumiButton
+                variant="secondary"
+                size="sm"
+                [disabled]="!canHandOver()"
+                [title]="'Show the tutor: ' + (item.title || 'Material')"
+                (click)="handOver(item)"
+              >
+                + {{ item.title || 'Material' }}
+              </button>
+            }
+          </div>
+        }
+      </div>
     </sumi-card>
   }
 
@@ -67,12 +69,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
     </div>
   }`,
   styles: `
-    // sumi-card's own body is a plain padded block; this piece needs a
-    // flex column instead (the pending-material row sits right under the
-    // shown-material row with a smaller gap than the card's own padding),
-    // so it reaches into its own body the same way sumi-card's stylesheet
-    // reaches into its header/footer slots.
-    .material ::ng-deep .sumi-card__body {
+    .material {
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -105,6 +102,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
     }
 
     .thumb {
+      font: inherit;
       padding: 0;
       border: 1px solid var(--sumi-line);
       border-radius: 6px;

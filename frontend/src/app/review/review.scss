@@ -19,17 +19,12 @@ h2 {
   margin: 0;
 }
 
-/* Loading ----------------------------------------------------------------
-   sumi-card's body is a plain padded block; this card needs the
-   spinner/text side by side, so it reaches into its own body the same way
-   sumi-card's own stylesheet reaches into its header/footer slots. */
+/* Loading ---------------------------------------------------------------- */
 
 .loading {
-  ::ng-deep .sumi-card__body {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
+  display: flex;
+  align-items: center;
+  gap: 14px;
 
   p {
     margin: 0;
@@ -195,13 +190,11 @@ h2 {
 /* Transcript ------------------------------------------------------------ */
 
 .transcript {
-  ::ng-deep .sumi-card__body {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 380px;
-    overflow-y: auto;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 380px;
+  overflow-y: auto;
 }
 
 .line {

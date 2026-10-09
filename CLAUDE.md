@@ -160,10 +160,11 @@ scenario" cheap: `step.set('gate')` is the entire implementation.
 **Base components (#18).** Setup, Scenarios (list + editor), History, Review
 and Settings moved onto the library's own button/card/banner/badge/input/
 select/textarea/slider/checkbox/data-table/segmented-control components —
-`styles.scss` no longer has base styles of its own beyond the two `@use`s
-and one reset for the single plain `<button>` left (History's row-toggle,
-deliberately not a `sumiButton`: a clickable row surface, not something that
-should look like a button). Tags ("built-in"/"customized", a session's JLPT
+`styles.scss` is just the two `@use`s (Sumi UI and the app tokens). Page
+styles are layout only and never reach into a library component's
+internals (no `::ng-deep .sumi-card__body`): when a card's content needs a
+flex column or its own scroll area, an app `<div>` inside the card carries
+it. Tags ("built-in"/"customized", a session's JLPT
 level, Review's "n / m selected" counter, History's vocabulary chips) are
 `sumi-badge`; the conversation screen's token-details table (#17) is also a
 `sumi-data-table` now, formatted with `formatNumber()`. A few raw elements
@@ -171,7 +172,8 @@ stay on purpose, each with a reason in code: the material picker's hidden
 `<input type="file">` (no library equivalent for uploads), History's
 row-toggle `<button class="row">`, and the context panel's image-enlarge
 `<button class="thumb">` — none of them are meant to read as a styled
-button/input, just a plain clickable surface.
+button/input, just a plain clickable surface, so each carries its own small
+button reset in its component styles.
 
 **Empty states (T3).** `sumi-empty-state companion="kitsune"`: no sessions
 yet (History, "Start a conversation" links to `/practice`), no scenarios
