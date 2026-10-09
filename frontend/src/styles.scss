@@ -4,10 +4,14 @@
 @use 'sumi-ui/projects/sumi-ui/styles/sumi';
 @use 'styles/app-tokens.scss';
 
-/* Sumi's base styles cover box-sizing, body and [lang='ja'] — but the app
-   still renders plain <button>/<input>/<textarea>/<select> elements (the
-   library's own form components are a later issue, #17/#18), so those still
-   need the usual reset to inherit the page's font and colour. */
+/* #18 moved every page onto the library's own button/card/banner/badge/
+   input/select/textarea/slider/checkbox components — the app no longer has
+   base styles of its own, only this one reset. A single plain `<button>`
+   remains on purpose (History's row toggle, `.row` in history.scss): it is
+   deliberately *not* styled as a button — just a clickable row surface — so
+   it still needs the usual reset to drop the browser's button chrome and
+   inherit the page's font and colour, the one case `sumiButton` does not
+   cover because it opts out of the directive entirely. */
 button {
   font: inherit;
   cursor: pointer;
@@ -19,146 +23,4 @@ button {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-}
-
-/* Shared button styles -------------------------------------------------- */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 11px 20px;
-  border-radius: var(--sumi-radius-sm);
-  font-weight: 600;
-  font-size: 14px;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
-}
-
-.btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.btn-primary {
-  background: var(--sumi-accent);
-  color: var(--sumi-on-accent);
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--sumi-accent-ink);
-}
-
-.btn-secondary {
-  background: var(--sumi-sunken);
-  border: 1px solid color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
-  color: var(--sumi-text);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  border-color: var(--sumi-muted);
-}
-
-.btn-ghost {
-  color: var(--sumi-muted);
-  padding: 8px 12px;
-}
-
-.btn-ghost:hover:not(:disabled) {
-  color: var(--sumi-text);
-}
-
-/* Shared surfaces -------------------------------------------------------- */
-
-.card {
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: var(--sumi-radius);
-  padding: 20px;
-}
-
-.banner {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px 14px;
-  border-radius: var(--sumi-radius-sm);
-  font-size: 13.5px;
-  border: 1px solid;
-}
-
-.banner-error {
-  background: var(--sumi-wrong-soft);
-  border-color: color-mix(in oklab, var(--sumi-wrong) 35%, transparent);
-  color: var(--sumi-wrong);
-}
-
-.banner-warning {
-  background: var(--sumi-retry-soft);
-  border-color: color-mix(in oklab, var(--sumi-retry) 30%, transparent);
-  color: var(--sumi-retry);
-}
-
-.banner-info {
-  background: color-mix(in oklab, var(--info) 9%, var(--sumi-surface));
-  border-color: color-mix(in oklab, var(--info) 28%, transparent);
-  color: var(--info);
-}
-
-.banner-success {
-  background: var(--sumi-correct-soft);
-  border-color: color-mix(in oklab, var(--sumi-correct) 30%, transparent);
-  color: var(--sumi-correct);
-}
-
-/* Context material — shared by the setup screen and the scenario editor, which
-   show the same attachments at different sizes. */
-.material-thumb,
-.material-icon {
-  flex-shrink: 0;
-  border-radius: 4px;
-  border: 1px solid var(--sumi-line);
-}
-
-.material-thumb {
-  object-fit: cover;
-}
-
-.material-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--sumi-muted);
-}
-
-.material-item {
-  background: var(--sumi-sunken);
-  border: 1px solid var(--sumi-line);
-  border-radius: 8px;
-}
-
-.material-title {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.material-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  color: var(--sumi-muted);
-  cursor: pointer;
-}
-
-.material-toggle input {
-  accent-color: var(--sumi-accent);
-  cursor: pointer;
 }
