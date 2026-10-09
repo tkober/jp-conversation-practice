@@ -80,15 +80,12 @@ inline SVG favicon in `index.html` by hand if the accent changes; it is not
 derived from `provideSumi()`.
 
 **Tokens.** `styles.scss` is `@use 'sumi-ui/projects/sumi-ui/styles/sumi'`
-plus the app's own leftover classes (`.btn*`, `.card`, `.banner*` — #17 moved
-the conversation screen and the practice gates onto the library's own
-button/select/slider/banner components, `.banner*` stays global as long as
-history/settings/scenarios/the review screen still use it; the rest of the
-move onto the library's form/button components is #18, not done here) on
-Sumi's `--sumi-*` tokens instead of the app's old dark-only
-`:root` block. `--info` (the review screen's kana reading, the settings
-screen's inline "Reset" link) has no Sumi equivalent and is the one token
-that stays app-side, in `src/styles/app-tokens.scss`, defined once with
+plus the app-token `@use` and a single app-specific reset (see "Base
+components (#18)" below) — the old `.btn*`/`.card`/`.banner*` global classes
+are gone, every page runs on the library's own button/card/banner/badge/
+input/select/textarea/slider/checkbox components now. `--info` (the review
+screen's kana reading) has no Sumi equivalent and is the one token that
+stays app-side, in `src/styles/app-tokens.scss`, defined once with
 `light-dark()` exactly like Sumi defines its own.
 
 **Navigation lock.** While `RealtimeSessionService.isLive()` is true, `app.html`
@@ -127,10 +124,19 @@ scenario" cheap: `step.set('gate')` is the entire implementation.
    disables the gate's own `actionDisabled`, which also locks its `Enter`.
 2. **Details.** A plain `sumi-page` titled with the scenario (see above), a
    "Change scenario" link back to the gate, then — only for "Your own
-   scenario…" — the free-text section first, followed by Material, Level and
-   Voice (restyling those is #18; the sections are no longer numbered). "Start
-   conversation" is the user gesture the mic/AudioContext need, so the
-   session only actually starts here, exactly as before.
+   scenario…" — the free-text section first (`textarea[sumiTextarea]`),
+   followed by Material, Level and Voice, each its own `sumi-card` (the
+   sections are no longer numbered). Level is `sumi-segmented-control`
+   (N5–N2, all four always present) with the selected level's description
+   shown below it; Voice is `select[sumiSelect]` ("Label — description" per
+   option) with a ghost preview button next to it (▶ / ♪ while playing,
+   same preview logic as before). "Start conversation" (`size="lg"`) is the
+   user gesture the mic/AudioContext need, so the session only actually
+   starts here, exactly as before. If `scenarios()`/`health()`/`voices()`
+   fail outright (not just "no key"), the whole gate is replaced by T6
+   (`sumi-error-state`, see "Base components" below) — a missing API key
+   still just banners on the gate, since that response means the backend
+   *is* reachable.
 3. **Conversation.** Unchanged: no title, `[inkEnd]="false"` (T7: never ink
    next to the conversation itself).
 4. **T2 — the end-of-session gate.** `practice.html`'s `'analysing'` case
@@ -150,6 +156,50 @@ scenario" cheap: `step.set('gate')` is the entire implementation.
    yank the user back to a screen they already left.
 5. **Review.** Unchanged, title "Review"; "New session" goes back to the
    gate (step 1).
+
+**Base components (#18).** Setup, Scenarios (list + editor), History, Review
+and Settings moved onto the library's own button/card/banner/badge/input/
+select/textarea/slider/checkbox/data-table/segmented-control components —
+`styles.scss` no longer has base styles of its own beyond the two `@use`s
+and one reset for the single plain `<button>` left (History's row-toggle,
+deliberately not a `sumiButton`: a clickable row surface, not something that
+should look like a button). Tags ("built-in"/"customized", a session's JLPT
+level, Review's "n / m selected" counter, History's vocabulary chips) are
+`sumi-badge`; the conversation screen's token-details table (#17) is also a
+`sumi-data-table` now, formatted with `formatNumber()`. A few raw elements
+stay on purpose, each with a reason in code: the material picker's hidden
+`<input type="file">` (no library equivalent for uploads), History's
+row-toggle `<button class="row">`, and the context panel's image-enlarge
+`<button class="thumb">` — none of them are meant to read as a styled
+button/input, just a plain clickable surface.
+
+**Empty states (T3).** `sumi-empty-state companion="kitsune"`: no sessions
+yet (History, "Start a conversation" links to `/practice`), no scenarios
+(Scenarios, "New scenario"). Two places deliberately do *not* get one,
+because T3 must never sit next to learning content: the review's "no new
+vocabulary" note (it sits beside the feedback/grammar cards) and the material
+picker's "no material yet" line (it sits directly above the upload controls,
+inside Setup's details step, not a page of its own) — both stay a single
+muted line instead, with the reasoning in a comment at each call site.
+
+**Error state (T6).** `sumi-error-state companion="kitsune"`, "Try again" —
+shown instead of the page's ordinary content when its own *initial* load
+fails and the failure means the backend could not be reached at all:
+Setup/Practice (replacing the whole T1 gate), Scenarios, Scenario editor,
+History, Settings. `core/unreachable.ts`'s `isBackendUnreachable()` is the
+shared call (status `0` or `5xx` — mirrors jp-conjugation's
+`failed`/`loadFailed` signals in `practice`/`words`/`stats`/`rules`, which
+treat any error from an initial GET the same way, since a 4xx there would
+mean the backend answered). A scenario that genuinely does not exist
+(`ScenarioEditor`, loaded by id out of the full list) is *never* an HTTP
+error — the list itself loads fine — so it stays a banner, not T6, per the
+epic's "404 is not an outage" rule.
+
+The scenario editor's writing-assistant chat composer is
+`textarea[sumiTextarea][sumiSubmitOnEnter]`: Enter sends, Shift+Enter inserts
+a newline (the directive's own job, `sumi-ui/forms`'
+`SumiSubmitOnEnterDirective` — replaces the app's old hand-rolled
+`onChatKeydown`), with a `sumi-kbd`-rendered hint under the composer.
 
 **The library is the source of truth.** If something needed here is missing
 or broken in Sumi UI, that is a `tkober/sumi-ui` issue, not a local
