@@ -13,14 +13,10 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
  * in between escalates the help one step — the backend owns the escalation,
  * this only shows where it stands.
  *
- * The button itself is `button[sumiButton]` (sumi-ui#17) rather than the
- * app's own `.btn` — there is no library variant for the amber "help"
- * meaning the old hand-styled button had (only primary/secondary/ghost/
- * danger exist, see `sumi-ui` `forms/button.ts` and
- * `styles/components/_button.scss`), so this picks `secondary` and reports
- * the gap in the implementation report instead of hand-styling a colour
- * back in. The step dots below keep `--sumi-retry` — that is the library's
- * own feedback-colour token, not a new one.
+ * The button is a plain `secondary` `sumiButton`, like `Alt+H` in the other
+ * apps: Sumi UI keeps colour for feedback, so the old amber fill is gone.
+ * The step dots below carry `--sumi-retry`, the library's token for "not
+ * there yet".
  */
 @Component({
   selector: 'app-wakaranai-button',

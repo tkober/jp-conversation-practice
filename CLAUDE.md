@@ -126,10 +126,9 @@ scenario" cheap: `step.set('gate')` is the entire implementation.
    which only matters once "Start conversation" is actually pressed)
    disables the gate's own `actionDisabled`, which also locks its `Enter`.
 2. **Details.** A plain `sumi-page` titled with the scenario (see above), a
-   "Change scenario" link back to the gate, then Material/Level/Voice
-   unchanged (restyling those is #18) — section numbering shifted down by
-   one now that "Scenario" moved to the gate — plus, only for "Your own
-   scenario…", the free-text textarea as its own numbered section. "Start
+   "Change scenario" link back to the gate, then — only for "Your own
+   scenario…" — the free-text section first, followed by Material, Level and
+   Voice (restyling those is #18; the sections are no longer numbered). "Start
    conversation" is the user gesture the mic/AudioContext need, so the
    session only actually starts here, exactly as before.
 3. **Conversation.** Unchanged: no title, `[inkEnd]="false"` (T7: never ink
@@ -434,13 +433,11 @@ it for them.
 **Frontend (#17).** `WakaranaiButton` is `button[sumiButton]` with the hotkey
 `Alt+H` (`SUMI_KEYS.iDontKnow`, scope `'practice'`, `enabled: () =>
 canRequest()`) registered via `injectHotkey` — `sumi-hotkey-help` (already in
-the shell) picks it up automatically while the conversation runs. There is no
-`sumiButton` variant for the old amber "help" colour (only
-primary/secondary/ghost/danger exist); the button uses `secondary` and this
-is a reported `tkober/sumi-ui` gap, not a hand-styled workaround — see the
-component's doc comment. The escalation step dots keep `--sumi-retry`, the
-library's own token for this meaning, so no new colour was introduced either
-way. Mute is the same pattern (`Alt+M`, `SUMI_KEYS.mute`, `secondary`),
+the shell) picks it up automatically while the conversation runs. It is a
+plain `secondary` button, like every other app's `Alt+H`: the old amber
+fill is gone on purpose, because Sumi UI keeps colour for feedback. The
+escalation step dots carry `--sumi-retry`, the library's own token for
+"not there yet". Mute is the same pattern (`Alt+M`, `SUMI_KEYS.mute`, `secondary`),
 without a stage to track.
 
 A press sends `app.session.help`. The relay answers it with **one**

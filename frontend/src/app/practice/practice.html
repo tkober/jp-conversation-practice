@@ -46,7 +46,7 @@
         <app-review
           [analysis]="analysis()"
           [analysisError]="analysisError()"
-          [loading]="phase() === 'analysing'"
+          [loading]="!reviewReady()"
           [usage]="session.usage()"
           [transcript]="session.transcript()"
           [elapsedSeconds]="finalElapsed()"

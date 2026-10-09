@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { SumiHanko, SumiPage } from 'sumi-ui/layout';
 import { SumiSessionGate, SumiSessionSummary, SumiSummaryTile } from 'sumi-ui/practice';
 
@@ -84,10 +84,31 @@ export class Practice {
     });
   }
 
+  constructor() {
+    // The relay can end a conversation on its own: when the socket closes
+    // while live, the service stops and jumps straight to 'review'. Route
+    // that through the same ending as "End session", so it also gets stored,
+    // analysed and the T2 gate, instead of an empty review.
+    effect(() => {
+      if (this.phase() === 'review' && !this.reviewOpened()) {
+        untracked(() => this.endConversation());
+      }
+    });
+  }
+
   protected async onFinish(): Promise<void> {
-    this.finalElapsed.set(this.session.elapsedSeconds());
+    // Leave 'live' before stopping: closing the socket fires its onclose, and
+    // in 'live' that would count as the relay ending the session (above).
+    this.session.phase.set('analysing');
     this.reviewOpened.set(false);
+    this.finalElapsed.set(this.session.elapsedSeconds());
     await this.session.stop();
+    this.storeSession();
+    this.runAnalysis();
+  }
+
+  private endConversation(): void {
+    this.finalElapsed.set(this.session.elapsedSeconds());
     this.storeSession();
     this.runAnalysis();
   }

@@ -52,8 +52,23 @@
       <sumi-banner tone="error">The session could not be started: {{ error }}</sumi-banner>
     }
 
+    @if (customPicked()) {
+      <section class="card">
+        <h2>Your scenario</h2>
+        <label class="field">
+          <span class="field-label">Describe your own scenario</span>
+          <textarea
+            rows="3"
+            placeholder="e.g. Book a room at a ryokan and ask about dinner"
+            [ngModel]="customScenario()"
+            (ngModelChange)="customScenario.set($event)"
+          ></textarea>
+        </label>
+      </section>
+    }
+
     <section class="card">
-      <h2>1 · Material</h2>
+      <h2>Material</h2>
       <app-material-picker
         [scenarioId]="customPicked() ? null : selectedScenarioId()"
         [(selected)]="pickedMaterial"
@@ -63,7 +78,7 @@
     </section>
 
     <section class="card">
-      <h2>2 · Your level</h2>
+      <h2>Your level</h2>
       <div class="levels">
         @for (item of levels; track item.level) {
           <button
@@ -80,7 +95,7 @@
     </section>
 
     <section class="card">
-      <h2>3 · Voice</h2>
+      <h2>Voice</h2>
       <div class="voices">
         @for (voice of voices(); track voice.id) {
           <div class="voice" [class.active]="selectedVoice() === voice.id">
@@ -126,20 +141,6 @@
       </label>
     </section>
 
-    @if (customPicked()) {
-      <section class="card">
-        <h2>4 · Your scenario</h2>
-        <label class="field">
-          <span class="field-label">Describe your own scenario</span>
-          <textarea
-            rows="3"
-            placeholder="e.g. Book a room at a ryokan and ask about dinner"
-            [ngModel]="customScenario()"
-            (ngModelChange)="customScenario.set($event)"
-          ></textarea>
-        </label>
-      </section>
-    }
 
     <div class="actions">
       <button

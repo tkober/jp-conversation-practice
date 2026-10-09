@@ -112,17 +112,16 @@ export class Conversation {
   });
 
   /**
-   * Borrows the wrong/correct hues for a live indicator, not a judgement —
-   * same trade-off `.hud-status`'s `.speaking`/`.listening` classes made
-   * before this screen moved onto `sumi-badge` (see the removed rule's
-   * comment in `conversation.scss`'s history).
+   * The accent marks whoever is speaking; muted takes the retry hue as a
+   * notice. Wrong/correct stay reserved for judgements (the feedback
+   * language shared with the other apps), never for a live indicator.
    */
   readonly statusTone = computed<SumiBadgeTone>(() => {
-    if (this.tutorSpeaking()) {
-      return 'wrong';
+    if (this.muted()) {
+      return 'retry';
     }
-    if (this.userSpeaking()) {
-      return 'correct';
+    if (this.tutorSpeaking() || this.userSpeaking()) {
+      return 'accent';
     }
     return 'neutral';
   });
