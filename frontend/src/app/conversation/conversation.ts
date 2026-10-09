@@ -1,7 +1,8 @@
-import { DecimalPipe } from '@angular/common';
+import { formatNumber } from '@angular/common';
 import {
   Component,
   ElementRef,
+  LOCALE_ID,
   computed,
   effect,
   inject,
@@ -11,7 +12,7 @@ import {
 } from '@angular/core';
 import { SUMI_KEYS, injectHotkey } from 'sumi-ui/core';
 import { SumiBadge, type SumiBadgeTone, SumiBanner } from 'sumi-ui/layout';
-import { SumiStatTile } from 'sumi-ui/charts';
+import { SumiDataTable, SumiStatTile, type SumiTableColumn } from 'sumi-ui/charts';
 import { SumiButtonDirective, SumiSelectDirective, SumiSliderDirective } from 'sumi-ui/forms';
 import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
@@ -25,10 +26,10 @@ import { WakaranaiButton } from './wakaranai-button';
   selector: 'app-conversation',
   imports: [
     ContextPanel,
-    DecimalPipe,
     SumiBadge,
     SumiBanner,
     SumiButtonDirective,
+    SumiDataTable,
     SumiFuriganaText,
     SumiFuriganaToggle,
     SumiSelectDirective,
@@ -42,6 +43,7 @@ import { WakaranaiButton } from './wakaranai-button';
 })
 export class Conversation {
   private readonly session = inject(RealtimeSessionService);
+  private readonly locale = inject(LOCALE_ID);
 
   readonly finish = output<void>();
 
@@ -61,6 +63,32 @@ export class Conversation {
   readonly sessionInfo = this.session.sessionInfo;
 
   readonly showTokenDetails = signal(false);
+
+  readonly tokenColumns: SumiTableColumn[] = [
+    { key: 'row', label: '' },
+    { key: 'audio', label: 'Audio', align: 'end' },
+    { key: 'text', label: 'Text', align: 'end' },
+    { key: 'cached', label: 'Cached', align: 'end' },
+  ];
+
+  readonly tokenRows = computed(() => {
+    const usage = this.usage();
+    const n = (value: number) => formatNumber(value, this.locale);
+    return [
+      {
+        row: 'Input',
+        audio: n(usage.input.audio_tokens),
+        text: n(usage.input.text_tokens),
+        cached: n(usage.input.cached_audio_tokens + usage.input.cached_text_tokens),
+      },
+      {
+        row: 'Output',
+        audio: n(usage.output.audio_tokens),
+        text: n(usage.output.text_tokens),
+        cached: '—',
+      },
+    ];
+  });
 
   // Template narrowing for the transcript's event union; see models.ts.
   protected readonly asSpeech = asSpeech;

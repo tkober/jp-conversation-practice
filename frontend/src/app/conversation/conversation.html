@@ -113,29 +113,6 @@
   </button>
 
   @if (showTokenDetails()) {
-    <table class="tokens">
-      <thead>
-        <tr>
-          <th></th>
-          <th>Audio</th>
-          <th>Text</th>
-          <th>Cached</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>Input</th>
-          <td>{{ usage().input.audio_tokens | number }}</td>
-          <td>{{ usage().input.text_tokens | number }}</td>
-          <td>{{ usage().input.cached_audio_tokens + usage().input.cached_text_tokens | number }}</td>
-        </tr>
-        <tr>
-          <th>Output</th>
-          <td>{{ usage().output.audio_tokens | number }}</td>
-          <td>{{ usage().output.text_tokens | number }}</td>
-          <td>—</td>
-        </tr>
-      </tbody>
-    </table>
+    <sumi-data-table class="tokens" [columns]="tokenColumns" [rows]="tokenRows()" />
   }
 </div>

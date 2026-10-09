@@ -1,4 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { SumiButtonDirective } from 'sumi-ui/forms';
+import { SumiCard } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { Attachment } from '../core/models';
@@ -17,9 +19,9 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
  */
 @Component({
   selector: 'app-context-panel',
-  imports: [],
+  imports: [SumiButtonDirective, SumiCard],
   template: `@if (ready() && (visible().length || pending().length)) {
-    <section class="material">
+    <sumi-card class="material">
       @if (visible().length) {
         <div class="shown">
           @for (item of visible(); track item.id) {
@@ -43,7 +45,9 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
           @for (item of pending(); track item.id) {
             <button
               type="button"
-              class="btn btn-secondary"
+              sumiButton
+              variant="secondary"
+              size="sm"
               [disabled]="!canHandOver()"
               [title]="'Show the tutor: ' + (item.title || 'Material')"
               (click)="handOver(item)"
@@ -53,7 +57,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
           }
         </div>
       }
-    </section>
+    </sumi-card>
   }
 
   @if (zoomed(); as item) {
@@ -63,14 +67,15 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
     </div>
   }`,
   styles: `
-    .material {
+    // sumi-card's own body is a plain padded block; this piece needs a
+    // flex column instead (the pending-material row sits right under the
+    // shown-material row with a smaller gap than the card's own padding),
+    // so it reaches into its own body the same way sumi-card's stylesheet
+    // reaches into its header/footer slots.
+    .material ::ng-deep .sumi-card__body {
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 12px 16px;
-      background: var(--sumi-surface);
-      border: 1px solid var(--sumi-line);
-      border-radius: var(--sumi-radius);
     }
 
     .shown {
