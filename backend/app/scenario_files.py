@@ -7,14 +7,14 @@ the Settings/Editor screens work against that.
 
     ---
     slug: konbini
-    title: Einkaufen im Kombini
-    summary: Abendschicht an der Kasse ...
+    title: Shopping at the konbini
+    summary: Evening shift at the register ...
     ---
 
     You are the clerk at a Japanese convenience store ...
 
 The body is the model-facing prompt and is therefore English; `title` and
-`summary` are user-facing and therefore German.
+`summary` are user-facing and are English too.
 """
 
 from __future__ import annotations

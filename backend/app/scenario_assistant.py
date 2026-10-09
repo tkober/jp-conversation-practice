@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 MAX_HISTORY_MESSAGES = 20
 
-SYSTEM_PROMPT = """You help a German-speaking learner of Japanese write scenario prompts for a
+SYSTEM_PROMPT = """You help a learner of Japanese write scenario prompts for a
 spoken role-play practice app. A scenario prompt is the instruction given to a
 realtime voice model that will then play a character while the learner speaks
 Japanese with it.
@@ -52,7 +52,7 @@ If the user's draft contains such a sequence, say so plainly and show them the
 role-based rewrite.
 
 # How to reply
-Talk to the user IN GERMAN — that is the language of the app's interface and
+Talk to the user IN ENGLISH — that is the language of the app's interface and
 of this conversation. The scenario prompt itself always stays ENGLISH.
 Be concrete and brief. When you propose wording, put the complete new prompt
 into `suggested_prompt` (the full replacement text, not a fragment or a diff),
@@ -125,7 +125,7 @@ class ScenarioAssistant:
                         "properties": {
                             "reply": {
                                 "type": "string",
-                                "description": "The answer to the user, in German.",
+                                "description": "The answer to the user, in English.",
                             },
                             "suggested_prompt": {
                                 "type": "string",
