@@ -1,13 +1,24 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { SumiPage } from 'sumi-ui/layout';
+import { SumiButtonDirective } from 'sumi-ui/forms';
+import { SumiBadge, SumiBanner, SumiCard, SumiEmptyState, SumiErrorState, SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { Scenario } from '../core/models';
+import { isBackendUnreachable } from '../core/unreachable';
 
 @Component({
   selector: 'app-scenario-list',
-  imports: [RouterLink, SumiPage],
+  imports: [
+    RouterLink,
+    SumiBadge,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiEmptyState,
+    SumiErrorState,
+    SumiPage,
+  ],
   templateUrl: './scenario-list.html',
   styleUrl: './scenario-list.scss',
 })
@@ -17,6 +28,8 @@ export class ScenarioList {
 
   readonly scenarios = signal<Scenario[]>([]);
   readonly error = signal<string | null>(null);
+  /** The list itself could not be loaded at all — T6, not just a banner. */
+  readonly failed = signal(false);
   readonly busy = signal(false);
   /** Scenario awaiting delete confirmation, if any. */
   readonly confirmingDelete = signal<number | null>(null);
@@ -27,8 +40,17 @@ export class ScenarioList {
 
   reload(): void {
     this.api.scenarios().subscribe({
-      next: (scenarios) => this.scenarios.set(scenarios),
-      error: (error: unknown) => this.error.set(this.describe(error)),
+      next: (scenarios) => {
+        this.failed.set(false);
+        this.scenarios.set(scenarios);
+      },
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.failed.set(true);
+        } else {
+          this.error.set(this.describe(error));
+        }
+      },
     });
   }
 

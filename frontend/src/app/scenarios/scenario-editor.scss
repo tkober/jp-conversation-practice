@@ -20,22 +20,6 @@ header {
   }
 }
 
-.tag {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--sumi-sunken);
-  color: var(--sumi-muted);
-  border: 1px solid var(--sumi-line);
-
-  &.edited {
-    color: var(--sumi-retry);
-    border-color: color-mix(in oklab, var(--sumi-retry) 35%, transparent);
-  }
-}
-
 .columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -45,9 +29,20 @@ header {
 
 /* --- form ---------------------------------------------------------------- */
 
+// `sumi-card`'s own body is a plain padded block (see its scss) — these two
+// cards need a flex column that reaches down into it (the "grow" field here,
+// the scrolling chat feed in `.assistant` below), so each pierces its own
+// card's body the same way `sumi-card`'s stylesheet itself reaches into its
+// header/footer slots.
 .form {
   display: flex;
   flex-direction: column;
+
+  ::ng-deep .sumi-card__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
 }
 
 .field {
@@ -84,25 +79,6 @@ header {
   }
 }
 
-input[type='text'],
-textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--sumi-radius-sm);
-  border: 1px solid var(--sumi-line);
-  background: var(--sumi-sunken);
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--sumi-accent-ink);
-  }
-
-  &::placeholder {
-    color: var(--sumi-muted);
-  }
-}
-
 .form textarea {
   min-height: 240px;
   resize: vertical;
@@ -135,13 +111,19 @@ textarea {
   display: flex;
   flex-direction: column;
   max-height: 620px;
+
+  ::ng-deep .sumi-card__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0; // lets .chat shrink and scroll instead of overflowing
+  }
 }
 
 .assistant-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
 
   h2 {
     margin: 0;
@@ -220,11 +202,6 @@ textarea {
     max-height: 200px;
     overflow-y: auto;
   }
-
-  .btn {
-    font-size: 12.5px;
-    padding: 7px 13px;
-  }
 }
 
 .composer {
@@ -238,6 +215,12 @@ textarea {
     resize: none;
     font-size: 13.5px;
   }
+}
+
+.composer-hint {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  color: var(--sumi-muted);
 }
 
 @media (max-width: 900px) {
