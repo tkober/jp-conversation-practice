@@ -48,8 +48,8 @@ export class SettingsPage {
   readonly wanikaniTokenInput = signal('');
 
   /**
-   * Slots the user switched to free text. Sticky, because picking "Anderes
-   * Modell ..." leaves the old -- still valid -- value in place, so the text
+   * Slots the user switched to free text. Sticky, because picking "Other
+   * model ..." leaves the old -- still valid -- value in place, so the text
    * box cannot be derived from the value alone.
    */
   private readonly customSlots = signal<ReadonlySet<string>>(new Set());
@@ -94,7 +94,7 @@ export class SettingsPage {
   readonly helpFactorLabel = computed(() => {
     const factor = this.helpFactor();
     const percent = Math.round((1 - factor) * 100);
-    return percent > 0 ? `×${factor.toFixed(2)} — ${percent} % langsamer` : 'aus';
+    return percent > 0 ? `×${factor.toFixed(2)} — ${percent}% slower` : 'off';
   });
 
   constructor() {
@@ -108,7 +108,7 @@ export class SettingsPage {
         this.modelSlots.set(catalog.slots);
         this.modelListNote.set(catalog.live_ok ? null : catalog.live_detail);
       },
-      error: () => this.modelListNote.set('Die Modellliste konnte nicht geladen werden.'),
+      error: () => this.modelListNote.set('The model list could not be loaded.'),
     });
   }
 
@@ -187,12 +187,12 @@ export class SettingsPage {
     if (option.price_hint) {
       notes.push(option.price_hint);
     } else if (option.rates_known === false) {
-      notes.push('kein Preis hinterlegt');
+      notes.push('no price on file');
     }
     if (option.shutdown_date) {
       // The field is the shutdown date, not the date it was deprecated: it is
       // callable until then, it just has a successor already.
-      notes.push(`deprecated (Abschaltung ${option.shutdown_date})`);
+      notes.push(`deprecated (shutting down ${option.shutdown_date})`);
     }
     return notes.length ? `${option.label} — ${notes.join(', ')}` : option.label;
   }
@@ -245,7 +245,7 @@ export class SettingsPage {
         this.openaiKeyInput.set('');
         this.wanikaniTokenInput.set('');
         this.saveState.set('saved');
-        this.saveMessage.set('Gespeichert.');
+        this.saveMessage.set('Saved.');
       },
       error: (error: unknown) => {
         this.saveState.set('error');
@@ -261,7 +261,7 @@ export class SettingsPage {
       next: (settings) => {
         this.current.set(settings);
         this.saveState.set('saved');
-        this.saveMessage.set('Zurückgesetzt — es gilt wieder der Wert aus der .env.');
+        this.saveMessage.set('Reset — the value from .env applies again.');
       },
       error: (error: unknown) => {
         this.saveState.set('error');
@@ -272,6 +272,6 @@ export class SettingsPage {
 
   private describe(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
-    return detail ? `Fehler: ${detail}` : 'Die Einstellungen konnten nicht geladen werden.';
+    return detail ? `Error: ${detail}` : 'The settings could not be loaded.';
   }
 }

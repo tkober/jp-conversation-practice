@@ -1,11 +1,11 @@
 <div class="history">
   <header>
-    <h1>Verlauf</h1>
+    <h1>History</h1>
     @if (stats(); as totals) {
       <div class="totals">
-        <span><strong>{{ totals.session_count }}</strong> Sessions</span>
-        <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> gesamt</span>
-        <span><strong>{{ totalMinutes() }}</strong> Minuten geübt</span>
+        <span><strong>{{ totals.session_count }}</strong> sessions</span>
+        <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>
+        <span><strong>{{ totalMinutes() }}</strong> minutes practiced</span>
       </div>
     }
   </header>
@@ -18,20 +18,20 @@
     @for (session of sessions(); track session.id) {
       <li class="session" [class.open]="openId() === session.id">
         <button type="button" class="row" (click)="toggle(session)">
-          <span class="when">{{ session.started_at | date: 'dd.MM.yy HH:mm' }}</span>
+          <span class="when">{{ session.started_at | date: 'MM/dd/yy, HH:mm' }}</span>
           <span class="title">{{ session.scenario_title }}</span>
           <span class="level">{{ session.jlpt_level }}</span>
-          <span class="turns">{{ session.turn_count }} Beiträge</span>
+          <span class="turns">{{ session.turn_count }} turns</span>
           <span class="time">{{ duration(session.duration_seconds) }}</span>
           <span class="cost">${{ session.cost_usd | number: '1.4-4' }}</span>
 
           <span class="tools">
             @if (confirmingDelete() === session.id) {
-              <span class="confirm" (click)="$event.stopPropagation()">Löschen?</span>
-              <span class="btn btn-ghost danger" (click)="confirmDelete(session, $event)">Ja</span>
-              <span class="btn btn-ghost" (click)="cancelDelete($event)">Nein</span>
+              <span class="confirm" (click)="$event.stopPropagation()">Delete?</span>
+              <span class="btn btn-ghost danger" (click)="confirmDelete(session, $event)">Yes</span>
+              <span class="btn btn-ghost" (click)="cancelDelete($event)">No</span>
             } @else {
-              <span class="btn btn-ghost" (click)="askDelete(session, $event)">Löschen</span>
+              <span class="btn btn-ghost" (click)="askDelete(session, $event)">Delete</span>
             }
           </span>
         </button>
@@ -39,7 +39,7 @@
         @if (openId() === session.id) {
           <div class="detail">
             @if (detailLoading()) {
-              <p class="muted">Lade …</p>
+              <p class="muted">Loading …</p>
             } @else if (detail(); as full) {
               @if (full.analysis; as analysis) {
                 <p class="summary">{{ analysis.summary }}</p>
@@ -55,7 +55,7 @@
                   </div>
                 }
               } @else {
-                <p class="muted">Für diese Session gibt es keine Auswertung.</p>
+                <p class="muted">There is no analysis for this session.</p>
               }
 
               @if (full.context_items.length > 0) {
@@ -65,7 +65,7 @@
                     <span class="context-item" [title]="item.description">
                       {{ item.title || 'Material' }}
                       @if (item.introduced_at !== null) {
-                        <em>ab {{ duration(item.introduced_at) }}</em>
+                        <em>from {{ duration(item.introduced_at) }}</em>
                       }
                     </span>
                   }
@@ -80,7 +80,7 @@
                 @for (event of full.transcript; track $index) {
                   @if (asSpeech(event); as turn) {
                     <p class="line">
-                      <span class="role">{{ turn.role === 'user' ? 'Du' : '先生' }}</span>
+                      <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
                       <span class="jp">
                         <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
                       </span>
@@ -93,13 +93,13 @@
 
               <div class="meta">
                 <span>{{ full.model }}</span>
-                <span>Stimme {{ full.voice }}</span>
-                <span>Tempo {{ full.speed }}×</span>
+                <span>Voice {{ full.voice }}</span>
+                <span>Pace {{ full.speed }}×</span>
                 @if (full.vad_eagerness) {
-                  <span>Geduld {{ eagernessLabel(full.vad_eagerness) }}</span>
+                  <span>Patience {{ eagernessLabel(full.vad_eagerness) }}</span>
                 }
                 <button type="button" class="btn btn-ghost" (click)="downloadJson(full, $event)">
-                  JSON herunterladen
+                  Download JSON
                 </button>
               </div>
             }
@@ -107,7 +107,7 @@
         }
       </li>
     } @empty {
-      <li class="empty">Noch keine Sessions aufgezeichnet.</li>
+      <li class="empty">No sessions recorded yet.</li>
     }
   </ul>
 </div>

@@ -100,9 +100,9 @@ export class Review {
       next: (response) => {
         this.exportState.set('done');
         const duplicates =
-          response.duplicates > 0 ? ` (${response.duplicates} Duplikate übersprungen)` : '';
+          response.duplicates > 0 ? ` (${response.duplicates} duplicate(s) skipped)` : '';
         this.exportMessage.set(
-          `${response.added} Karten in „${response.deck_name}" angelegt${duplicates}.`,
+          `${response.added} card(s) added to "${response.deck_name}"${duplicates}.`,
         );
       },
       error: (error: unknown) => {
@@ -162,11 +162,11 @@ export class Review {
   }
 
   private describeError(error: unknown): string {
-    // The backend speaks English; keep the user-facing lead-in German and
+    // The backend speaks English; keep the user-facing lead-in English and
     // append the technical detail so the cause stays visible.
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
     return detail
-      ? `Export fehlgeschlagen: ${detail}`
-      : 'Export fehlgeschlagen. Läuft Anki mit dem AnkiConnect-Add-on?';
+      ? `Export failed: ${detail}`
+      : 'Export failed. Is Anki running with the AnkiConnect add-on?';
   }
 }

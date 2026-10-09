@@ -21,12 +21,12 @@ const WORKLET_URL = 'audio/pcm-recorder-worklet.js';
 export function microphoneBlockedReason(): string | null {
   if (!window.isSecureContext) {
     return (
-      `Der Browser gibt das Mikrofon nur über eine sichere Verbindung frei, diese Seite ` +
-      `läuft aber über ${location.origin}. Rufe sie über HTTPS oder über localhost auf.`
+      `The browser only grants microphone access over a secure connection, but this page ` +
+      `is running over ${location.origin}. Open it over HTTPS or via localhost.`
     );
   }
   if (!navigator.mediaDevices?.getUserMedia) {
-    return 'Dieser Browser stellt keinen Zugriff auf das Mikrofon bereit.';
+    return 'This browser does not provide access to the microphone.';
   }
   return null;
 }

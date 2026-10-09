@@ -35,7 +35,7 @@ VOICE_ID_PATTERN = re.compile(r"^[a-z_-]{1,32}$")
 class Voice:
     """One selectable tutor voice.
 
-    `description` is user-facing and therefore German, like the scenario titles.
+    `description` is user-facing and therefore English, like the scenario titles.
     """
 
     id: str
@@ -46,16 +46,16 @@ class Voice:
 # Voices available to both the Realtime API and the TTS endpoint, so a preview
 # is representative of what the tutor will sound like.
 VOICES: list[Voice] = [
-    Voice("marin", "Marin", "Weiblich, warm und ruhig — Standard"),
-    Voice("cedar", "Cedar", "Männlich, ruhig und deutlich"),
-    Voice("alloy", "Alloy", "Neutral und sachlich"),
-    Voice("ash", "Ash", "Männlich, tiefer und gelassen"),
-    Voice("ballad", "Ballad", "Männlich, weich und erzählend"),
-    Voice("coral", "Coral", "Weiblich, hell und lebhaft"),
-    Voice("echo", "Echo", "Männlich, nüchtern und klar"),
-    Voice("sage", "Sage", "Weiblich, gelassen und freundlich"),
-    Voice("shimmer", "Shimmer", "Weiblich, weich und leise"),
-    Voice("verse", "Verse", "Männlich, ausdrucksstark"),
+    Voice("marin", "Marin", "Female, warm and calm — default"),
+    Voice("cedar", "Cedar", "Male, calm and clear"),
+    Voice("alloy", "Alloy", "Neutral and matter-of-fact"),
+    Voice("ash", "Ash", "Male, deeper and relaxed"),
+    Voice("ballad", "Ballad", "Male, soft and narrative"),
+    Voice("coral", "Coral", "Female, bright and lively"),
+    Voice("echo", "Echo", "Male, plain and clear"),
+    Voice("sage", "Sage", "Female, relaxed and friendly"),
+    Voice("shimmer", "Shimmer", "Female, soft and quiet"),
+    Voice("verse", "Verse", "Male, expressive"),
 ]
 
 VOICE_IDS = frozenset(voice.id for voice in VOICES)

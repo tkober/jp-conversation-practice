@@ -124,7 +124,7 @@ export class Practice {
     // on.
     if (!transcript.some(isSpeech)) {
       this.analysisError.set(
-        'Es wurde nichts aufgezeichnet. Für eine Auswertung braucht es mindestens einen Redebeitrag.',
+        'Nothing was recorded. An analysis needs at least one turn of speech.',
       );
       this.session.phase.set('review');
       return;
@@ -166,7 +166,7 @@ export class Practice {
   private describeError(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
     return detail
-      ? `Die Auswertung ist fehlgeschlagen: ${detail}`
-      : 'Die Auswertung ist fehlgeschlagen.';
+      ? `The analysis failed: ${detail}`
+      : 'The analysis failed.';
   }
 }

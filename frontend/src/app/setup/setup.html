@@ -1,22 +1,22 @@
 <div class="setup">
   <header class="hero">
     <div class="hero-mark jp">会話</div>
-    <h1>Japanisch-Konversation üben</h1>
+    <h1>Practice Japanese conversation</h1>
     <p>
-      Sprich mit einer KI-Lehrkraft in Echtzeit, verfolge die exakten API-Kosten live und
-      erzeuge danach Anki-Karten für alles, was du noch nicht kennst.
+      Talk with an AI tutor in real time, track the exact API cost live, and
+      generate Anki cards afterwards for anything you don't know yet.
     </p>
   </header>
 
   @if (backendUnreachable()) {
     <div class="banner banner-error">
-      <span>Backend nicht erreichbar. Läuft <code>uvicorn</code> auf Port 8000?</span>
+      <span>Backend unreachable. Is <code>uvicorn</code> running on port 8000?</span>
     </div>
   } @else if (health() && !health()!.openai_configured) {
     <div class="banner banner-error">
       <span>
-        Auf dem Server ist kein <code>OPENAI_API_KEY</code> gesetzt. Trage ihn in
-        <code>backend/.env</code> ein und starte das Backend neu.
+        No <code>OPENAI_API_KEY</code> is set on the server. Add it in
+        <code>backend/.env</code> and restart the backend.
       </span>
     </div>
   }
@@ -25,12 +25,12 @@
     <div class="banner banner-error"><span>{{ reason }}</span></div>
   } @else if (startError(); as error) {
     <div class="banner banner-error">
-      <span>Die Session konnte nicht gestartet werden: {{ error }}</span>
+      <span>The session could not be started: {{ error }}</span>
     </div>
   }
 
   <section class="card">
-    <h2>1 · Szenario</h2>
+    <h2>1 · Scenario</h2>
     <div class="presets">
       @for (scenario of scenarios(); track scenario.id) {
         <button
@@ -46,15 +46,14 @@
     </div>
 
     <p class="hint">
-      Szenarien lassen sich unter <a routerLink="/scenarios">Szenarien</a> bearbeiten
-      und neu anlegen.
+      Scenarios can be edited and created under <a routerLink="/scenarios">Scenarios</a>.
     </p>
 
     <label class="field">
-      <span class="field-label">Oder eigenes Szenario beschreiben</span>
+      <span class="field-label">Or describe your own scenario</span>
       <textarea
         rows="3"
-        placeholder="z. B. Ein Zimmer im Ryokan reservieren und nach dem Abendessen fragen"
+        placeholder="e.g. Book a room at a ryokan and ask about dinner"
         [ngModel]="customScenario()"
         (ngModelChange)="customScenario.set($event)"
       ></textarea>
@@ -72,7 +71,7 @@
   </section>
 
   <section class="card">
-    <h2>3 · Dein Niveau</h2>
+    <h2>3 · Your level</h2>
     <div class="levels">
       @for (item of levels; track item.level) {
         <button
@@ -89,7 +88,7 @@
   </section>
 
   <section class="card">
-    <h2>4 · Stimme</h2>
+    <h2>4 · Voice</h2>
     <div class="voices">
       @for (voice of voices(); track voice.id) {
         <div class="voice" [class.active]="selectedVoice() === voice.id">
@@ -101,7 +100,7 @@
             type="button"
             class="voice-play"
             [disabled]="samplePlaying() === voice.id"
-            [title]="'Hörprobe für ' + voice.label"
+            [title]="'Preview for ' + voice.label"
             (click)="playSample(voice)"
           >
             {{ samplePlaying() === voice.id ? '♪' : '▶' }}
@@ -114,15 +113,15 @@
       <div class="banner banner-warning"><span>{{ error }}</span></div>
     } @else {
       <p class="hint">
-        Die erste Hörprobe je Stimme wird auf dem Server erzeugt und dauert einen
-        Moment — danach ist sie sofort da.
+        The first preview for each voice is rendered on the server and takes a
+        moment — after that it's instant.
       </p>
     }
 
     <label class="field">
       <span class="field-label">
-        Sprechgeschwindigkeit — {{ speed().toFixed(2) }}×
-        <em>(auch während der Session änderbar)</em>
+        Speaking rate — {{ speed().toFixed(2) }}×
+        <em>(also changeable during the session)</em>
       </span>
       <input
         type="range"
@@ -137,12 +136,12 @@
 
   <div class="actions">
     <button type="button" class="btn btn-primary btn-start" [disabled]="!canStart()" (click)="onStart()">
-      Konversation starten
+      Start conversation
     </button>
     @if (health(); as info) {
       <p class="meta">
-        Modell <code>{{ info.realtime_model }}</code> ·
-        WaniKani-Filter {{ info.wanikani_configured ? 'aktiv' : 'nicht konfiguriert' }}
+        Model <code>{{ info.realtime_model }}</code> ·
+        WaniKani filter {{ info.wanikani_configured ? 'active' : 'not configured' }}
       </p>
     }
   </div>

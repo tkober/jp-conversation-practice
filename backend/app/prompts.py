@@ -174,7 +174,7 @@ Short affirmations (そうですか、いいですね、なるほど) keep them 
 # --- "わからない": the learner says they are stuck -------------------------
 
 # One entry per press of the わからない button, in escalation order. The last
-# one is the ultima ratio: German.
+# one is the ultima ratio: English.
 #
 # Each stage offers several tactics rather than prescribing one, because a
 # tutor that answers the same signal with the same move every time teaches the
@@ -203,12 +203,12 @@ other words. Hand them one of the options to say instead.""",
 - ask for a single word,
 - drop this point entirely and ask something easier in the same setting.""",
     """Last resort, and this one OVERRIDES the "speak ONLY Japanese" rule above:
-say one or two sentences in GERMAN. What is blocking them, or simply what your
-Japanese sentence meant. German is not optional at this point -- they have now
+say one or two sentences in ENGLISH. What is blocking them, or simply what your
+Japanese sentence meant. English is not optional at this point -- they have now
 asked for help four times and Japanese has not got through, so answering in
 Japanese again is a failure, not caution. Then straight back into Japanese in
 this same turn, with one easy question that keeps the role-play going. Do not
-stay in German, and do not turn this into a grammar lesson.""",
+stay in English, and do not turn this into a grammar lesson.""",
 )
 
 MAX_HELP_STAGE = len(HELP_STAGES)
@@ -276,13 +276,13 @@ same spot are the clearest signal you have about what to cover in the summary.
 Produce three things:
 
 1. `summary`: 2-4 sentences of warm, specific feedback on the learner's
-   performance. WRITE THIS IN GERMAN.
+   performance. WRITE THIS IN ENGLISH.
 
 2. `grammar_notes`: The most useful corrections from the learner's own
    utterances. Only include real mistakes the learner actually made -- quote
    their original wording verbatim in `original`. `correction` is the natural
    Japanese a native speaker would say. `explanation` is a short rule-level
-   explanation IN GERMAN. Return an empty list if the learner made no
+   explanation IN ENGLISH. Return an empty list if the learner made no
    noteworthy mistakes. Never invent mistakes.
 
 3. `anki_cards`: 3-8 Japanese words or set phrases from the conversation that
@@ -293,7 +293,7 @@ Produce three things:
    - `expression`: the dictionary form as written in Japanese (kanji where
      normal).
    - `reading`: the reading in hiragana/katakana only.
-   - `meaning`: the meaning IN GERMAN.
+   - `meaning`: the meaning IN ENGLISH.
    - `context_sentence`: a short Japanese sentence using the word, taken from
      the transcript where possible, otherwise written to fit the scenario.
 

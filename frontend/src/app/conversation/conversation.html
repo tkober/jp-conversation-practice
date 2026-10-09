@@ -1,17 +1,17 @@
 <div class="conversation">
   <div class="hud">
     <div class="hud-metric">
-      <span class="hud-label">Kosten</span>
+      <span class="hud-label">Cost</span>
       <span class="hud-value cost">{{ formattedCost() }}<small>USD</small></span>
       @if (costPerMinute(); as rate) {
-        <span class="hud-sub">≈ ${{ rate.toFixed(3) }} / Min.</span>
+        <span class="hud-sub">≈ ${{ rate.toFixed(3) }} / min</span>
       }
     </div>
 
     <div class="hud-metric">
-      <span class="hud-label">Dauer</span>
+      <span class="hud-label">Duration</span>
       <span class="hud-value">{{ formattedTime() }}</span>
-      <span class="hud-sub">{{ usage().response_count }} Antworten</span>
+      <span class="hud-sub">{{ usage().response_count }} responses</span>
     </div>
 
     <div class="hud-status" [class.speaking]="tutorSpeaking()" [class.listening]="userSpeaking()">
@@ -23,8 +23,8 @@
   @if (!usage().rates_known && usage().model) {
     <div class="banner banner-warning">
       <span>
-        Für <code>{{ usage().model }}</code> sind keine Preise hinterlegt — die Kosten werden
-        mit den Raten von <code>gpt-realtime-2.1-mini</code> geschätzt.
+        No prices are on file for <code>{{ usage().model }}</code> — the cost is being
+        estimated with <code>gpt-realtime-2.1-mini</code> rates.
       </span>
     </div>
   }
@@ -43,16 +43,16 @@
     @if (transcript().length === 0) {
       <div class="empty">
         <p class="jp">はじめまして！</p>
-        <p>Sprich einfach los — die Lehrkraft beginnt gleich das Gespräch.</p>
+        <p>Just start talking — the tutor will open the conversation.</p>
       </div>
     }
     @for (event of transcript(); track $index) {
       @if (asSpeech(event); as turn) {
         <div class="turn" [class.turn-user]="turn.role === 'user'">
           <span class="turn-role">
-            {{ turn.role === 'user' ? 'Du' : '先生' }}
+            {{ turn.role === 'user' ? 'You' : '先生' }}
             @if (turn.help_stage) {
-              <span class="turn-help">わからない · Stufe {{ turn.help_stage }}</span>
+              <span class="turn-help">わからない · Stage {{ turn.help_stage }}</span>
             }
           </span>
           <p class="turn-text jp">
@@ -69,8 +69,8 @@
 
   <div class="speed">
     <label for="speed-slider">
-      Tempo <strong>{{ speed().toFixed(2) }}×</strong>
-      <span class="speed-note">wirkt ab der nächsten Antwort</span>
+      Pace <strong>{{ speed().toFixed(2) }}×</strong>
+      <span class="speed-note">takes effect from the next response</span>
     </label>
     <input
       id="speed-slider"
@@ -85,8 +85,8 @@
 
   <div class="speed">
     <label for="eagerness-select">
-      Geduld
-      <span class="speed-note">wie lange du überlegen darfst, bevor geantwortet wird</span>
+      Patience
+      <span class="speed-note">how long you're allowed to think before the tutor answers</span>
     </label>
     <select
       id="eagerness-select"
@@ -107,16 +107,16 @@
     </div>
 
     <button type="button" class="btn btn-secondary" (click)="toggleMute()">
-      {{ muted() ? 'Mikrofon an' : 'Mikrofon stumm' }}
+      {{ muted() ? 'Unmute microphone' : 'Mute microphone' }}
     </button>
 
     <button type="button" class="btn btn-primary" (click)="onFinish()">
-      Session beenden &amp; auswerten
+      End session &amp; review
     </button>
   </div>
 
   <button type="button" class="btn btn-ghost token-toggle" (click)="showTokenDetails.set(!showTokenDetails())">
-    {{ showTokenDetails() ? 'Token-Details ausblenden' : 'Token-Details anzeigen' }}
+    {{ showTokenDetails() ? 'Hide token details' : 'Show token details' }}
   </button>
 
   @if (showTokenDetails()) {

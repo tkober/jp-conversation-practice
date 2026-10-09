@@ -4,16 +4,16 @@
 
     <div class="links" [class.locked]="conversationRunning()">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        Üben
+        Practice
       </a>
-      <a routerLink="/scenarios" routerLinkActive="active">Szenarien</a>
-      <a routerLink="/history" routerLinkActive="active">Verlauf</a>
-      <a routerLink="/settings" routerLinkActive="active">Einstellungen</a>
+      <a routerLink="/scenarios" routerLinkActive="active">Scenarios</a>
+      <a routerLink="/history" routerLinkActive="active">History</a>
+      <a routerLink="/settings" routerLinkActive="active">Settings</a>
     </div>
 
     @if (conversationRunning()) {
-      <span class="running" title="Beende die Session, bevor du wegnavigierst">
-        Session läuft
+      <span class="running" title="End the session before navigating away">
+        Session running
       </span>
     }
   </nav>

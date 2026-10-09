@@ -9,10 +9,10 @@ import { MaterialPicker } from './material-picker';
 import { Attachment, HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
 const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
-  { level: 'N5', label: 'Anfänger — einfache Sätze, langsames Tempo' },
-  { level: 'N4', label: 'Fortgeschrittener Anfänger — Alltagsgespräche' },
-  { level: 'N3', label: 'Mittelstufe — natürliches Tempo' },
-  { level: 'N2', label: 'Obere Mittelstufe — muttersprachliches Tempo' },
+  { level: 'N5', label: 'Beginner — simple sentences, slow pace' },
+  { level: 'N4', label: 'Advanced beginner — everyday conversations' },
+  { level: 'N3', label: 'Intermediate — natural pace' },
+  { level: 'N2', label: 'Upper intermediate — native pace' },
 ];
 
 export interface SessionSetup {
@@ -139,12 +139,12 @@ export class Setup {
 
     audio.onended = () => this.clearSample(voice.id);
     audio.onerror = () => {
-      this.sampleError.set(`Für „${voice.label}" konnte keine Hörprobe geladen werden.`);
+      this.sampleError.set(`Could not load a preview for "${voice.label}".`);
       this.clearSample(voice.id);
     };
 
     void audio.play().catch(() => {
-      this.sampleError.set('Die Hörprobe konnte nicht abgespielt werden.');
+      this.sampleError.set('The preview could not be played.');
       this.clearSample(voice.id);
     });
   }
@@ -187,7 +187,7 @@ export class Setup {
     this.start.emit({
       scenario: this.effectiveScenario(),
       scenarioId: picked?.id ?? null,
-      scenarioTitle: picked?.title ?? 'Eigenes Szenario',
+      scenarioTitle: picked?.title ?? 'Custom scenario',
       jlptLevel: this.jlptLevel(),
       voice: this.selectedVoice(),
       speed: this.speed(),

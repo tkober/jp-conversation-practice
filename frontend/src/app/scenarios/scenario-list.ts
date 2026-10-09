@@ -38,7 +38,7 @@ export class ScenarioList {
     this.busy.set(true);
     this.api
       .createScenario({
-        title: 'Neues Szenario',
+        title: 'New scenario',
         summary: '',
         // A skeleton that already follows the role-not-checklist rule, so the
         // starting point does not teach the wrong shape.
@@ -79,6 +79,6 @@ export class ScenarioList {
 
   private describe(error: unknown): string {
     const detail = (error as { error?: { detail?: string } })?.error?.detail;
-    return detail ? `Fehler: ${detail}` : 'Die Szenarien konnten nicht geladen werden.';
+    return detail ? `Error: ${detail}` : 'The scenarios could not be loaded.';
   }
 }

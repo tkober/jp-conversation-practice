@@ -59,7 +59,7 @@ def is_valid_model_id(model: str) -> bool:
 class CuratedModel:
     """A model we have an opinion about.
 
-    `description` is user-facing and therefore German, like the voice
+    `description` is user-facing and therefore English, like the voice
     descriptions and the scenario titles.
     """
 
@@ -120,29 +120,29 @@ _CHAT_EXCLUDES = (
 SLOTS: tuple[ModelSlot, ...] = (
     ModelSlot(
         key="realtime_model",
-        label="Konversation (Realtime)",
+        label="Conversation (Realtime)",
         hint=(
-            "Führt das Live-Gespräch. Der Preis gilt pro 1M Audio-Token "
-            "(Eingabe / Ausgabe) und ist das, was die Kostenanzeige abrechnet."
+            "Runs the live conversation. The price is per 1M audio tokens "
+            "(input / output) and is what the cost display bills."
         ),
         curated=(
             CuratedModel(
                 "gpt-realtime-2.1-mini",
                 "gpt-realtime-2.1-mini",
-                "Standard. Günstig, aber das schwächste Glied in der Kohärenz.",
+                "Default. Cheap, but the weakest link in coherence.",
             ),
             CuratedModel(
                 "gpt-realtime-2.1",
                 "gpt-realtime-2.1",
-                "Aktuelle Vollversion. 3,2x teurer pro Audio-Token, dafür deutlich "
-                "kohärenter — die erste Wahl, wenn nicht die Formulierung, sondern "
-                "das Denken des Tutors das Problem ist.",
+                "Current full version. 3.2x more expensive per audio token, but "
+                "noticeably more coherent — the first choice when the tutor's "
+                "thinking, not its wording, is the problem.",
             ),
             CuratedModel(
                 "gpt-realtime",
                 "gpt-realtime",
-                "Der unversionierte Alias derselben Klasse: gleiche Audio-Preise wie "
-                "2.1, aber mit Abschaltdatum. Für Neues 2.1 nehmen.",
+                "The unversioned alias of the same class: same audio prices as "
+                "2.1, but with a shutdown date. Use 2.1 for anything new.",
             ),
         ),
         prefixes=("gpt-realtime",),
@@ -152,17 +152,17 @@ SLOTS: tuple[ModelSlot, ...] = (
     ),
     ModelSlot(
         key="analysis_model",
-        label="Auswertung",
-        hint="Erzeugt Feedback, Grammatik-Hinweise und Anki-Karten nach der Session.",
+        label="Analysis",
+        hint="Produces feedback, grammar notes and Anki cards after the session.",
         curated=(
             CuratedModel(
-                "gpt-4o-mini", "gpt-4o-mini", "Standard. Schnell und günstig für die Auswertung."
+                "gpt-4o-mini", "gpt-4o-mini", "Default. Fast and cheap for the analysis."
             ),
             CuratedModel(
-                "gpt-4o", "gpt-4o", "Genauer bei Grammatik-Erklärungen, spürbar teurer."
+                "gpt-4o", "gpt-4o", "More precise on grammar explanations, noticeably pricier."
             ),
             CuratedModel(
-                "gpt-5-mini", "gpt-5-mini", "Neuere Generation, gutes Verhältnis für diese Aufgabe."
+                "gpt-5-mini", "gpt-5-mini", "Newer generation, good value for this task."
             ),
         ),
         prefixes=_CHAT_PREFIXES,
@@ -170,35 +170,35 @@ SLOTS: tuple[ModelSlot, ...] = (
     ),
     ModelSlot(
         key="scenario_assistant_model",
-        label="Szenario-Assistent",
+        label="Scenario assistant",
         hint=(
-            "Hilft im Szenario-Editor beim Formulieren und wertet das Material "
-            "eines Szenarios aus. Schreibt Prosa statt zu sprechen — ein "
-            "stärkeres Modell lohnt sich hier eher. Für Bild-Material muss es "
-            "Bilder lesen können."
+            "Helps with wording in the scenario editor and evaluates a "
+            "scenario's material. Writes prose instead of speaking — a "
+            "stronger model pays off more here. For image material it needs "
+            "to be able to read images."
         ),
         curated=(
-            CuratedModel("gpt-4o", "gpt-4o", "Standard. Schreibt brauchbare Szenario-Prosa."),
-            CuratedModel("gpt-5", "gpt-5", "Stärker im Umformulieren und im Erkennen von Checklisten."),
-            CuratedModel("gpt-4o-mini", "gpt-4o-mini", "Günstiger, knappere Vorschläge."),
+            CuratedModel("gpt-4o", "gpt-4o", "Default. Writes usable scenario prose."),
+            CuratedModel("gpt-5", "gpt-5", "Stronger at rephrasing and spotting checklists."),
+            CuratedModel("gpt-4o-mini", "gpt-4o-mini", "Cheaper, terser suggestions."),
         ),
         prefixes=_CHAT_PREFIXES,
         excludes=_CHAT_EXCLUDES,
     ),
     ModelSlot(
         key="transcription_model",
-        label="Transkription",
-        hint="Wandelt deine Sprache in Text für Transkript und Auswertung.",
+        label="Transcription",
+        hint="Turns your speech into text for the transcript and analysis.",
         curated=(
             CuratedModel(
                 "gpt-4o-mini-transcribe",
                 "gpt-4o-mini-transcribe",
-                "Standard. Günstig und für Japanisch ausreichend genau.",
+                "Default. Cheap and accurate enough for Japanese.",
             ),
             CuratedModel(
-                "gpt-4o-transcribe", "gpt-4o-transcribe", "Genauer bei undeutlicher Aussprache."
+                "gpt-4o-transcribe", "gpt-4o-transcribe", "More accurate on unclear pronunciation."
             ),
-            CuratedModel("whisper-1", "whisper-1", "Älteres Modell, robust und breit erprobt."),
+            CuratedModel("whisper-1", "whisper-1", "Older model, robust and widely tested."),
         ),
         contains=("transcribe",),
         exact=("whisper-1",),
@@ -207,16 +207,16 @@ SLOTS: tuple[ModelSlot, ...] = (
     ),
     ModelSlot(
         key="tts_model",
-        label="Stimmproben (TTS)",
-        hint="Erzeugt die Hörproben in der Stimmauswahl. Wird einmal pro Stimme gerendert.",
+        label="Voice previews (TTS)",
+        hint="Generates the previews in the voice picker. Rendered once per voice.",
         curated=(
             CuratedModel(
                 "gpt-4o-mini-tts",
                 "gpt-4o-mini-tts",
-                "Standard. Versteht die Anweisung, wie die Probe klingen soll.",
+                "Default. Understands the instruction for how the preview should sound.",
             ),
-            CuratedModel("tts-1", "tts-1", "Älter und schneller, ignoriert Stil-Anweisungen."),
-            CuratedModel("tts-1-hd", "tts-1-hd", "Wie tts-1, höhere Audioqualität."),
+            CuratedModel("tts-1", "tts-1", "Older and faster, ignores style instructions."),
+            CuratedModel("tts-1-hd", "tts-1-hd", "Like tts-1, higher audio quality."),
         ),
         contains=("tts",),
     ),
@@ -236,7 +236,7 @@ def price_hint(model_id: str) -> str | None:
     if model_id not in MODEL_RATES:
         return None
     rates = rates_for(model_id)
-    return f"${rates.audio_input:g} / ${rates.audio_output:g} pro 1M Audio-Token"
+    return f"${rates.audio_input:g} / ${rates.audio_output:g} per 1M audio tokens"
 
 
 @dataclass
@@ -304,7 +304,7 @@ class ModelCatalog:
         ok = False
 
         if not api_key:
-            detail = "Kein OpenAI-API-Key hinterlegt."
+            detail = "No OpenAI API key is set."
         else:
             try:
                 live = await self._live_models(api_base, api_key)
@@ -392,11 +392,11 @@ async def _fetch_models(api_base: str, api_key: str) -> dict[str, str | None]:
     except httpx.HTTPStatusError as exc:
         logger.warning("Model list failed: HTTP %s", exc.response.status_code)
         raise ModelListError(
-            f"Modellliste nicht abrufbar (HTTP {exc.response.status_code})."
+            f"Model list unavailable (HTTP {exc.response.status_code})."
         ) from exc
     except (httpx.HTTPError, ValueError) as exc:
         logger.warning("Model list failed: %s", exc)
-        raise ModelListError("OpenAI-API für die Modellliste nicht erreichbar.") from exc
+        raise ModelListError("The OpenAI API is unreachable for the model list.") from exc
 
     models: dict[str, str | None] = {}
     for entry in payload.get("data") or []:

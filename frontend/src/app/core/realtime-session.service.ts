@@ -177,7 +177,7 @@ export class RealtimeSessionService {
   /**
    * わからない: tell the tutor you are stuck. Each press without saying
    * anything in between escalates the help one step; the last step is an
-   * explanation in German.
+   * explanation in English.
    *
    * The tutor is silenced right away, because the press usually happens *while*
    * it is talking — the backend cancels the response upstream, and the queued
@@ -257,14 +257,14 @@ export class RealtimeSessionService {
       socket.onerror = () => {
         if (!settled) {
           settled = true;
-          reject(new Error('Verbindung zum Backend fehlgeschlagen.'));
+          reject(new Error('Connection to the backend failed.'));
         }
       };
 
       socket.onclose = () => {
         if (!settled) {
           settled = true;
-          reject(new Error('Das Backend hat die Verbindung abgelehnt.'));
+          reject(new Error('The backend rejected the connection.'));
           return;
         }
         if (this.phase() === 'live') {
@@ -360,7 +360,7 @@ export class RealtimeSessionService {
         break;
 
       case 'app.error':
-        this.errorMessage.set(String(message['message'] ?? 'Unbekannter Fehler.'));
+        this.errorMessage.set(String(message['message'] ?? 'Unknown error.'));
         break;
 
       case 'error':
@@ -424,18 +424,18 @@ export class RealtimeSessionService {
 
   private describe(error: unknown): string {
     if (error instanceof DOMException && error.name === 'NotAllowedError') {
-      return 'Kein Zugriff auf das Mikrofon. Bitte die Berechtigung im Browser erlauben.';
+      return 'No access to the microphone. Please allow the permission in the browser.';
     }
     if (error instanceof DOMException && error.name === 'NotFoundError') {
-      return 'Kein Mikrofon gefunden.';
+      return 'No microphone found.';
     }
-    return error instanceof Error ? error.message : 'Die Session konnte nicht gestartet werden.';
+    return error instanceof Error ? error.message : 'The session could not be started.';
   }
 
   private describeApiError(error: unknown): string {
     if (error && typeof error === 'object' && 'message' in error) {
       return String((error as { message: unknown }).message);
     }
-    return 'Die Realtime API hat einen Fehler gemeldet.';
+    return 'The Realtime API reported an error.';
   }
 }
