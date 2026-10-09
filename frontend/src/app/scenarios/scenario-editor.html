@@ -1,4 +1,4 @@
-<sumi-page [title]="failed() ? undefined : pageTitle()">
+<sumi-page [title]="failed() ? undefined : pageTitle()" [inkEnd]="!failed()">
   @if (failed()) {
     <sumi-error-state title="Can't reach the server" companion="kitsune">
       Your draft here is safe either way.

@@ -1,9 +1,10 @@
 <sumi-page
+  [inkEnd]="!failed()"
   title="Settings"
   subtitle="Everything here is saved to the database and takes priority over the values from .env. An empty field means: the value from .env applies again."
 >
   @if (failed()) {
-    <sumi-error-state title="Can't reach the server" companion="kitsune">
+    <sumi-error-state title="Can't reach the server" companion="kitsune" pattern="none">
       Your saved settings are safe either way.
       <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
         Try again

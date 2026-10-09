@@ -130,9 +130,9 @@
 .material-title {
   font-size: 14px;
   font-weight: 600;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  // Wraps instead of truncating: at 360 px the column beside thumbnail, star
+  // and chevron is only a few characters wide, and "Shelf…" names nothing.
+  overflow-wrap: anywhere;
 }
 
 .material-actions,

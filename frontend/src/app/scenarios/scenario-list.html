@@ -1,4 +1,5 @@
 <sumi-page
+  [inkEnd]="!failed()"
   title="Scenarios"
   subtitle="A scenario describes a role and a situation — not a sequence of questions. That's the difference between a conversation and a form."
 >
@@ -20,7 +21,7 @@
   }
 
   @if (failed()) {
-    <sumi-error-state title="Can't reach the server" companion="kitsune">
+    <sumi-error-state title="Can't reach the server" companion="kitsune" pattern="none">
       Your scenarios are safe either way.
       <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
         Try again

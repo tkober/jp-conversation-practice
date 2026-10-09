@@ -1,4 +1,4 @@
-<sumi-page title="History">
+<sumi-page title="History" [inkEnd]="!failed()">
   @if (stats(); as totals) {
     <div class="totals">
       <span><strong>{{ totals.session_count }}</strong> sessions</span>
@@ -12,7 +12,7 @@
   }
 
   @if (failed()) {
-    <sumi-error-state title="Can't reach the server" companion="kitsune">
+    <sumi-error-state title="Can't reach the server" companion="kitsune" pattern="none">
       Your recorded sessions are safe either way.
       <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
         Try again
