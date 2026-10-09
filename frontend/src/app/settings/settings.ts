@@ -1,6 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SumiPage } from 'sumi-ui/layout';
+import {
+  SumiButtonDirective,
+  SumiInputDirective,
+  SumiSelectDirective,
+  SumiSliderDirective,
+} from 'sumi-ui/forms';
+import { SumiBanner, SumiCard, SumiErrorState, SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import {
@@ -11,6 +17,7 @@ import {
   ModelSlotView,
   VoiceOption,
 } from '../core/models';
+import { isBackendUnreachable } from '../core/unreachable';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -22,7 +29,17 @@ const CUSTOM = '__custom__';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, SumiPage],
+  imports: [
+    FormsModule,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiErrorState,
+    SumiInputDirective,
+    SumiPage,
+    SumiSelectDirective,
+    SumiSliderDirective,
+  ],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
@@ -38,6 +55,8 @@ export class SettingsPage {
   /** Why the dropdowns only show curated entries, when that is the case. */
   readonly modelListNote = signal<string | null>(null);
   readonly loadError = signal<string | null>(null);
+  /** The settings themselves could not be loaded at all — T6, not a banner. */
+  readonly failed = signal(false);
   readonly saveState = signal<SaveState>('idle');
   readonly saveMessage = signal<string | null>(null);
 
@@ -116,12 +135,19 @@ export class SettingsPage {
   reload(): void {
     this.api.settings().subscribe({
       next: (settings) => {
+        this.failed.set(false);
         this.current.set(settings);
         this.draft.set({});
         this.customSlots.set(new Set());
         this.loadError.set(null);
       },
-      error: (error: unknown) => this.loadError.set(this.describe(error)),
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.failed.set(true);
+        } else {
+          this.loadError.set(this.describe(error));
+        }
+      },
     });
   }
 
