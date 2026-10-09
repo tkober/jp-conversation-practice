@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import {
@@ -21,7 +22,7 @@ const CUSTOM = '__custom__';
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule],
+  imports: [FormsModule, SumiPage],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })

@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { AssistantMessage, Scenario } from '../core/models';
@@ -14,7 +15,7 @@ interface ChatEntry extends AssistantMessage {
 
 @Component({
   selector: 'app-scenario-editor',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, SumiPage],
   templateUrl: './scenario-editor.html',
   styleUrl: './scenario-editor.scss',
 })
@@ -54,6 +55,9 @@ export class ScenarioEditor {
   });
 
   readonly canReset = computed(() => this.scenario()?.is_builtin === true);
+
+  /** The scenario's own title once it has loaded, "Edit scenario" before that. */
+  readonly pageTitle = computed(() => this.scenario()?.title || 'Edit scenario');
 
   constructor() {
     effect(() => {

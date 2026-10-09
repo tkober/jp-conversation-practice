@@ -1,14 +1,12 @@
-<div class="history">
-  <header>
-    <h1>History</h1>
-    @if (stats(); as totals) {
-      <div class="totals">
-        <span><strong>{{ totals.session_count }}</strong> sessions</span>
-        <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>
-        <span><strong>{{ totalMinutes() }}</strong> minutes practiced</span>
-      </div>
-    }
-  </header>
+<sumi-page title="History">
+  <div class="history">
+  @if (stats(); as totals) {
+    <div class="totals">
+      <span><strong>{{ totals.session_count }}</strong> sessions</span>
+      <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>
+      <span><strong>{{ totalMinutes() }}</strong> minutes practiced</span>
+    </div>
+  }
 
   @if (error(); as message) {
     <div class="banner banner-error"><span>{{ message }}</span></div>
@@ -110,4 +108,5 @@
       <li class="empty">No sessions recorded yet.</li>
     }
   </ul>
-</div>
+  </div>
+</sumi-page>

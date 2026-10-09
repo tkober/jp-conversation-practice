@@ -1,12 +1,8 @@
-<div class="settings">
-  <header>
-    <h1>Settings</h1>
-    <p>
-      Everything here is saved to the database and takes priority over the values from
-      <code>.env</code>. An empty field means: the value from <code>.env</code> applies again.
-    </p>
-  </header>
-
+<sumi-page
+  title="Settings"
+  subtitle="Everything here is saved to the database and takes priority over the values from .env. An empty field means: the value from .env applies again."
+>
+  <div class="settings">
   @if (loadError(); as error) {
     <div class="banner banner-error">
       <span>{{ error }}</span>
@@ -245,4 +241,5 @@
       }
     </div>
   }
-</div>
+  </div>
+</sumi-page>

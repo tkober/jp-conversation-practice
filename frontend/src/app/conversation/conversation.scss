@@ -68,18 +68,17 @@
   color: var(--sumi-text-2);
   white-space: nowrap;
 
-  /* Tutor speaking / learner speaking are just two live indicator states,
-     not a correct/wrong judgement — but they still need to read as two
-     distinct, theme-aware colours rather than a literal rgba(). Borrowing
-     the wrong/correct hues (reddish vs. greenish) keeps the same visual
-     distinction the app had before Sumi UI. */
+  // Speaking/listening are live indicator states, not a correct/wrong
+  // judgement — but still need two theme-aware colours rather than a
+  // literal rgba(). Borrowing the wrong/correct hues keeps the same
+  // distinction the app had before Sumi UI.
   &.speaking {
-    border-color: color-mix(in oklab, var(--sumi-wrong) 45%, transparent);
+    border-color: var(--sumi-wrong);
     color: var(--sumi-wrong);
   }
 
   &.listening {
-    border-color: color-mix(in oklab, var(--sumi-correct) 45%, transparent);
+    border-color: var(--sumi-correct);
     color: var(--sumi-correct);
   }
 }
@@ -161,7 +160,6 @@
 .turn-user {
   align-self: flex-end;
   background: var(--sumi-accent-soft);
-  border-color: color-mix(in oklab, var(--sumi-accent) 28%, transparent);
 }
 
 .turn-role {
@@ -258,7 +256,7 @@
   transition: width 0.1s linear;
 
   &.muted {
-    background: color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
+    background: var(--sumi-line);
   }
 }
 

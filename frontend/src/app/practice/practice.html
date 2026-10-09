@@ -1,24 +1,35 @@
 @switch (phase()) {
   @case ('setup') {
-    <app-setup (start)="onStart($event)" />
+    <sumi-page
+      title="Practice"
+      subtitle="Talk with an AI tutor in real time, track the exact API cost live, and generate Anki cards afterwards for anything you don't know yet."
+    >
+      <app-setup (start)="onStart($event)" />
+    </sumi-page>
   }
   @case ('connecting') {
-    <app-conversation (finish)="onFinish()" />
+    <sumi-page [inkEnd]="false">
+      <app-conversation (finish)="onFinish()" />
+    </sumi-page>
   }
   @case ('live') {
-    <app-conversation (finish)="onFinish()" />
+    <sumi-page [inkEnd]="false">
+      <app-conversation (finish)="onFinish()" />
+    </sumi-page>
   }
   @default {
-    <app-review
-      [analysis]="analysis()"
-      [analysisError]="analysisError()"
-      [loading]="phase() === 'analysing'"
-      [usage]="session.usage()"
-      [transcript]="session.transcript()"
-      [elapsedSeconds]="finalElapsed()"
-      [sessionInfo]="session.sessionInfo()"
-      (restart)="onRestart()"
-      (retryAnalysis)="runAnalysis()"
-    />
+    <sumi-page title="Review">
+      <app-review
+        [analysis]="analysis()"
+        [analysisError]="analysisError()"
+        [loading]="phase() === 'analysing'"
+        [usage]="session.usage()"
+        [transcript]="session.transcript()"
+        [elapsedSeconds]="finalElapsed()"
+        [sessionInfo]="session.sessionInfo()"
+        (restart)="onRestart()"
+        (retryAnalysis)="runAnalysis()"
+      />
+    </sumi-page>
   }
 }
