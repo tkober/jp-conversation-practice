@@ -1,5 +1,4 @@
 <sumi-page title="History">
-  <div class="history">
   @if (stats(); as totals) {
     <div class="totals">
       <span><strong>{{ totals.session_count }}</strong> sessions</span>
@@ -9,104 +8,143 @@
   }
 
   @if (error(); as message) {
-    <div class="banner banner-error"><span>{{ message }}</span></div>
+    <sumi-banner tone="error">{{ message }}</sumi-banner>
   }
 
-  <ul class="sessions">
-    @for (session of sessions(); track session.id) {
-      <li class="session" [class.open]="openId() === session.id">
-        <button type="button" class="row" (click)="toggle(session)">
-          <span class="when">{{ session.started_at | date: 'd MMM y, HH:mm' }}</span>
-          <span class="title">{{ session.scenario_title }}</span>
-          <span class="level">{{ session.jlpt_level }}</span>
-          <span class="turns">{{ session.turn_count }} turns</span>
-          <span class="time">{{ duration(session.duration_seconds) }}</span>
-          <span class="cost">${{ session.cost_usd | number: '1.4-4' }}</span>
+  @if (failed()) {
+    <sumi-error-state title="Can't reach the server" companion="kitsune">
+      Your recorded sessions are safe either way.
+      <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
+        Try again
+      </button>
+    </sumi-error-state>
+  } @else if (sessions().length === 0) {
+    <sumi-empty-state title="No sessions yet" companion="kitsune">
+      Practice a conversation and it shows up here afterwards, with feedback and the transcript.
+      <a sumiEmptyAction sumiButton variant="primary" routerLink="/practice">Start a conversation</a>
+    </sumi-empty-state>
+  } @else {
+    <ul class="sessions">
+      @for (session of sessions(); track session.id) {
+        <li>
+          <sumi-card class="session" [class.open]="openId() === session.id">
+            <div class="row-wrap">
+              <button type="button" class="row" (click)="toggle(session)">
+                <span class="when">{{ session.started_at | date: 'd MMM y, HH:mm' }}</span>
+                <span class="title">{{ session.scenario_title }}</span>
+                <sumi-badge class="level">{{ session.jlpt_level }}</sumi-badge>
+                <span class="turns">{{ session.turn_count }} turns</span>
+                <span class="time">{{ duration(session.duration_seconds) }}</span>
+                <span class="cost">${{ session.cost_usd | number: '1.4-4' }}</span>
+              </button>
 
-          <span class="tools">
-            @if (confirmingDelete() === session.id) {
-              <span class="confirm" (click)="$event.stopPropagation()">Delete?</span>
-              <span class="btn btn-ghost danger" (click)="confirmDelete(session, $event)">Yes</span>
-              <span class="btn btn-ghost" (click)="cancelDelete($event)">No</span>
-            } @else {
-              <span class="btn btn-ghost" (click)="askDelete(session, $event)">Delete</span>
-            }
-          </span>
-        </button>
+              <div class="tools">
+                @if (confirmingDelete() === session.id) {
+                  <span class="confirm">Delete?</span>
+                  <button
+                    type="button"
+                    sumiButton
+                    variant="danger"
+                    size="sm"
+                    (click)="confirmDelete(session, $event)"
+                  >
+                    Yes
+                  </button>
+                  <button type="button" sumiButton variant="ghost" size="sm" (click)="cancelDelete($event)">
+                    No
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    sumiButton
+                    variant="ghost"
+                    size="sm"
+                    (click)="askDelete(session, $event)"
+                  >
+                    Delete
+                  </button>
+                }
+              </div>
+            </div>
 
-        @if (openId() === session.id) {
-          <div class="detail">
-            @if (detailLoading()) {
-              <p class="muted">Loading…</p>
-            } @else if (detail(); as full) {
-              @if (full.analysis; as analysis) {
-                <p class="summary">{{ analysis.summary }}</p>
+            @if (openId() === session.id) {
+              <div class="detail">
+                @if (detailLoading()) {
+                  <p class="muted">Loading…</p>
+                } @else if (detail(); as full) {
+                  @if (full.analysis; as analysis) {
+                    <p class="summary">{{ analysis.summary }}</p>
 
-                @if (analysis.anki_cards.length > 0) {
-                  <div class="cards">
-                    @for (card of analysis.anki_cards; track card.expression) {
-                      <span class="vocab">
-                        <span lang="ja">{{ card.expression }}</span>
-                        <em>{{ card.meaning }}</em>
-                      </span>
+                    @if (analysis.anki_cards.length > 0) {
+                      <div class="cards">
+                        @for (card of analysis.anki_cards; track card.expression) {
+                          <sumi-badge class="vocab">
+                            <span lang="ja">{{ card.expression }}</span>
+                            <em>{{ card.meaning }}</em>
+                          </sumi-badge>
+                        }
+                      </div>
+                    }
+                  } @else {
+                    <p class="muted">There is no analysis for this session.</p>
+                  }
+
+                  @if (full.context_items.length > 0) {
+                    <div class="context">
+                      <span class="context-label">Material</span>
+                      @for (item of full.context_items; track item.id) {
+                        <span class="context-item" [title]="item.description">
+                          {{ item.title || 'Material' }}
+                          @if (item.introduced_at !== null) {
+                            <em>from {{ duration(item.introduced_at) }}</em>
+                          }
+                        </span>
+                      }
+                    </div>
+                  }
+
+                  <div class="transcript-tools">
+                    <sumi-furigana-toggle />
+                  </div>
+
+                  <div class="transcript">
+                    @for (event of full.transcript; track $index) {
+                      @if (asSpeech(event); as turn) {
+                        <p class="line">
+                          <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
+                          <span lang="ja">
+                            <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
+                          </span>
+                        </p>
+                      } @else if (asMarker(event); as marker) {
+                        <app-transcript-marker [event]="marker" />
+                      }
                     }
                   </div>
+
+                  <div class="meta">
+                    <span>{{ full.model }}</span>
+                    <span>Voice {{ full.voice }}</span>
+                    <span>Pace {{ full.speed }}×</span>
+                    @if (full.vad_eagerness) {
+                      <span>Patience {{ eagernessLabel(full.vad_eagerness) }}</span>
+                    }
+                    <button
+                      type="button"
+                      sumiButton
+                      variant="ghost"
+                      size="sm"
+                      (click)="downloadJson(full, $event)"
+                    >
+                      Download JSON
+                    </button>
+                  </div>
                 }
-              } @else {
-                <p class="muted">There is no analysis for this session.</p>
-              }
-
-              @if (full.context_items.length > 0) {
-                <div class="context">
-                  <span class="context-label">Material</span>
-                  @for (item of full.context_items; track item.id) {
-                    <span class="context-item" [title]="item.description">
-                      {{ item.title || 'Material' }}
-                      @if (item.introduced_at !== null) {
-                        <em>from {{ duration(item.introduced_at) }}</em>
-                      }
-                    </span>
-                  }
-                </div>
-              }
-
-              <div class="transcript-tools">
-                <sumi-furigana-toggle />
-              </div>
-
-              <div class="transcript">
-                @for (event of full.transcript; track $index) {
-                  @if (asSpeech(event); as turn) {
-                    <p class="line">
-                      <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-                      <span lang="ja">
-                        <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
-                      </span>
-                    </p>
-                  } @else if (asMarker(event); as marker) {
-                    <app-transcript-marker [event]="marker" />
-                  }
-                }
-              </div>
-
-              <div class="meta">
-                <span>{{ full.model }}</span>
-                <span>Voice {{ full.voice }}</span>
-                <span>Pace {{ full.speed }}×</span>
-                @if (full.vad_eagerness) {
-                  <span>Patience {{ eagernessLabel(full.vad_eagerness) }}</span>
-                }
-                <button type="button" class="btn btn-ghost" (click)="downloadJson(full, $event)">
-                  Download JSON
-                </button>
               </div>
             }
-          </div>
-        }
-      </li>
-    } @empty {
-      <li class="empty">No sessions recorded yet.</li>
-    }
-  </ul>
-  </div>
+          </sumi-card>
+        </li>
+      }
+    </ul>
+  }
 </sumi-page>
