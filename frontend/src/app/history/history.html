@@ -1,5 +1,5 @@
 <sumi-page title="History" [inkEnd]="!failed()">
-  @if (stats(); as totals) {
+  @if (!failed() && stats(); as totals) {
     <div class="totals">
       <span><strong>{{ totals.session_count }}</strong> sessions</span>
       <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>

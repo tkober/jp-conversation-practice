@@ -130,9 +130,9 @@
 .material-title {
   font-size: 14px;
   font-weight: 600;
-  // Wraps instead of truncating: at 360 px the column beside thumbnail, star
-  // and chevron is only a few characters wide, and "Shelf…" names nothing.
-  overflow-wrap: anywhere;
+  // Wraps between words instead of truncating ("Shelf…" names nothing);
+  // the narrow-screen rules below leave it room for whole words.
+  overflow-wrap: break-word;
 }
 
 .material-actions,
@@ -155,5 +155,25 @@
 
   button {
     align-self: flex-start;
+  }
+}
+
+// At phone width the head row (checkbox, thumbnail, title, star, chevron)
+// leaves the title only a few characters, so the thumbnail shrinks and the
+// action buttons sit closer together.
+@media (max-width: 480px) {
+  .material-head {
+    gap: 8px;
+
+    .material-thumb,
+    .material-icon {
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  .material-actions {
+    flex-wrap: nowrap;
+    gap: 0;
   }
 }
