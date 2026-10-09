@@ -57,7 +57,7 @@ export interface ScenarioDraft {
  * part that repeats, so what is on the shelf is picked per run. A scenario can
  * pre-select entries, which is only about what gets ticked for you.
  *
- * `description` is the English prose the tutor gets; `title` is the German
+ * `description` is the English prose the tutor gets; `title` is the English
  * label the learner sees. The image bytes are not in here — they come from
  * `ApiService.attachmentFileUrl()` — so the list stays small.
  */

@@ -39,13 +39,13 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 
       @if (pending().length) {
         <div class="pending">
-          <span class="pending-label">Noch nicht dabei:</span>
+          <span class="pending-label">Not shown yet:</span>
           @for (item of pending(); track item.id) {
             <button
               type="button"
               class="btn btn-secondary"
               [disabled]="!canHandOver()"
-              [title]="'Der Lehrkraft zeigen: ' + (item.title || 'Material')"
+              [title]="'Show the tutor: ' + (item.title || 'Material')"
               (click)="handOver(item)"
             >
               + {{ item.title || 'Material' }}
@@ -59,7 +59,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
   @if (zoomed(); as item) {
     <div class="overlay" (click)="zoomed.set(null)">
       <img [src]="fileUrl(item.id)" [alt]="item.title" />
-      <span class="overlay-hint">{{ item.title }} — irgendwohin klicken zum Schließen</span>
+      <span class="overlay-hint">{{ item.title }} — click anywhere to close</span>
     </div>
   }`,
   styles: `
@@ -190,7 +190,7 @@ export class ContextPanel {
    * Nothing is drawn until the backend has said what the tutor knows about.
    * Between going live and that message arriving, `contextItems` is still
    * empty, so every piece — including the ones that started in the prompt —
-   * would briefly show up under "noch nicht dabei".
+   * would briefly show up under "not shown yet".
    */
   protected readonly ready = computed(() => this.session.sessionInfo() !== null);
 

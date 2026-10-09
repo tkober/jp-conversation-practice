@@ -49,8 +49,8 @@ export class TranscriptMarker {
   protected readonly label = computed(() => {
     const event = this.event();
     if (event.type === 'help') {
-      return `わからない · Stufe ${event.stage} von ${event.max_stage}`;
+      return `わからない · Stage ${event.stage} of ${event.max_stage}`;
     }
-    return `Material gezeigt: ${event.item.title || 'Material'}`;
+    return `Material shown: ${event.item.title || 'Material'}`;
   });
 }

@@ -45,7 +45,7 @@ export class Review {
   protected readonly asSpeech = asSpeech;
   protected readonly asMarker = asMarker;
 
-  /** A press is not a Redebeitrag, so the header counts what was said. */
+  /** A press is not a turn of speech, so the header counts what was said. */
   readonly speechCount = computed(() => this.transcript().filter(isSpeech).length);
 
   readonly exportState = signal<ExportState>('idle');

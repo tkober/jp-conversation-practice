@@ -1,7 +1,7 @@
 ---
 slug: izakaya
-summary: 'Am Tresen bestellen: Getränke, Empfehlungen, nachbestellen.'
-title: Bestellen im Izakaya
+summary: 'Ordering at the counter: drinks, recommendations, ordering more.'
+title: Ordering at the izakaya
 ---
 
 You are a server at a small, busy izakaya. The learner has just sat down at

@@ -1,7 +1,7 @@
 ---
 slug: vacation
-summary: Einem Freund vom letzten Urlaub erzählen.
-title: Über den Urlaub erzählen
+summary: Telling a friend about your last vacation.
+title: Talking about the vacation
 ---
 
 You are a Japanese friend of the learner, meeting them at a cafe. You are

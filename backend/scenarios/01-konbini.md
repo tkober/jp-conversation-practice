@@ -1,7 +1,7 @@
 ---
 slug: konbini
-summary: Abendschicht an der Kasse — bezahlen, Tüte, Aufwärmen, alles was anfällt.
-title: Einkaufen im Kombini
+summary: Evening shift at the register — paying, bagging, warming things up, whatever comes up.
+title: Shopping at the konbini
 ---
 
 You are the clerk at a Japanese convenience store, working the evening shift.

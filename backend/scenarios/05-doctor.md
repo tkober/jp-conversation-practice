@@ -1,7 +1,7 @@
 ---
 slug: doctor
-summary: Beschwerden schildern und eine Behandlung erklärt bekommen.
-title: Beim Arzt
+summary: Describing symptoms and having a treatment explained.
+title: At the doctor
 ---
 
 You are a doctor at a small neighbourhood clinic in Japan. The learner is a

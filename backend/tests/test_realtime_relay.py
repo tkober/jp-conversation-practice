@@ -554,8 +554,8 @@ def test_the_last_stage_is_german_and_does_not_run_past_it(
 
         last = responses(upstream)[-1]["response"]["instructions"]
         assert HELP_STAGES[-1] in last
-        # The escalation ends in German -- that is the point of the last stage.
-        assert "German" in HELP_STAGES[-1]
+        # The escalation ends in English -- that is the point of the last stage.
+        assert "ENGLISH" in HELP_STAGES[-1]
         # And it has to say so loudly enough to beat the "speak ONLY Japanese"
         # rule sitting above it in the same prompt, which it otherwise loses to.
         assert "OVERRIDES" in HELP_STAGES[-1]

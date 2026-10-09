@@ -98,7 +98,7 @@ async def test_slots_do_not_bleed_into_each_other(live) -> None:
     result = await build()
 
     assert "text-embedding-3-small" not in option_ids(result, "analysis_model")
-    # A code model is not what writes the German feedback.
+    # A code model is not what writes the English feedback.
     assert "gpt-5-codex" not in option_ids(result, "analysis_model")
     assert "gpt-5.1" in option_ids(result, "analysis_model")
     # Diarisation splits speakers; the realtime input stream is one.
