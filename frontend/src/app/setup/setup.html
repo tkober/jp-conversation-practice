@@ -1,139 +1,163 @@
 <div class="setup">
-  @if (backendUnreachable()) {
-    <div class="banner banner-error">
-      <span>Backend unreachable. Is <code>uvicorn</code> running on port 8000?</span>
-    </div>
-  } @else if (health() && !health()!.openai_configured) {
-    <div class="banner banner-error">
-      <span>
-        No <code>OPENAI_API_KEY</code> is set on the server. Add it in
-        <code>backend/.env</code> and restart the backend.
-      </span>
-    </div>
-  }
-
-  @if (microphoneBlocked(); as reason) {
-    <div class="banner banner-error"><span>{{ reason }}</span></div>
-  } @else if (startError(); as error) {
-    <div class="banner banner-error">
-      <span>The session could not be started: {{ error }}</span>
-    </div>
-  }
-
-  <section class="card">
-    <h2>1 · Scenario</h2>
-    <div class="presets">
-      @for (scenario of scenarios(); track scenario.id) {
-        <button
-          type="button"
-          class="preset"
-          [class.active]="selectedScenarioId() === scenario.id && !usingCustomText()"
-          (click)="selectScenario(scenario)"
-        >
-          <span class="preset-title">{{ scenario.title }}</span>
-          <span class="preset-prompt">{{ scenario.summary || scenario.prompt }}</span>
-        </button>
+  @if (step() === 'gate') {
+    <sumi-session-gate
+      title="Who do you want to talk to?"
+      text="Pick a scenario to practise, or write your own on the next step."
+      actionLabel="Continue"
+      companion="kitsune"
+      [actionDisabled]="gateBlocked()"
+      (start)="goToDetails()"
+    >
+      @if (backendUnreachable()) {
+        <sumi-banner tone="error">
+          Backend unreachable. Is <code>uvicorn</code> running on port 8000?
+        </sumi-banner>
+      } @else if (health() && !health()!.openai_configured) {
+        <sumi-banner tone="error">
+          No <code>OPENAI_API_KEY</code> is set on the server. Add it in
+          <code>backend/.env</code> and restart the backend.
+        </sumi-banner>
       }
-    </div>
 
-    <p class="hint">
-      Scenarios can be edited and created under <a routerLink="/scenarios">Scenarios</a>.
-    </p>
-
-    <label class="field">
-      <span class="field-label">Or describe your own scenario</span>
-      <textarea
-        rows="3"
-        placeholder="e.g. Book a room at a ryokan and ask about dinner"
-        [ngModel]="customScenario()"
-        (ngModelChange)="customScenario.set($event)"
-      ></textarea>
-    </label>
-  </section>
-
-  <section class="card">
-    <h2>2 · Material</h2>
-    <app-material-picker
-      [scenarioId]="usingCustomText() ? null : selectedScenarioId()"
-      [(selected)]="pickedMaterial"
-      [(fromStart)]="startingIds"
-      (materialChange)="material.set($event)"
-    />
-  </section>
-
-  <section class="card">
-    <h2>3 · Your level</h2>
-    <div class="levels">
-      @for (item of levels; track item.level) {
-        <button
-          type="button"
-          class="level"
-          [class.active]="jlptLevel() === item.level"
-          (click)="jlptLevel.set(item.level)"
-        >
-          <span class="level-badge">{{ item.level }}</span>
-          <span class="level-label">{{ item.label }}</span>
-        </button>
+      @if (microphoneBlocked(); as reason) {
+        <sumi-banner tone="error">{{ reason }}</sumi-banner>
       }
-    </div>
-  </section>
 
-  <section class="card">
-    <h2>4 · Voice</h2>
-    <div class="voices">
-      @for (voice of voices(); track voice.id) {
-        <div class="voice" [class.active]="selectedVoice() === voice.id">
-          <button type="button" class="voice-pick" (click)="selectedVoice.set(voice.id)">
-            <span class="voice-label">{{ voice.label }}</span>
-            <span class="voice-description">{{ voice.description }}</span>
-          </button>
+      <select
+        class="scenario-select"
+        sumiSelect
+        [ngModel]="selectedOption()"
+        (ngModelChange)="onScenarioOptionChange($event)"
+      >
+        @for (scenario of scenarios(); track scenario.id) {
+          <option [value]="scenario.id">{{ scenario.title }}</option>
+        }
+        <option value="own">Your own scenario…</option>
+      </select>
+
+      @if (!customPicked() && selectedScenario(); as scenario) {
+        <p class="gate-summary">{{ scenario.summary || scenario.prompt }}</p>
+      }
+
+      <p class="hint">
+        Scenarios can be edited and created under <a routerLink="/scenarios">Scenarios</a>.
+      </p>
+    </sumi-session-gate>
+  } @else {
+    <button type="button" sumiButton variant="ghost" class="back-link" (click)="backToGate()">
+      ← Change scenario
+    </button>
+
+    @if (startError(); as error) {
+      <sumi-banner tone="error">The session could not be started: {{ error }}</sumi-banner>
+    }
+
+    <section class="card">
+      <h2>1 · Material</h2>
+      <app-material-picker
+        [scenarioId]="customPicked() ? null : selectedScenarioId()"
+        [(selected)]="pickedMaterial"
+        [(fromStart)]="startingIds"
+        (materialChange)="material.set($event)"
+      />
+    </section>
+
+    <section class="card">
+      <h2>2 · Your level</h2>
+      <div class="levels">
+        @for (item of levels; track item.level) {
           <button
             type="button"
-            class="voice-play"
-            [disabled]="samplePlaying() === voice.id"
-            [title]="'Preview for ' + voice.label"
-            (click)="playSample(voice)"
+            class="level"
+            [class.active]="jlptLevel() === item.level"
+            (click)="jlptLevel.set(item.level)"
           >
-            {{ samplePlaying() === voice.id ? '♪' : '▶' }}
+            <span class="level-badge">{{ item.level }}</span>
+            <span class="level-label">{{ item.label }}</span>
           </button>
-        </div>
+        }
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3 · Voice</h2>
+      <div class="voices">
+        @for (voice of voices(); track voice.id) {
+          <div class="voice" [class.active]="selectedVoice() === voice.id">
+            <button type="button" class="voice-pick" (click)="selectedVoice.set(voice.id)">
+              <span class="voice-label">{{ voice.label }}</span>
+              <span class="voice-description">{{ voice.description }}</span>
+            </button>
+            <button
+              type="button"
+              class="voice-play"
+              [disabled]="samplePlaying() === voice.id"
+              [title]="'Preview for ' + voice.label"
+              (click)="playSample(voice)"
+            >
+              {{ samplePlaying() === voice.id ? '♪' : '▶' }}
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (sampleError(); as error) {
+        <sumi-banner tone="error">{{ error }}</sumi-banner>
+      } @else {
+        <p class="hint">
+          The first preview for each voice is rendered on the server and takes a
+          moment — after that it's instant.
+        </p>
+      }
+
+      <label class="field">
+        <span class="field-label">
+          Speaking rate — {{ speed().toFixed(2) }}×
+          <em>(also changeable during the session)</em>
+        </span>
+        <input
+          type="range"
+          [min]="speedMin()"
+          [max]="speedMax()"
+          step="0.05"
+          [value]="speed()"
+          (input)="speed.set(+$any($event.target).value)"
+        />
+      </label>
+    </section>
+
+    @if (customPicked()) {
+      <section class="card">
+        <h2>4 · Your scenario</h2>
+        <label class="field">
+          <span class="field-label">Describe your own scenario</span>
+          <textarea
+            rows="3"
+            placeholder="e.g. Book a room at a ryokan and ask about dinner"
+            [ngModel]="customScenario()"
+            (ngModelChange)="customScenario.set($event)"
+          ></textarea>
+        </label>
+      </section>
+    }
+
+    <div class="actions">
+      <button
+        type="button"
+        sumiButton
+        variant="primary"
+        class="btn-start"
+        [disabled]="!canStart()"
+        (click)="onStart()"
+      >
+        Start conversation
+      </button>
+      @if (health(); as info) {
+        <p class="meta">
+          Model <code>{{ info.realtime_model }}</code> ·
+          WaniKani filter {{ info.wanikani_configured ? 'active' : 'not configured' }}
+        </p>
       }
     </div>
-
-    @if (sampleError(); as error) {
-      <div class="banner banner-warning"><span>{{ error }}</span></div>
-    } @else {
-      <p class="hint">
-        The first preview for each voice is rendered on the server and takes a
-        moment — after that it's instant.
-      </p>
-    }
-
-    <label class="field">
-      <span class="field-label">
-        Speaking rate — {{ speed().toFixed(2) }}×
-        <em>(also changeable during the session)</em>
-      </span>
-      <input
-        type="range"
-        [min]="speedMin()"
-        [max]="speedMax()"
-        step="0.05"
-        [value]="speed()"
-        (input)="speed.set(+$any($event.target).value)"
-      />
-    </label>
-  </section>
-
-  <div class="actions">
-    <button type="button" class="btn btn-primary btn-start" [disabled]="!canStart()" (click)="onStart()">
-      Start conversation
-    </button>
-    @if (health(); as info) {
-      <p class="meta">
-        Model <code>{{ info.realtime_model }}</code> ·
-        WaniKani filter {{ info.wanikani_configured ? 'active' : 'not configured' }}
-      </p>
-    }
-  </div>
+  }
 </div>

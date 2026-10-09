@@ -1,6 +1,9 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { SumiButtonDirective, SumiSelectDirective } from 'sumi-ui/forms';
+import { SumiBanner } from 'sumi-ui/layout';
+import { SumiSessionGate } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
 import { microphoneBlockedReason } from '../core/audio-recorder';
@@ -14,6 +17,9 @@ const JLPT_LEVELS: { level: JlptLevel; label: string }[] = [
   { level: 'N3', label: 'Intermediate — natural pace' },
   { level: 'N2', label: 'Upper intermediate — native pace' },
 ];
+
+/** Sentinel `<select>` value for the "Your own scenario…" option. */
+const OWN_SCENARIO = 'own';
 
 export interface SessionSetup {
   /** The prompt the tutor runs with. */
@@ -30,9 +36,13 @@ export interface SessionSetup {
   contextIds: number[];
 }
 
+/** Which of the two steps is on screen — see `Practice`'s outer `sumi-page`,
+ *  which reads `step`/`pageTitle` to pick its title and ink. */
+export type SetupStep = 'gate' | 'details';
+
 @Component({
   selector: 'app-setup',
-  imports: [FormsModule, MaterialPicker, RouterLink],
+  imports: [FormsModule, MaterialPicker, RouterLink, SumiBanner, SumiButtonDirective, SumiSelectDirective, SumiSessionGate],
   templateUrl: './setup.html',
   styleUrl: './setup.scss',
 })
@@ -41,6 +51,15 @@ export class Setup {
   private readonly session = inject(RealtimeSessionService);
 
   readonly start = output<SessionSetup>();
+
+  /**
+   * T1 (scenario pick) vs. the details step (material/level/voice/own-text)
+   * — one component instance for both, so "Change scenario" going back to
+   * T1 keeps whatever was already picked instead of resetting it (there is
+   * no persistence to invent here: the component simply never unmounts
+   * between the two steps, see `practice.html`).
+   */
+  readonly step = signal<SetupStep>('gate');
 
   readonly levels = JLPT_LEVELS;
   readonly scenarios = signal<Scenario[]>([]);
@@ -64,6 +83,8 @@ export class Setup {
   private sampleAudio: HTMLAudioElement | null = null;
 
   readonly selectedScenarioId = signal<number | null>(null);
+  /** True once "Your own scenario…" is picked in the T1 select. */
+  readonly customPicked = signal(false);
   readonly customScenario = signal('');
   readonly jlptLevel = signal<JlptLevel>('N5');
 
@@ -80,13 +101,34 @@ export class Setup {
     this.scenarios().find((item) => item.id === this.selectedScenarioId()) ?? null,
   );
 
+  /** `<select>`'s own value: the sentinel, or the scenario id as a string. */
+  readonly selectedOption = computed(() =>
+    this.customPicked() ? OWN_SCENARIO : String(this.selectedScenarioId() ?? ''),
+  );
+
   readonly effectiveScenario = computed(() => {
-    const custom = this.customScenario().trim();
-    return custom || this.selectedScenario()?.prompt || '';
+    if (this.customPicked()) {
+      return this.customScenario().trim();
+    }
+    return this.selectedScenario()?.prompt ?? '';
   });
 
-  /** True when the free-text field overrides the picked scenario. */
-  readonly usingCustomText = computed(() => this.customScenario().trim().length > 0);
+  /** The details step's `sumi-page` title (see `Practice`). */
+  readonly pageTitle = computed(
+    () => (this.customPicked() ? 'Your own scenario' : this.selectedScenario()?.title) ??
+      'Your own scenario',
+  );
+
+  /**
+   * Blocks T1's "Continue", mirrored in its `actionDisabled` so `Enter`
+   * cannot jump ahead either. Only the two conditions that make *any*
+   * session impossible — a missing microphone only matters once "Start
+   * conversation" is actually pressed on the details step, which `canStart`
+   * still guards.
+   */
+  readonly gateBlocked = computed(
+    () => this.backendUnreachable() || this.health()?.openai_configured === false,
+  );
 
   readonly canStart = computed(
     () =>
@@ -173,9 +215,31 @@ export class Setup {
   }
 
   selectScenario(scenario: Scenario): void {
+    this.customPicked.set(false);
     this.selectedScenarioId.set(scenario.id);
-    // Picking a scenario replaces whatever free text was there before.
-    this.customScenario.set('');
+  }
+
+  /** T1's `<select>` change handler — `OWN_SCENARIO` or a scenario id. */
+  onScenarioOptionChange(value: string): void {
+    if (value === OWN_SCENARIO) {
+      this.customPicked.set(true);
+      return;
+    }
+    this.customPicked.set(false);
+    this.selectedScenarioId.set(Number(value));
+  }
+
+  /** T1's "Continue" — moves to the details step without starting a session. */
+  goToDetails(): void {
+    if (this.gateBlocked()) {
+      return;
+    }
+    this.step.set('details');
+  }
+
+  /** Details step's "Change scenario" — back to T1, choices kept. */
+  backToGate(): void {
+    this.step.set('gate');
   }
 
   onStart(): void {
@@ -183,7 +247,7 @@ export class Setup {
       return;
     }
     this.stopSample();
-    const picked = this.usingCustomText() ? null : this.selectedScenario();
+    const picked = this.customPicked() ? null : this.selectedScenario();
     this.start.emit({
       scenario: this.effectiveScenario(),
       scenarioId: picked?.id ?? null,

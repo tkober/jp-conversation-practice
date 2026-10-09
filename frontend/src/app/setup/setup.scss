@@ -13,47 +13,21 @@ h2 {
   color: var(--sumi-muted);
 }
 
-.presets {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 10px;
+/* T1 gate (sumi-session-gate's projected content) ------------------------ */
+
+.scenario-select {
+  width: 100%;
 }
 
-.preset {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  text-align: left;
-  padding: 13px 15px;
-  border-radius: var(--sumi-radius-sm);
-  border: 1px solid var(--sumi-line);
-  background: var(--sumi-sunken);
-  transition: border-color 0.15s ease, background 0.15s ease;
-
-  &:hover {
-    border-color: color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
-  }
-
-  &.active {
-    border-color: var(--sumi-accent-ink);
-    background: var(--sumi-accent-soft);
-  }
+.gate-summary {
+  margin: 0;
+  font-size: 13px;
+  color: var(--sumi-muted);
+  text-align: center;
 }
 
-.preset-title {
-  font-weight: 600;
-  font-size: 14.5px;
-}
-
-.preset-prompt {
-  font-size: 12.5px;
-  color: var(--sumi-text-2);
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.back-link {
+  align-self: flex-start;
 }
 
 .field {
