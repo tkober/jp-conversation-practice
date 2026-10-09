@@ -1,4 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { SumiButtonDirective, SumiCheckboxDirective } from 'sumi-ui/forms';
+import { SumiBadge, SumiBanner, SumiCard } from 'sumi-ui/layout';
+import { SumiStatGrid, SumiStatTile } from 'sumi-ui/charts';
 import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
@@ -20,7 +23,18 @@ type ExportState = 'idle' | 'running' | 'done' | 'error';
 
 @Component({
   selector: 'app-review',
-  imports: [SumiFuriganaText, SumiFuriganaToggle, TranscriptMarker],
+  imports: [
+    SumiBadge,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiCheckboxDirective,
+    SumiFuriganaText,
+    SumiFuriganaToggle,
+    SumiStatGrid,
+    SumiStatTile,
+    TranscriptMarker,
+  ],
   templateUrl: './review.html',
   styleUrl: './review.scss',
 })
