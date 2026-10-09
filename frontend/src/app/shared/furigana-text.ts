@@ -45,7 +45,7 @@ import { RubySegment } from '../core/models';
     rt {
       font-size: 0.52em;
       font-weight: 400;
-      color: var(--text-muted);
+      color: var(--sumi-text-2);
       /* Copying a line should yield the sentence, not sentence-with-readings. */
       user-select: none;
     }

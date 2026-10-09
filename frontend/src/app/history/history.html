@@ -1,14 +1,12 @@
-<div class="history">
-  <header>
-    <h1>History</h1>
-    @if (stats(); as totals) {
-      <div class="totals">
-        <span><strong>{{ totals.session_count }}</strong> sessions</span>
-        <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>
-        <span><strong>{{ totalMinutes() }}</strong> minutes practiced</span>
-      </div>
-    }
-  </header>
+<sumi-page title="History">
+  <div class="history">
+  @if (stats(); as totals) {
+    <div class="totals">
+      <span><strong>{{ totals.session_count }}</strong> sessions</span>
+      <span><strong>${{ totals.total_cost_usd | number: '1.4-4' }}</strong> total</span>
+      <span><strong>{{ totalMinutes() }}</strong> minutes practiced</span>
+    </div>
+  }
 
   @if (error(); as message) {
     <div class="banner banner-error"><span>{{ message }}</span></div>
@@ -47,8 +45,8 @@
                 @if (analysis.anki_cards.length > 0) {
                   <div class="cards">
                     @for (card of analysis.anki_cards; track card.expression) {
-                      <span class="vocab jp">
-                        {{ card.expression }}
+                      <span class="vocab">
+                        <span lang="ja">{{ card.expression }}</span>
                         <em>{{ card.meaning }}</em>
                       </span>
                     }
@@ -81,7 +79,7 @@
                   @if (asSpeech(event); as turn) {
                     <p class="line">
                       <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-                      <span class="jp">
+                      <span lang="ja">
                         <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
                       </span>
                     </p>
@@ -110,4 +108,5 @@
       <li class="empty">No sessions recorded yet.</li>
     }
   </ul>
-</div>
+  </div>
+</sumi-page>

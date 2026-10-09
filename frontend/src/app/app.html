@@ -1,22 +1,10 @@
-<div class="shell">
-  <nav class="nav">
-    <a class="brand jp" routerLink="/">会話</a>
+<sumi-app-shell [brand]="brand" [nav]="navItems">
+  <sumi-app-switcher sumiShellSwitcher />
 
-    <div class="links" [class.locked]="conversationRunning()">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        Practice
-      </a>
-      <a routerLink="/scenarios" routerLinkActive="active">Scenarios</a>
-      <a routerLink="/history" routerLinkActive="active">History</a>
-      <a routerLink="/settings" routerLinkActive="active">Settings</a>
-    </div>
-
-    @if (conversationRunning()) {
-      <span class="running" title="End the session before navigating away">
-        Session running
-      </span>
-    }
-  </nav>
+  @if (conversationRunning()) {
+    <ng-container sumiNavLock="Conversation running — end it before leaving" />
+  }
 
   <router-outlet />
-</div>
+  <sumi-hotkey-help />
+</sumi-app-shell>

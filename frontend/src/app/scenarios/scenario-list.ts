@@ -1,12 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { Scenario } from '../core/models';
 
 @Component({
   selector: 'app-scenario-list',
-  imports: [RouterLink],
+  imports: [RouterLink, SumiPage],
   templateUrl: './scenario-list.html',
   styleUrl: './scenario-list.scss',
 })

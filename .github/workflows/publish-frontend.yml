@@ -6,6 +6,7 @@ on:
     paths:
       - "frontend/**"
       - ".github/workflows/publish-frontend.yml"
+      - ".gitmodules"
     tags: ["v*.*.*"]
 
   # Lets the image be rebuilt without a code change — useful after a base
@@ -24,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - uses: docker/setup-buildx-action@v3
 

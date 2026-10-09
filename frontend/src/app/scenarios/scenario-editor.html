@@ -1,20 +1,21 @@
-<div class="editor">
-  <header>
-    <a class="back" routerLink="/scenarios">← All scenarios</a>
-    @if (scenario(); as current) {
-      @if (current.is_builtin) {
-        <span class="tag" [class.edited]="current.is_customized">
-          {{ current.is_customized ? 'customized' : 'built-in' }}
-        </span>
+<sumi-page [title]="pageTitle()">
+  <div class="editor">
+    <header>
+      <a class="back" routerLink="/scenarios">← All scenarios</a>
+      @if (scenario(); as current) {
+        @if (current.is_builtin) {
+          <span class="tag" [class.edited]="current.is_customized">
+            {{ current.is_customized ? 'customized' : 'built-in' }}
+          </span>
+        }
       }
+    </header>
+
+    @if (loadError(); as error) {
+      <div class="banner banner-error"><span>{{ error }}</span></div>
     }
-  </header>
 
-  @if (loadError(); as error) {
-    <div class="banner banner-error"><span>{{ error }}</span></div>
-  }
-
-  @if (scenario()) {
+    @if (scenario()) {
     <div class="columns">
       <section class="form card">
         <label class="field">
@@ -134,5 +135,6 @@
         </div>
       </section>
     </div>
-  }
-</div>
+    }
+  </div>
+</sumi-page>

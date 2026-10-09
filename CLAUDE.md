@@ -57,6 +57,59 @@ correctness gate: it type-checks templates, so run it after touching any
 component. Add specs as `src/**/*.spec.ts` and `ng test` picks them up
 (`--filter "<regex>"` by test name, `--include <path>` by file).
 
+## Sumi UI
+
+`frontend/sumi-ui` is a git submodule (`tkober/sumi-ui`, shared with
+kanji-trainer, katakana-reading and jp-conjugation) — clone this repo with
+`git clone --recurse-submodules`, or run `git submodule update --init` in an
+existing checkout; **never `npm install` inside it**, it compiles against this
+app's own `node_modules`. Wired in per sumi-ui's README ("Using Sumi UI in an
+app"): `tsconfig.json`'s `paths` resolves `sumi-ui/*` straight to the
+submodule's TypeScript sources (no separate library build), `angular.json`'s
+`stylePreprocessorOptions.includePaths` is the Sass load path `styles.scss`
+needs for `@use 'sumi-ui/projects/sumi-ui/styles/sumi'`, and the library's
+`@font-face` rules ship as their own non-injected `sumi-fonts.css` bundle,
+linked separately in `index.html` and served with `Cache-Control: no-cache` in
+`nginx.conf` (the filename stays fixed across builds, so it cannot rely on
+content hashing to bust the cache).
+
+`provideSumi({ accent: 'asagi', motif: 'torii', pattern: 'shippo', companion:
+'kitsune' })` in `app.config.ts` — all four are **placeholders**, docs/concept.md
+in the sumi-ui repo tracks the real choice as tkober/sumi-ui#25. Update the
+inline SVG favicon in `index.html` by hand if the accent changes; it is not
+derived from `provideSumi()`.
+
+**Tokens.** `styles.scss` is `@use 'sumi-ui/projects/sumi-ui/styles/sumi'`
+plus the app's own leftover classes (`.btn*`, `.card`, `.banner*` — moving
+those onto the library's own form/button components is #17/#18, not done
+here) on Sumi's `--sumi-*` tokens instead of the app's old dark-only
+`:root` block. `--info` (the review screen's kana reading, the settings
+screen's inline "Reset" link) has no Sumi equivalent and is the one token
+that stays app-side, in `src/styles/app-tokens.scss`, defined once with
+`light-dark()` exactly like Sumi defines its own.
+
+**Navigation lock.** While `RealtimeSessionService.isLive()` is true, `app.html`
+renders `<ng-container sumiNavLock="…" />` inside `sumi-app-shell` instead of
+dimming its own nav links — the directive (`sumi-ui/layout`) disables the
+header nav, the mobile tab bar, the brand link and the app switcher itself,
+and shows the reason in the header, for as long as the element is rendered.
+
+**Pages** sit on `sumi-page`, which supplies the max-width, the side gutters,
+the body's vertical gap between direct children, a title/subtitle header and
+(once a page actually scrolls) an ink landscape at the end — so a page
+no longer needs its own wrapping width/padding/`h1` rules. The one exception
+is the practice route: `practice.html` (not each stage component) switches
+the `sumi-page` title per session phase, since it already `@switch`es on
+`phase()` to pick the stage component — "Practice" with subtitle on setup,
+no title and `[inkEnd]="false"` during the live conversation (T7: never ink
+next to the conversation itself), "Review" once it ends.
+
+**The library is the source of truth.** If something needed here is missing
+or broken in Sumi UI, that is a `tkober/sumi-ui` issue, not a local
+workaround — reimplementing library behaviour in this app's own CSS/TS would
+drift the four apps apart again, which is the whole reason the library
+exists.
+
 ## Persistence
 
 Postgres on the shared `postgres-core` instance, using the same two-role split

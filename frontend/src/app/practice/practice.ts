@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { SumiPage } from 'sumi-ui/layout';
 
 import { Conversation } from '../conversation/conversation';
 import { ApiService } from '../core/api.service';
@@ -9,9 +10,8 @@ import { SessionSetup, Setup } from '../setup/setup';
 
 @Component({
   selector: 'app-practice',
-  imports: [Setup, Conversation, Review],
+  imports: [Setup, Conversation, Review, SumiPage],
   templateUrl: './practice.html',
-  styleUrl: './practice.scss',
 })
 export class Practice {
   private readonly api = inject(ApiService);

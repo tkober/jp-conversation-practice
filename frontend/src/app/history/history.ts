@@ -1,5 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import {
@@ -17,7 +18,7 @@ import { TranscriptMarker } from '../shared/transcript-marker';
 
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle, TranscriptMarker],
+  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle, SumiPage, TranscriptMarker],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })

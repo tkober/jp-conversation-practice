@@ -46,6 +46,11 @@ file. Pick one of the two stacks — there is no migration between them.
 
 ## Run for development
 
+The frontend UI chrome (`frontend/sumi-ui`) is a git submodule, so clone with
+`git clone --recurse-submodules`, or run `git submodule update --init` in an
+existing checkout before the first `npm install` — `frontend/sumi-ui` stays
+empty otherwise and the build fails to resolve `sumi-ui/*`.
+
 ```bash
 cp backend/.env.example backend/.env   # fill in DB_* and OPENAI_API_KEY
 cd backend && uv sync && cd ..

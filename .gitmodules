@@ -1,0 +1,3 @@
+[submodule "frontend/sumi-ui"]
+	path = frontend/sumi-ui
+	url = https://github.com/tkober/sumi-ui.git
