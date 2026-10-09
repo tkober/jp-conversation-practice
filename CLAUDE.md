@@ -80,9 +80,12 @@ inline SVG favicon in `index.html` by hand if the accent changes; it is not
 derived from `provideSumi()`.
 
 **Tokens.** `styles.scss` is `@use 'sumi-ui/projects/sumi-ui/styles/sumi'`
-plus the app's own leftover classes (`.btn*`, `.card`, `.banner*` — moving
-those onto the library's own form/button components is #17/#18, not done
-here) on Sumi's `--sumi-*` tokens instead of the app's old dark-only
+plus the app's own leftover classes (`.btn*`, `.card`, `.banner*` — #17 moved
+the conversation screen and the practice gates onto the library's own
+button/select/slider/banner components, `.banner*` stays global as long as
+history/settings/scenarios/the review screen still use it; the rest of the
+move onto the library's form/button components is #18, not done here) on
+Sumi's `--sumi-*` tokens instead of the app's old dark-only
 `:root` block. `--info` (the review screen's kana reading, the settings
 screen's inline "Reset" link) has no Sumi equivalent and is the one token
 that stays app-side, in `src/styles/app-tokens.scss`, defined once with
@@ -99,10 +102,55 @@ the body's vertical gap between direct children, a title/subtitle header and
 (once a page actually scrolls) an ink landscape at the end — so a page
 no longer needs its own wrapping width/padding/`h1` rules. The one exception
 is the practice route: `practice.html` (not each stage component) switches
-the `sumi-page` title per session phase, since it already `@switch`es on
-`phase()` to pick the stage component — "Practice" with subtitle on setup,
-no title and `[inkEnd]="false"` during the live conversation (T7: never ink
-next to the conversation itself), "Review" once it ends.
+the `sumi-page` title/`inkEnd` per session phase, since it already
+`@switch`es on `phase()` to pick the stage component.
+
+**Practice flow (#17).** The `setup` phase is itself two steps, both inside
+one `Setup` component instance so going back and forth keeps whatever was
+picked (no new persistence to invent): a `Setup.step` signal, `'gate'` or
+`'details'`, that `practice.html` reads via `viewChild(Setup)` to decide the
+outer `sumi-page`'s title (`undefined` for the gate, the picked scenario's
+title — or "Your own scenario" — for details) and `inkEnd` (`false` for the
+gate, which brings its own ink scene; the default otherwise). One `Setup`
+instance, never destroyed between the two steps, is what makes "Change
+scenario" cheap: `step.set('gate')` is the entire implementation.
+
+1. **T1 — the gate.** `sumi-session-gate companion="kitsune"` with a
+   `select[sumiSelect]` listing the scenarios plus a last "Your own
+   scenario…" option (`Setup.customPicked`, a sentinel `'own'` value rather
+   than inferring it from whether free text is present — the free text
+   itself now lives on the details step, not here). The picked scenario's
+   summary shows in muted text below the select. Backend-unreachable/no-key/
+   microphone-blocked banners (`sumi-banner tone="error"`) show here, above
+   the select; `gateBlocked` (unreachable or no key — *not* the microphone,
+   which only matters once "Start conversation" is actually pressed)
+   disables the gate's own `actionDisabled`, which also locks its `Enter`.
+2. **Details.** A plain `sumi-page` titled with the scenario (see above), a
+   "Change scenario" link back to the gate, then Material/Level/Voice
+   unchanged (restyling those is #18) — section numbering shifted down by
+   one now that "Scenario" moved to the gate — plus, only for "Your own
+   scenario…", the free-text textarea as its own numbered section. "Start
+   conversation" is the user gesture the mic/AudioContext need, so the
+   session only actually starts here, exactly as before.
+3. **Conversation.** Unchanged: no title, `[inkEnd]="false"` (T7: never ink
+   next to the conversation itself).
+4. **T2 — the end-of-session gate.** `practice.html`'s `'analysing'` case
+   shows `sumi-session-gate [showAction]="false" companion="kitsune"`
+   projecting `sumi-session-summary` (no `answered`/`correct` — this is not
+   a quiz, see sumi-ui#56) with a `sumi-hanko` (完了/"Conversation complete")
+   and `Turns`/`Cost` tiles, **only the first time** a given session ends —
+   `Practice.reviewOpened` tracks that. The summary's `actionLabel`/
+   `actionDisabled` (and the gate's own, mirrored, so `Enter` stays locked
+   too) read `reviewReady` (`analysis()` or `analysisError()` set) — "Show
+   review" opens the review and flips `reviewOpened` to `true`; a "no speech
+   at all" session sets `analysisError` synchronously in `runAnalysis()`, so
+   that gate is ready immediately, no spinner. Once `reviewOpened` is `true`,
+   further analysis (a retry from the review screen) no longer shows this
+   gate — `practice.html` keeps `app-review` mounted and just flips its own
+   `[loading]`, exactly like before this gate existed, so retrying does not
+   yank the user back to a screen they already left.
+5. **Review.** Unchanged, title "Review"; "New session" goes back to the
+   gate (step 1).
 
 **The library is the source of truth.** If something needed here is missing
 or broken in Sumi UI, that is a `tkober/sumi-ui` issue, not a local
@@ -173,7 +221,10 @@ that, rather than `test_sqlite.py`, is what actually covers the backend;
 
 ## Architecture
 
-Three-stage flow, with the backend as the only holder of the API key:
+Three-stage flow, with the backend as the only holder of the API key — the
+frontend breaks "setup" and "review" each into a gate before the real screen
+(see "Practice flow" above), but the backend only ever sees one session
+start, one live conversation and one analysis request per run:
 
 ```
 setup -> live conversation -> review
@@ -379,6 +430,18 @@ A teacher sees when a learner is out of their depth and eases off without being
 asked. The model cannot see that, and "ask for help in Japanese" is precisely
 what a stuck learner cannot do — so the session screen has a button that says
 it for them.
+
+**Frontend (#17).** `WakaranaiButton` is `button[sumiButton]` with the hotkey
+`Alt+H` (`SUMI_KEYS.iDontKnow`, scope `'practice'`, `enabled: () =>
+canRequest()`) registered via `injectHotkey` — `sumi-hotkey-help` (already in
+the shell) picks it up automatically while the conversation runs. There is no
+`sumiButton` variant for the old amber "help" colour (only
+primary/secondary/ghost/danger exist); the button uses `secondary` and this
+is a reported `tkober/sumi-ui` gap, not a hand-styled workaround — see the
+component's doc comment. The escalation step dots keep `--sumi-retry`, the
+library's own token for this meaning, so no new colour was introduced either
+way. Mute is the same pattern (`Alt+M`, `SUMI_KEYS.mute`, `secondary`),
+without a stage to track.
 
 A press sends `app.session.help`. The relay answers it with **one**
 `response.create` whose `response.instructions` is
@@ -606,9 +669,18 @@ arrays bury the conversation in it.
 ワタクシ, which is defensible and not what a textbook teaches. Keep that table
 short — it is for readings that are *misleading*, not merely surprising.
 
-The toggle (`FuriganaService`) is one setting for the whole app, kept in
-localStorage and offered wherever a transcript appears: session, review,
-history.
+**Frontend (#17).** The toggle and the `<ruby>` rendering are sumi-ui's own
+(`SumiFurigana`/`sumi-furigana`/`sumi-furigana-toggle`, `sumi-ui/practice`) —
+the app's own `core/furigana.service.ts`, `shared/furigana-text.ts` and
+`shared/furigana-toggle.ts` are gone, replaced everywhere a transcript
+appears (conversation, review, history). `core/models.ts`'s
+`toFuriganaSegments()` is the one adapter left: it maps this app's
+`RubySegment` (`{ text, reading }`) to the library's `{ base, reading }`
+shape, and stands in for a `RubySegment[]` of `null` with a single
+reading-less segment so plain text still renders. The library's storage key
+(`sumi-ui.furigana`) differs from the app's old one
+(`jp-practice.furigana`), so the saved on/off preference resets once —
+harmless, it defaults to on either way.
 
 ## Session export
 
