@@ -1,0 +1,11 @@
+// Tokens Sumi UI has no equivalent for, defined exactly once with
+// `light-dark()`, the same way Sumi defines its own (see
+// sumi-ui/projects/sumi-ui/styles/_tokens.scss).
+:root {
+  // A neutral "supplementary information" colour — the review screen's
+  // kana reading next to a vocabulary expression, and the settings screen's
+  // inline "Reset" link. Neither is a feedback colour (correct/wrong/retry)
+  // or the brand accent, so it stays its own token rather than borrowing
+  // one of those and implying a meaning that isn't there.
+  --info: light-dark(#2f6690, #7cb8e6);
+}

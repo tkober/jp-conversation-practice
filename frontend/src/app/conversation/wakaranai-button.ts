@@ -17,7 +17,8 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
   template: `<div class="help">
     <button
       type="button"
-      class="btn jp"
+      class="btn"
+      lang="ja"
       (click)="session.requestHelp()"
       [disabled]="!canRequest()"
       title="Tell the tutor you're stuck right now"
@@ -39,21 +40,21 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       align-items: center;
       gap: 16px;
       padding: 12px 16px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--sumi-surface);
+      border: 1px solid var(--sumi-line);
+      border-radius: var(--sumi-radius);
     }
 
     .btn {
       flex-shrink: 0;
       font-size: 17px;
-      background: rgba(232, 182, 76, 0.12);
-      border: 1px solid rgba(232, 182, 76, 0.4);
-      color: var(--warning);
+      background: var(--sumi-retry-soft);
+      border: 1px solid color-mix(in oklab, var(--sumi-retry) 40%, transparent);
+      color: var(--sumi-retry);
 
       &:hover:not(:disabled) {
-        background: rgba(232, 182, 76, 0.2);
-        border-color: var(--warning);
+        background: color-mix(in oklab, var(--sumi-retry) 20%, var(--sumi-retry-soft));
+        border-color: var(--sumi-retry);
       }
     }
 
@@ -62,7 +63,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       flex-direction: column;
       gap: 6px;
       font-size: 12.5px;
-      color: var(--text-faint);
+      color: var(--sumi-muted);
     }
 
     .steps {
@@ -74,10 +75,10 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       width: 22px;
       height: 4px;
       border-radius: 999px;
-      background: var(--bg-input);
+      background: var(--sumi-sunken);
 
       &.reached {
-        background: var(--warning);
+        background: var(--sumi-retry);
       }
     }
 

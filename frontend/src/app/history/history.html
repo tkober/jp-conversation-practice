@@ -47,8 +47,8 @@
                 @if (analysis.anki_cards.length > 0) {
                   <div class="cards">
                     @for (card of analysis.anki_cards; track card.expression) {
-                      <span class="vocab jp">
-                        {{ card.expression }}
+                      <span class="vocab">
+                        <span lang="ja">{{ card.expression }}</span>
                         <em>{{ card.meaning }}</em>
                       </span>
                     }
@@ -81,7 +81,7 @@
                   @if (asSpeech(event); as turn) {
                     <p class="line">
                       <span class="role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-                      <span class="jp">
+                      <span lang="ja">
                         <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
                       </span>
                     </p>

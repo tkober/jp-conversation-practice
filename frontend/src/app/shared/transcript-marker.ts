@@ -25,7 +25,7 @@ import { ContextEvent, HelpEvent } from '../core/models';
       gap: 10px;
       margin: 10px 0;
       font-size: 12px;
-      color: var(--text-faint);
+      color: var(--sumi-muted);
     }
 
     .label {
@@ -33,13 +33,13 @@ import { ContextEvent, HelpEvent } from '../core/models';
     }
 
     .help .label {
-      color: var(--warning);
+      color: var(--sumi-retry);
     }
 
     .rule {
       flex: 1;
       height: 1px;
-      background: var(--border);
+      background: var(--sumi-line);
     }
   `,
 })

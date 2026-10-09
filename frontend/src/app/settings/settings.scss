@@ -2,25 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 32px;
 }
 
 header {
-  h1 {
-    margin: 0 0 6px;
-    font-size: 24px;
-    letter-spacing: -0.02em;
-  }
-
-  p {
-    margin: 0;
-    max-width: 620px;
-    color: var(--text-muted);
-    font-size: 14px;
-  }
-
   code {
-    font-family: var(--font-mono);
+    font-family: var(--sumi-font-mono);
     font-size: 12.5px;
   }
 }
@@ -31,7 +17,7 @@ h2 {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .field {
@@ -52,7 +38,7 @@ h2 {
   em {
     font-style: normal;
     font-weight: 400;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -60,7 +46,7 @@ h2 {
   display: block;
   margin: 6px 0 0;
   font-size: 12.5px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   line-height: 1.5;
 }
 
@@ -69,24 +55,24 @@ input[type='password'],
 select {
   width: 100%;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
+  border-radius: var(--sumi-radius-sm);
+  border: 1px solid var(--sumi-line);
+  background: var(--sumi-sunken);
   font-size: 14px;
 
   &:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--sumi-accent-ink);
   }
 
   &::placeholder {
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
 input[type='range'] {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--sumi-accent);
   cursor: pointer;
 }
 
@@ -100,7 +86,7 @@ select {
 }
 
 .field-hint-warning {
-  color: var(--warning, var(--text-faint));
+  color: var(--sumi-retry);
 }
 
 .secret {
@@ -130,18 +116,18 @@ select {
   position: sticky;
   bottom: 0;
   padding: 14px 0;
-  background: linear-gradient(180deg, transparent, var(--bg) 40%);
+  background: linear-gradient(180deg, transparent, var(--sumi-bg) 40%);
 }
 
 .save-message {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
 
   &.ok {
-    color: var(--success);
+    color: var(--sumi-correct);
   }
 
   &.fail {
-    color: var(--accent);
+    color: var(--sumi-wrong);
   }
 }

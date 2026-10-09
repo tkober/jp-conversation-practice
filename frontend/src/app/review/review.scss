@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 32px;
 }
 
 h2 {
@@ -11,11 +10,11 @@ h2 {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .muted {
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
   font-size: 14px;
   margin: 0;
 }
@@ -27,9 +26,9 @@ h2 {
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   padding: 15px 18px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
 
   > div {
     display: flex;
@@ -42,24 +41,24 @@ h2 {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .bar-value {
-  font-family: var(--font-mono);
+  font-family: var(--sumi-font-mono);
   font-size: 20px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 
   small {
     font-size: 11px;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
     font-weight: 400;
   }
 }
 
 .cost {
-  color: var(--accent);
+  color: var(--sumi-accent-ink);
 }
 
 /* Loading --------------------------------------------------------------- */
@@ -71,7 +70,7 @@ h2 {
 
   p {
     margin: 0;
-    color: var(--text-muted);
+    color: var(--sumi-text-2);
     font-size: 14px;
   }
 }
@@ -81,8 +80,8 @@ h2 {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong);
-  border-top-color: var(--accent);
+  border: 2px solid color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
+  border-top-color: var(--sumi-accent-ink);
   animation: spin 0.8s linear infinite;
 }
 
@@ -111,9 +110,9 @@ h2 {
 
 .note {
   padding: 13px 15px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius-sm);
 }
 
 .note-line {
@@ -132,17 +131,17 @@ h2 {
 }
 
 .tag-wrong {
-  color: var(--accent);
+  color: var(--sumi-wrong);
 }
 
 .tag-right {
-  color: var(--success);
+  color: var(--sumi-correct);
 }
 
 .note-explanation {
   margin: 9px 0 0;
   font-size: 13.5px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
   line-height: 1.55;
 }
 
@@ -157,7 +156,7 @@ h2 {
 
 .counter {
   font-size: 12px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -174,9 +173,9 @@ h2 {
   display: flex;
   gap: 12px;
   padding: 13px 15px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius-sm);
   transition: opacity 0.15s ease, border-color 0.15s ease;
 
   &.off {
@@ -192,7 +191,7 @@ h2 {
   input {
     width: 17px;
     height: 17px;
-    accent-color: var(--accent);
+    accent-color: var(--sumi-accent);
     cursor: pointer;
   }
 }
@@ -227,7 +226,7 @@ h2 {
 .context {
   margin: 7px 0 0;
   font-size: 13.5px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
 }
 
 /* Export ---------------------------------------------------------------- */
@@ -242,14 +241,14 @@ h2 {
 
 .export-message {
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
 
   &.ok {
-    color: var(--success);
+    color: var(--sumi-correct);
   }
 
   &.fail {
-    color: var(--accent);
+    color: var(--sumi-wrong);
   }
 }
 
@@ -274,7 +273,7 @@ h2 {
   min-width: 34px;
   margin-right: 10px;
   font-size: 11px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }

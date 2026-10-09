@@ -17,7 +17,7 @@
   em {
     font-style: normal;
     font-weight: 400;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -25,20 +25,20 @@ input[type='text'],
 textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
+  border-radius: var(--sumi-radius-sm);
+  border: 1px solid var(--sumi-line);
+  background: var(--sumi-sunken);
   color: inherit;
   font-family: inherit;
   font-size: 14px;
 
   &:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--sumi-accent-ink);
   }
 
   &::placeholder {
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -55,11 +55,11 @@ textarea {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .material-missing {
-  color: var(--warning);
+  color: var(--sumi-retry);
 }
 
 .material-item {
@@ -83,19 +83,19 @@ textarea {
 }
 
 .material-item.picked {
-  border-color: var(--accent);
+  border-color: var(--sumi-accent-ink);
 }
 
 .material-pick input {
   margin-top: 4px;
-  accent-color: var(--accent);
+  accent-color: var(--sumi-accent);
   cursor: pointer;
 }
 
 .material-warning {
   font-size: 11.5px;
   line-height: 1.35;
-  color: var(--warning);
+  color: var(--sumi-retry);
 }
 
 .material-detail {
@@ -110,16 +110,16 @@ textarea {
   padding: 4px 8px;
   font-size: 15px;
   line-height: 1;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   background: none;
   border: 1px solid transparent;
 
   &.on {
-    color: var(--warning);
+    color: var(--sumi-retry);
   }
 
   &:hover {
-    color: var(--warning);
+    color: var(--sumi-retry);
   }
 }
 
@@ -145,7 +145,7 @@ textarea {
 }
 
 .material-actions .danger:hover:not(:disabled) {
-  color: var(--accent);
+  color: var(--sumi-wrong);
 }
 
 .material-description {
@@ -154,8 +154,8 @@ textarea {
   max-height: 220px;
   overflow: auto;
   white-space: pre-wrap;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
   border-radius: 6px;
 }
 
@@ -179,7 +179,7 @@ textarea {
 
 .material-busy {
   font-size: 12.5px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .material-text-form {

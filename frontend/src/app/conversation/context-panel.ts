@@ -29,7 +29,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
                   <img [src]="fileUrl(item.id)" [alt]="item.title" />
                 </button>
               } @else {
-                <pre class="body jp">{{ item.body }}</pre>
+                <pre class="body" lang="ja">{{ item.body }}</pre>
               }
               <figcaption>{{ item.title || 'Material' }}</figcaption>
             </figure>
@@ -68,9 +68,9 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       flex-direction: column;
       gap: 10px;
       padding: 12px 16px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: var(--sumi-surface);
+      border: 1px solid var(--sumi-line);
+      border-radius: var(--sumi-radius);
     }
 
     .shown {
@@ -93,7 +93,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 
     figcaption {
       font-size: 12px;
-      color: var(--text-faint);
+      color: var(--sumi-muted);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -101,14 +101,14 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 
     .thumb {
       padding: 0;
-      border: 1px solid var(--border);
+      border: 1px solid var(--sumi-line);
       border-radius: 6px;
       overflow: hidden;
-      background: var(--bg-input);
+      background: var(--sumi-sunken);
       cursor: zoom-in;
 
       &:hover {
-        border-color: var(--accent);
+        border-color: var(--sumi-accent-ink);
       }
 
       img {
@@ -127,8 +127,8 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       font-size: 13px;
       line-height: 1.5;
       white-space: pre-wrap;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
+      background: var(--sumi-sunken);
+      border: 1px solid var(--sumi-line);
       border-radius: 6px;
     }
 
@@ -141,9 +141,12 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 
     .pending-label {
       font-size: 12.5px;
-      color: var(--text-faint);
+      color: var(--sumi-muted);
     }
 
+    /* Deliberately not a token: a lightbox backdrop behind an enlarged photo
+       is dark either way, for contrast with the image — it is independent
+       of the page's own light/dark theme, not a surface that should follow it. */
     .overlay {
       position: fixed;
       inset: 0;
@@ -167,7 +170,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
 
     .overlay-hint {
       font-size: 12.5px;
-      color: var(--text-faint);
+      color: #fff;
     }
   `,
 })

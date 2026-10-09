@@ -43,11 +43,11 @@
             <li class="note">
               <div class="note-line">
                 <span class="tag tag-wrong">✗</span>
-                <span class="jp">{{ note.original }}</span>
+                <span lang="ja">{{ note.original }}</span>
               </div>
               <div class="note-line">
                 <span class="tag tag-right">✓</span>
-                <span class="jp">{{ note.correction }}</span>
+                <span lang="ja">{{ note.correction }}</span>
               </div>
               <p class="note-explanation">{{ note.explanation }}</p>
             </li>
@@ -66,7 +66,7 @@
         <div class="banner banner-info">
           <span>
             {{ result.filtered_out.length }} word(s) filtered via WaniKani (Guru or higher):
-            <span class="jp">{{ result.filtered_out.join('、') }}</span>
+            <span lang="ja">{{ result.filtered_out.join('、') }}</span>
           </span>
         </div>
       } @else if (result.wanikani_status === 'error') {
@@ -91,11 +91,11 @@
               </label>
               <div class="vocab-body">
                 <div class="vocab-head">
-                  <span class="expression jp">{{ card.expression }}</span>
-                  <span class="reading jp">{{ card.reading }}</span>
+                  <span class="expression" lang="ja">{{ card.expression }}</span>
+                  <span class="reading" lang="ja">{{ card.reading }}</span>
                 </div>
                 <p class="meaning">{{ card.meaning }}</p>
-                <p class="context jp">{{ card.context_sentence }}</p>
+                <p class="context" lang="ja">{{ card.context_sentence }}</p>
               </div>
             </li>
           }
@@ -155,7 +155,7 @@
           @if (asSpeech(event); as turn) {
             <p class="line">
               <span class="line-role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-              <span class="jp">
+              <span lang="ja">
                 <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
               </span>
             </p>

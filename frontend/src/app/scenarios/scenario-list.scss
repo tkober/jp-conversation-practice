@@ -1,31 +1,3 @@
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding-bottom: 32px;
-}
-
-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-
-  h1 {
-    margin: 0 0 6px;
-    font-size: 24px;
-    letter-spacing: -0.02em;
-  }
-
-  p {
-    margin: 0;
-    max-width: 560px;
-    color: var(--text-muted);
-    font-size: 14px;
-  }
-}
-
 .scenarios {
   list-style: none;
   margin: 0;
@@ -40,13 +12,13 @@ header {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
   transition: border-color 0.15s ease;
 
   &:hover {
-    border-color: var(--border-strong);
+    border-color: color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
   }
 }
 
@@ -75,20 +47,20 @@ header {
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: var(--bg-input);
-  color: var(--text-faint);
-  border: 1px solid var(--border);
+  background: var(--sumi-sunken);
+  color: var(--sumi-muted);
+  border: 1px solid var(--sumi-line);
 
   &.edited {
-    color: var(--warning);
-    border-color: rgba(232, 182, 76, 0.35);
+    color: var(--sumi-retry);
+    border-color: color-mix(in oklab, var(--sumi-retry) 35%, transparent);
   }
 }
 
 .summary {
   margin: 5px 0 0;
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -111,21 +83,21 @@ header {
 }
 
 .danger {
-  color: var(--accent);
+  color: var(--sumi-wrong);
 }
 
 .confirm {
   font-size: 12.5px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
 }
 
 .empty {
   padding: 28px;
   text-align: center;
-  color: var(--text-faint);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  color: var(--sumi-muted);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
 }
 
 @media (max-width: 620px) {

@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-bottom: 32px;
 }
 
 header {
@@ -12,12 +11,12 @@ header {
 }
 
 .back {
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
   text-decoration: none;
   font-size: 13.5px;
 
   &:hover {
-    color: var(--text);
+    color: var(--sumi-text);
   }
 }
 
@@ -27,13 +26,13 @@ header {
   letter-spacing: 0.06em;
   padding: 2px 7px;
   border-radius: 999px;
-  background: var(--bg-input);
-  color: var(--text-faint);
-  border: 1px solid var(--border);
+  background: var(--sumi-sunken);
+  color: var(--sumi-muted);
+  border: 1px solid var(--sumi-line);
 
   &.edited {
-    color: var(--warning);
-    border-color: rgba(232, 182, 76, 0.35);
+    color: var(--sumi-retry);
+    border-color: color-mix(in oklab, var(--sumi-retry) 35%, transparent);
   }
 }
 
@@ -69,7 +68,7 @@ header {
   em {
     font-style: normal;
     font-weight: 400;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -77,11 +76,11 @@ header {
   display: block;
   margin-top: 7px;
   font-size: 12.5px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   line-height: 1.5;
 
   strong {
-    color: var(--text-muted);
+    color: var(--sumi-text-2);
   }
 }
 
@@ -89,18 +88,18 @@ input[type='text'],
 textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-input);
+  border-radius: var(--sumi-radius-sm);
+  border: 1px solid var(--sumi-line);
+  background: var(--sumi-sunken);
   font-size: 14px;
 
   &:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--sumi-accent-ink);
   }
 
   &::placeholder {
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -119,14 +118,14 @@ textarea {
 
 .save-message {
   font-size: 12.5px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
 
   &.ok {
-    color: var(--success);
+    color: var(--sumi-correct);
   }
 
   &.fail {
-    color: var(--accent);
+    color: var(--sumi-wrong);
   }
 }
 
@@ -150,7 +149,7 @@ textarea {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
   }
 }
 
@@ -166,7 +165,7 @@ textarea {
 
 .chat-empty {
   margin: auto 0;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   font-size: 13px;
 
   p {
@@ -182,19 +181,19 @@ textarea {
 
 .bubble {
   padding: 10px 13px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  border-radius: var(--sumi-radius-sm);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
   font-size: 13.5px;
   line-height: 1.55;
 
   &.from-user {
-    background: var(--accent-soft);
-    border-color: rgba(224, 82, 99, 0.28);
+    background: var(--sumi-accent-soft);
+    border-color: color-mix(in oklab, var(--sumi-accent) 28%, transparent);
   }
 
   &.thinking {
-    color: var(--text-faint);
+    color: var(--sumi-muted);
     font-style: italic;
   }
 }
@@ -207,14 +206,14 @@ textarea {
 .suggestion {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--sumi-line);
 
   pre {
     margin: 0 0 10px;
     padding: 10px;
-    background: var(--bg);
+    background: var(--sumi-bg);
     border-radius: 6px;
-    font-family: var(--font-mono);
+    font-family: var(--sumi-font-mono);
     font-size: 12px;
     line-height: 1.55;
     white-space: pre-wrap;

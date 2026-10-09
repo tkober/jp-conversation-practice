@@ -13,9 +13,9 @@
   gap: 12px;
   align-items: center;
   padding: 15px 18px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
 }
 
 .hud-metric {
@@ -28,11 +28,11 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .hud-value {
-  font-family: var(--font-mono);
+  font-family: var(--sumi-font-mono);
   font-size: 24px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -40,19 +40,19 @@
 
   small {
     font-size: 12px;
-    color: var(--text-faint);
+    color: var(--sumi-muted);
     margin-left: 5px;
     font-weight: 400;
   }
 }
 
 .cost {
-  color: var(--accent);
+  color: var(--sumi-accent-ink);
 }
 
 .hud-sub {
   font-size: 11.5px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -62,20 +62,25 @@
   gap: 8px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
   font-size: 13px;
-  color: var(--text-muted);
+  color: var(--sumi-text-2);
   white-space: nowrap;
 
+  /* Tutor speaking / learner speaking are just two live indicator states,
+     not a correct/wrong judgement — but they still need to read as two
+     distinct, theme-aware colours rather than a literal rgba(). Borrowing
+     the wrong/correct hues (reddish vs. greenish) keeps the same visual
+     distinction the app had before Sumi UI. */
   &.speaking {
-    border-color: rgba(224, 82, 99, 0.45);
-    color: #f3a3ad;
+    border-color: color-mix(in oklab, var(--sumi-wrong) 45%, transparent);
+    color: var(--sumi-wrong);
   }
 
   &.listening {
-    border-color: rgba(62, 207, 142, 0.45);
-    color: #86e0b6;
+    border-color: color-mix(in oklab, var(--sumi-correct) 45%, transparent);
+    color: var(--sumi-correct);
   }
 }
 
@@ -121,20 +126,20 @@
   flex-direction: column;
   gap: 12px;
   padding: 18px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
   scroll-behavior: smooth;
 }
 
 .empty {
   margin: auto;
   text-align: center;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 
   p:first-child {
     font-size: 22px;
-    color: var(--text-muted);
+    color: var(--sumi-text-2);
     margin: 0 0 6px;
   }
 
@@ -148,15 +153,15 @@
   max-width: 78%;
   align-self: flex-start;
   padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  border-radius: var(--sumi-radius-sm);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
 }
 
 .turn-user {
   align-self: flex-end;
-  background: var(--accent-soft);
-  border-color: rgba(224, 82, 99, 0.28);
+  background: var(--sumi-accent-soft);
+  border-color: color-mix(in oklab, var(--sumi-accent) 28%, transparent);
 }
 
 .turn-role {
@@ -164,13 +169,13 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
   margin-bottom: 3px;
 }
 
 .turn-help {
   margin-left: 6px;
-  color: var(--warning);
+  color: var(--sumi-retry);
 }
 
 .turn-text {
@@ -186,25 +191,25 @@
   align-items: center;
   gap: 14px;
   padding: 10px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
 
   label {
     flex-shrink: 0;
     font-size: 13px;
-    color: var(--text-muted);
+    color: var(--sumi-text-2);
   }
 
   strong {
-    color: var(--text);
-    font-family: var(--font-mono);
+    color: var(--sumi-text);
+    font-family: var(--sumi-font-mono);
     font-variant-numeric: tabular-nums;
   }
 
   input[type='range'] {
     flex: 1;
-    accent-color: var(--accent);
+    accent-color: var(--sumi-accent);
     cursor: pointer;
   }
 
@@ -213,9 +218,9 @@
     padding: 4px 8px;
     font: inherit;
     font-size: 13px;
-    color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--border);
+    color: var(--sumi-text);
+    background: var(--sumi-bg);
+    border: 1px solid var(--sumi-line);
     border-radius: 6px;
     cursor: pointer;
   }
@@ -224,7 +229,7 @@
 .speed-note {
   margin-left: 8px;
   font-size: 11.5px;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 /* Controls -------------------------------------------------------------- */
@@ -242,18 +247,18 @@
 .mic-bar {
   height: 8px;
   border-radius: 999px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
   overflow: hidden;
 }
 
 .mic-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--success), var(--warning));
+  background: linear-gradient(90deg, var(--sumi-correct), var(--sumi-retry));
   transition: width 0.1s linear;
 
   &.muted {
-    background: var(--border-strong);
+    background: color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
   }
 }
 
@@ -272,11 +277,11 @@
   td {
     padding: 7px 10px;
     text-align: right;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--sumi-line);
   }
 
   thead th {
-    color: var(--text-faint);
+    color: var(--sumi-muted);
     font-weight: 500;
     font-size: 11.5px;
     text-transform: uppercase;
@@ -285,12 +290,12 @@
 
   tbody th {
     text-align: left;
-    color: var(--text-muted);
+    color: var(--sumi-text-2);
     font-weight: 600;
   }
 
   td {
-    font-family: var(--font-mono);
+    font-family: var(--sumi-font-mono);
   }
 }
 

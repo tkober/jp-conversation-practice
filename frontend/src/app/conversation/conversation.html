@@ -42,7 +42,7 @@
   <div class="transcript" #scrollBox>
     @if (transcript().length === 0) {
       <div class="empty">
-        <p class="jp">はじめまして！</p>
+        <p lang="ja">はじめまして！</p>
         <p>Just start talking — the tutor will open the conversation.</p>
       </div>
     }
@@ -55,7 +55,7 @@
               <span class="turn-help">わからない · Stage {{ turn.help_stage }}</span>
             }
           </span>
-          <p class="turn-text jp">
+          <p class="turn-text" lang="ja">
             <app-furigana-text [text]="turn.text" [ruby]="turn.ruby" />
           </p>
         </div>

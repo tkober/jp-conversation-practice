@@ -1,52 +1,13 @@
-/* Global design tokens and base styles. */
+/* Sumi UI's tokens and base styles (box-sizing, body font/colour/background,
+   the focus ring, [lang='ja'] font stacks — see sumi-ui's README, "Using
+   Sumi UI in an app", step 3), plus the app's own tokens. */
+@use 'sumi-ui/projects/sumi-ui/styles/sumi';
+@use 'styles/app-tokens.scss';
 
-:root {
-  --bg: #0f1115;
-  --bg-elevated: #171a21;
-  --bg-input: #1e222b;
-  --border: #2a2f3a;
-  --border-strong: #3a4150;
-
-  --text: #e8eaf0;
-  --text-muted: #949bab;
-  --text-faint: #6b7280;
-
-  --accent: #e05263;
-  --accent-soft: rgba(224, 82, 99, 0.14);
-  --accent-hover: #f06274;
-  --success: #3ecf8e;
-  --warning: #e8b64c;
-  --info: #5b9dd9;
-
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
-
-  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-jp: 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', var(--font-ui);
-  --font-mono: 'SF Mono', 'JetBrains Mono', ui-monospace, monospace;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-ui);
-  font-size: 15px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-}
-
+/* Sumi's base styles cover box-sizing, body and [lang='ja'] — but the app
+   still renders plain <button>/<input>/<textarea>/<select> elements (the
+   library's own form components are a later issue, #17/#18), so those still
+   need the usual reset to inherit the page's font and colour. */
 button {
   font: inherit;
   cursor: pointer;
@@ -67,10 +28,6 @@ select {
   color: inherit;
 }
 
-.jp {
-  font-family: var(--font-jp);
-}
-
 /* Shared button styles -------------------------------------------------- */
 
 .btn {
@@ -79,7 +36,7 @@ select {
   justify-content: center;
   gap: 8px;
   padding: 11px 20px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--sumi-radius-sm);
   font-weight: 600;
   font-size: 14px;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.05s ease;
@@ -90,39 +47,39 @@ select {
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--sumi-accent);
+  color: var(--sumi-on-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--sumi-accent-ink);
 }
 
 .btn-secondary {
-  background: var(--bg-input);
-  border: 1px solid var(--border-strong);
-  color: var(--text);
+  background: var(--sumi-sunken);
+  border: 1px solid color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
+  color: var(--sumi-text);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--text-faint);
+  border-color: var(--sumi-muted);
 }
 
 .btn-ghost {
-  color: var(--text-muted);
+  color: var(--sumi-muted);
   padding: 8px 12px;
 }
 
 .btn-ghost:hover:not(:disabled) {
-  color: var(--text);
+  color: var(--sumi-text);
 }
 
 /* Shared surfaces -------------------------------------------------------- */
 
 .card {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  background: var(--sumi-surface);
+  border: 1px solid var(--sumi-line);
+  border-radius: var(--sumi-radius);
   padding: 20px;
 }
 
@@ -131,33 +88,33 @@ select {
   gap: 10px;
   align-items: flex-start;
   padding: 12px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--sumi-radius-sm);
   font-size: 13.5px;
   border: 1px solid;
 }
 
 .banner-error {
-  background: rgba(224, 82, 99, 0.1);
-  border-color: rgba(224, 82, 99, 0.35);
-  color: #f6a8b2;
+  background: var(--sumi-wrong-soft);
+  border-color: color-mix(in oklab, var(--sumi-wrong) 35%, transparent);
+  color: var(--sumi-wrong);
 }
 
 .banner-warning {
-  background: rgba(232, 182, 76, 0.09);
-  border-color: rgba(232, 182, 76, 0.3);
-  color: #e8c37c;
+  background: var(--sumi-retry-soft);
+  border-color: color-mix(in oklab, var(--sumi-retry) 30%, transparent);
+  color: var(--sumi-retry);
 }
 
 .banner-info {
-  background: rgba(91, 157, 217, 0.09);
-  border-color: rgba(91, 157, 217, 0.28);
-  color: #9cc4e8;
+  background: color-mix(in oklab, var(--info) 9%, var(--sumi-surface));
+  border-color: color-mix(in oklab, var(--info) 28%, transparent);
+  color: var(--info);
 }
 
 .banner-success {
-  background: rgba(62, 207, 142, 0.09);
-  border-color: rgba(62, 207, 142, 0.3);
-  color: #86e0b6;
+  background: var(--sumi-correct-soft);
+  border-color: color-mix(in oklab, var(--sumi-correct) 30%, transparent);
+  color: var(--sumi-correct);
 }
 
 /* Context material — shared by the setup screen and the scenario editor, which
@@ -166,7 +123,7 @@ select {
 .material-icon {
   flex-shrink: 0;
   border-radius: 4px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--sumi-line);
 }
 
 .material-thumb {
@@ -177,12 +134,12 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-faint);
+  color: var(--sumi-muted);
 }
 
 .material-item {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
+  background: var(--sumi-sunken);
+  border: 1px solid var(--sumi-line);
   border-radius: 8px;
 }
 
@@ -197,11 +154,11 @@ select {
   align-items: center;
   gap: 6px;
   font-size: 12.5px;
-  color: var(--text-muted);
+  color: var(--sumi-muted);
   cursor: pointer;
 }
 
 .material-toggle input {
-  accent-color: var(--accent);
+  accent-color: var(--sumi-accent);
   cursor: pointer;
 }
