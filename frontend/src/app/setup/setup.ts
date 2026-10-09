@@ -1,13 +1,20 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { SumiButtonDirective, SumiSelectDirective } from 'sumi-ui/forms';
-import { SumiBanner } from 'sumi-ui/layout';
+import {
+  SumiButtonDirective,
+  SumiSegmentedControl,
+  type SumiSegmentedOption,
+  SumiSelectDirective,
+  SumiSliderDirective,
+} from 'sumi-ui/forms';
+import { SumiBanner, SumiCard, SumiErrorState } from 'sumi-ui/layout';
 import { SumiSessionGate } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
 import { microphoneBlockedReason } from '../core/audio-recorder';
 import { RealtimeSessionService } from '../core/realtime-session.service';
+import { isBackendUnreachable } from '../core/unreachable';
 import { MaterialPicker } from './material-picker';
 import { Attachment, HealthResponse, JlptLevel, Scenario, VoiceOption } from '../core/models';
 
@@ -42,7 +49,19 @@ export type SetupStep = 'gate' | 'details';
 
 @Component({
   selector: 'app-setup',
-  imports: [FormsModule, MaterialPicker, RouterLink, SumiBanner, SumiButtonDirective, SumiSelectDirective, SumiSessionGate],
+  imports: [
+    FormsModule,
+    MaterialPicker,
+    RouterLink,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiErrorState,
+    SumiSegmentedControl,
+    SumiSelectDirective,
+    SumiSessionGate,
+    SumiSliderDirective,
+  ],
   templateUrl: './setup.html',
   styleUrl: './setup.scss',
 })
@@ -62,6 +81,10 @@ export class Setup {
   readonly step = signal<SetupStep>('gate');
 
   readonly levels = JLPT_LEVELS;
+  readonly levelOptions: SumiSegmentedOption<JlptLevel>[] = JLPT_LEVELS.map((item) => ({
+    value: item.level,
+    label: item.level,
+  }));
   readonly scenarios = signal<Scenario[]>([]);
   readonly health = signal<HealthResponse | null>(null);
   readonly backendUnreachable = signal(false);
@@ -101,6 +124,14 @@ export class Setup {
     this.scenarios().find((item) => item.id === this.selectedScenarioId()) ?? null,
   );
 
+  readonly selectedLevelDescription = computed(
+    () => this.levels.find((item) => item.level === this.jlptLevel())?.label ?? '',
+  );
+
+  readonly selectedVoiceOption = computed(
+    () => this.voices().find((voice) => voice.id === this.selectedVoice()) ?? null,
+  );
+
   /** `<select>`'s own value: the sentinel, or the scenario id as a string. */
   readonly selectedOption = computed(() =>
     this.customPicked() ? OWN_SCENARIO : String(this.selectedScenarioId() ?? ''),
@@ -138,17 +169,35 @@ export class Setup {
   );
 
   constructor() {
+    this.loadInitial();
+  }
+
+  /** T6's "Try again" re-runs exactly this — same three requests as on first load. */
+  retryLoad(): void {
+    this.backendUnreachable.set(false);
+    this.loadInitial();
+  }
+
+  private loadInitial(): void {
     this.api.scenarios().subscribe({
       next: (scenarios) => {
         this.scenarios.set(scenarios);
         this.selectedScenarioId.set(scenarios[0]?.id ?? null);
       },
-      error: () => this.backendUnreachable.set(true),
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.backendUnreachable.set(true);
+        }
+      },
     });
 
     this.api.health().subscribe({
       next: (response) => this.health.set(response),
-      error: () => this.backendUnreachable.set(true),
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.backendUnreachable.set(true);
+        }
+      },
     });
 
     this.api.voices().subscribe({
@@ -161,7 +210,11 @@ export class Setup {
         this.session.speedMin.set(response.speed_min);
         this.session.speedMax.set(response.speed_max);
       },
-      error: () => this.backendUnreachable.set(true),
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.backendUnreachable.set(true);
+        }
+      },
     });
   }
 

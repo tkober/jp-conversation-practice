@@ -11,15 +11,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: var(--sumi-radius);
-  transition: border-color 0.15s ease;
-
-  &:hover {
-    border-color: color-mix(in oklab, var(--sumi-text) 20%, var(--sumi-line));
-  }
 }
 
 .body {
@@ -41,22 +32,6 @@
   font-size: 15.5px;
 }
 
-.tag {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--sumi-sunken);
-  color: var(--sumi-muted);
-  border: 1px solid var(--sumi-line);
-
-  &.edited {
-    color: var(--sumi-retry);
-    border-color: color-mix(in oklab, var(--sumi-retry) 35%, transparent);
-  }
-}
-
 .summary {
   margin: 5px 0 0;
   font-size: 13px;
@@ -75,29 +50,11 @@
   gap: 2px;
   flex-shrink: 0;
   flex-wrap: wrap;
-
-  .btn {
-    font-size: 12.5px;
-    text-decoration: none;
-  }
-}
-
-.danger {
-  color: var(--sumi-wrong);
 }
 
 .confirm {
   font-size: 12.5px;
   color: var(--sumi-text-2);
-}
-
-.empty {
-  padding: 28px;
-  text-align: center;
-  color: var(--sumi-muted);
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: var(--sumi-radius);
 }
 
 @media (max-width: 620px) {

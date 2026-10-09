@@ -5,7 +5,7 @@
 }
 
 h2 {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
@@ -19,49 +19,7 @@ h2 {
   margin: 0;
 }
 
-/* Summary bar ----------------------------------------------------------- */
-
-.summary-bar {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 15px 18px;
-  background: var(--sumi-surface);
-  border: 1px solid var(--sumi-line);
-  border-radius: var(--sumi-radius);
-
-  > div {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-}
-
-.bar-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--sumi-muted);
-}
-
-.bar-value {
-  font-family: var(--sumi-font-mono);
-  font-size: 20px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-
-  small {
-    font-size: 11px;
-    color: var(--sumi-muted);
-    font-weight: 400;
-  }
-}
-
-.cost {
-  color: var(--sumi-accent-ink);
-}
-
-/* Loading --------------------------------------------------------------- */
+/* Loading ---------------------------------------------------------------- */
 
 .loading {
   display: flex;
@@ -145,19 +103,16 @@ h2 {
   line-height: 1.55;
 }
 
-/* Vocabulary cards ------------------------------------------------------ */
+/* Anki cards -------------------------------------------------------------- */
 
-.section-head {
+// Higher specificity than sumi-card's own `[sumiCardHeader] { display: block }`
+// (same tier otherwise, so source order would decide) — needs the header
+// itself to be a row (title + counter badge), not sumi-card's default block.
+.section-head[sumiCardHeader] {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-}
-
-.counter {
-  font-size: 12px;
-  color: var(--sumi-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .cards {
@@ -187,13 +142,6 @@ h2 {
   display: flex;
   align-items: flex-start;
   padding-top: 3px;
-
-  input {
-    width: 17px;
-    height: 17px;
-    accent-color: var(--sumi-accent);
-    cursor: pointer;
-  }
 }
 
 .vocab-body {
@@ -239,19 +187,6 @@ h2 {
   margin-top: 18px;
 }
 
-.export-message {
-  font-size: 13px;
-  color: var(--sumi-text-2);
-
-  &.ok {
-    color: var(--sumi-correct);
-  }
-
-  &.fail {
-    color: var(--sumi-wrong);
-  }
-}
-
 /* Transcript ------------------------------------------------------------ */
 
 .transcript {
@@ -290,10 +225,4 @@ h2 {
   gap: 12px;
   justify-content: center;
   padding-top: 4px;
-}
-
-@media (max-width: 560px) {
-  .summary-bar {
-    grid-template-columns: 1fr 1fr;
-  }
 }

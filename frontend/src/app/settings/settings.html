@@ -1,245 +1,273 @@
 <sumi-page
+  [inkEnd]="!failed()"
   title="Settings"
   subtitle="Everything here is saved to the database and takes priority over the values from .env. An empty field means: the value from .env applies again."
 >
-  <div class="settings">
-  @if (loadError(); as error) {
-    <div class="banner banner-error">
-      <span>{{ error }}</span>
-    </div>
-  }
-
-  @if (current(); as settings) {
-    <section class="card">
-      <h2>Credentials</h2>
-
-      <div class="secret">
-        <label class="field">
-          <span class="field-label">OpenAI API key</span>
-          <input
-            type="password"
-            autocomplete="off"
-            [placeholder]="
-              settings.openai_api_key_set
-                ? 'Set (' + settings.openai_api_key_hint + ') — enter a new key to change it'
-                : 'sk-...'
-            "
-            [ngModel]="openaiKeyInput()"
-            (ngModelChange)="openaiKeyInput.set($event)"
-          />
-        </label>
-        <p class="field-hint">
-          @if (settings.openai_api_key_set && settings.openai_api_key_from_env) {
-            Comes from the container's <code>.env</code>. A key entered here overrides it.
-          } @else if (settings.openai_api_key_set) {
-            Saved in the database.
-            <button type="button" class="link" (click)="clearSecret('openai_api_key')">
-              Reset
-            </button>
-          } @else {
-            Without a key, neither conversation nor analysis works.
-          }
-        </p>
-      </div>
-
-      <div class="secret">
-        <label class="field">
-          <span class="field-label">WaniKani API token <em>(optional)</em></span>
-          <input
-            type="password"
-            autocomplete="off"
-            [placeholder]="
-              settings.wanikani_api_token_set
-                ? 'Set (' + settings.wanikani_api_token_hint + ')'
-                : 'Leave empty to disable the filter'
-            "
-            [ngModel]="wanikaniTokenInput()"
-            (ngModelChange)="wanikaniTokenInput.set($event)"
-          />
-        </label>
-        <p class="field-hint">
-          Filters vocabulary you already know at Guru or above on WaniKani out of the Anki cards.
-          @if (settings.wanikani_api_token_set && !settings.wanikani_api_token_from_env) {
-            <button type="button" class="link" (click)="clearSecret('wanikani_api_token')">
-              Reset
-            </button>
-          }
-        </p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Models</h2>
-
-      @if (modelListNote(); as note) {
-        <div class="banner banner-info">
-          <span
-            >{{ note }} Only the known models are offered — a different one can be entered
-            via "Other model…".</span
-          >
-        </div>
+  @if (failed()) {
+    <sumi-error-state title="Can't reach the server" companion="kitsune" pattern="none">
+      Your saved settings are safe either way.
+      <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
+        Try again
+      </button>
+    </sumi-error-state>
+  } @else {
+    <div class="settings">
+      @if (loadError(); as error) {
+        <sumi-banner tone="error">{{ error }}</sumi-banner>
       }
 
-      @for (slot of modelSlots(); track slot.key) {
-        <div class="field">
-          <label class="field-label" [attr.for]="slot.key">{{ slot.label }}</label>
-          <select
-            [id]="slot.key"
-            [ngModel]="selectValue(slot)"
-            (ngModelChange)="onSlotSelect(slot, $event)"
-          >
-            <optgroup label="Recommended">
-              @for (option of curatedOptions(slot); track option.id) {
-                <option [value]="option.id">{{ optionText(option) }}</option>
+      @if (current(); as settings) {
+        <sumi-card>
+          <h2 sumiCardHeader>Credentials</h2>
+
+          <div class="secret">
+            <label class="field">
+              <span class="field-label">OpenAI API key</span>
+              <input
+                type="password"
+                sumiInput
+                autocomplete="off"
+                [placeholder]="
+                  settings.openai_api_key_set
+                    ? 'Set (' + settings.openai_api_key_hint + ') — enter a new key to change it'
+                    : 'sk-...'
+                "
+                [ngModel]="openaiKeyInput()"
+                (ngModelChange)="openaiKeyInput.set($event)"
+              />
+            </label>
+            <p class="field-hint">
+              @if (settings.openai_api_key_set && settings.openai_api_key_from_env) {
+                Comes from the container's <code>.env</code>. A key entered here overrides it.
+              } @else if (settings.openai_api_key_set) {
+                Saved in the database.
+                <button
+                  type="button"
+                  sumiButton
+                  variant="ghost"
+                  size="sm"
+                  (click)="clearSecret('openai_api_key')"
+                >
+                  Reset
+                </button>
+              } @else {
+                Without a key, neither conversation nor analysis works.
               }
-            </optgroup>
-            @if (liveOptions(slot).length) {
-              <optgroup label="More from your account">
-                @for (option of liveOptions(slot); track option.id) {
-                  <option [value]="option.id">{{ optionText(option) }}</option>
+            </p>
+          </div>
+
+          <div class="secret">
+            <label class="field">
+              <span class="field-label">WaniKani API token <em>(optional)</em></span>
+              <input
+                type="password"
+                sumiInput
+                autocomplete="off"
+                [placeholder]="
+                  settings.wanikani_api_token_set
+                    ? 'Set (' + settings.wanikani_api_token_hint + ')'
+                    : 'Leave empty to disable the filter'
+                "
+                [ngModel]="wanikaniTokenInput()"
+                (ngModelChange)="wanikaniTokenInput.set($event)"
+              />
+            </label>
+            <p class="field-hint">
+              Filters vocabulary you already know at Guru or above on WaniKani out of the Anki cards.
+              @if (settings.wanikani_api_token_set && !settings.wanikani_api_token_from_env) {
+                <button
+                  type="button"
+                  sumiButton
+                  variant="ghost"
+                  size="sm"
+                  (click)="clearSecret('wanikani_api_token')"
+                >
+                  Reset
+                </button>
+              }
+            </p>
+          </div>
+        </sumi-card>
+
+        <sumi-card>
+          <h2 sumiCardHeader>Models</h2>
+
+          @if (modelListNote(); as note) {
+            <sumi-banner tone="info">
+              {{ note }} Only the known models are offered — a different one can be entered
+              via "Other model…".
+            </sumi-banner>
+          }
+
+          @for (slot of modelSlots(); track slot.key) {
+            <div class="field">
+              <label class="field-label" [attr.for]="slot.key">{{ slot.label }}</label>
+              <select
+                [id]="slot.key"
+                sumiSelect
+                [ngModel]="selectValue(slot)"
+                (ngModelChange)="onSlotSelect(slot, $event)"
+              >
+                <optgroup label="Recommended">
+                  @for (option of curatedOptions(slot); track option.id) {
+                    <option [value]="option.id">{{ optionText(option) }}</option>
+                  }
+                </optgroup>
+                @if (liveOptions(slot).length) {
+                  <optgroup label="More from your account">
+                    @for (option of liveOptions(slot); track option.id) {
+                      <option [value]="option.id">{{ optionText(option) }}</option>
+                    }
+                  </optgroup>
                 }
-              </optgroup>
-            }
-            <option [value]="customValue">Other model…</option>
-          </select>
+                <option [value]="customValue">Other model…</option>
+              </select>
 
-          @if (isCustom(slot)) {
+              @if (isCustom(slot)) {
+                <input
+                  class="custom-model"
+                  type="text"
+                  sumiInput
+                  spellcheck="false"
+                  autocapitalize="off"
+                  placeholder="Model name, e.g. gpt-realtime-3"
+                  [ngModel]="value(slot.key)"
+                  (ngModelChange)="set(slot.key, $event)"
+                />
+              }
+
+              <span class="field-hint">{{ slot.hint }}</span>
+              @if (selectedOption(slot)?.description; as description) {
+                <span class="field-hint">{{ description }}</span>
+              }
+              @if (ratesUnknown(slot)) {
+                <span class="field-hint field-hint-warning">
+                  No prices are on file for this model — the cost display then uses the rates for
+                  <code>gpt-realtime-2.1-mini</code>.
+                </span>
+              }
+            </div>
+          }
+        </sumi-card>
+
+        <sumi-card>
+          <h2 sumiCardHeader>Voice &amp; pace</h2>
+
+          <label class="field">
+            <span class="field-label">Default voice</span>
+            <select sumiSelect [ngModel]="value('realtime_voice')" (ngModelChange)="set('realtime_voice', $event)">
+              @for (voice of voices(); track voice.id) {
+                <option [value]="voice.id">{{ voice.label }} — {{ voice.description }}</option>
+              }
+            </select>
+            <span class="field-hint">
+              Preselected in setup; it can be changed and previewed per session there.
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">
+              Default pace — {{ (+value('realtime_speed') || settings.realtime_speed).toFixed(2) }}×
+            </span>
             <input
-              class="custom-model"
-              type="text"
-              spellcheck="false"
-              autocapitalize="off"
-              placeholder="Model name, e.g. gpt-realtime-3"
-              [ngModel]="value(slot.key)"
-              (ngModelChange)="set(slot.key, $event)"
+              type="range"
+              sumiSlider
+              [min]="settings.speed_min"
+              [max]="settings.speed_max"
+              step="0.05"
+              [ngModel]="+value('realtime_speed') || settings.realtime_speed"
+              (ngModelChange)="set('realtime_speed', +$event)"
             />
-          }
+          </label>
 
-          <span class="field-hint">{{ slot.hint }}</span>
-          @if (selectedOption(slot)?.description; as description) {
-            <span class="field-hint">{{ description }}</span>
-          }
-          @if (ratesUnknown(slot)) {
-            <span class="field-hint field-hint-warning">
-              No prices are on file for this model — the cost display then uses the rates for
-              <code>gpt-realtime-2.1-mini</code>.
+          <label class="field">
+            <span class="field-label">
+              Slowdown on "わからない" — {{ helpFactorLabel() }}
+            </span>
+            <input
+              type="range"
+              sumiSlider
+              [min]="settings.help_speed_factor_min"
+              [max]="settings.help_speed_factor_max"
+              step="0.05"
+              [ngModel]="helpFactor()"
+              (ngModelChange)="set('realtime_help_speed_factor', +$event)"
+            />
+            <span class="field-hint">
+              Not a fixed pace, but a factor on the running session's pace: at
+              {{ helpBaseSpeed().toFixed(2) }}× the help comes at {{ helpSpeed().toFixed(2) }}×.
+              Change the pace mid-session and the help follows along. All the way to the right
+              turns the slowdown off.
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Patience while listening</span>
+            <select
+              sumiSelect
+              [ngModel]="value('realtime_vad_eagerness')"
+              (ngModelChange)="set('realtime_vad_eagerness', $event)"
+            >
+              @for (option of eagernessOptions; track option.id) {
+                <option [value]="option.id">{{ option.label }} — {{ option.hint }}</option>
+              }
+            </select>
+            <span class="field-hint">
+              How long the tutor waits out a pause before answering. It can be changed any time
+              during a session — this only sets what each session starts with.
+            </span>
+          </label>
+        </sumi-card>
+
+        <sumi-card>
+          <h2 sumiCardHeader>Anki</h2>
+          <label class="field">
+            <span class="field-label">AnkiConnect address</span>
+            <input
+              type="text"
+              sumiInput
+              spellcheck="false"
+              [ngModel]="value('ankiconnect_url')"
+              (ngModelChange)="set('ankiconnect_url', $event)"
+            />
+            <span class="field-hint">
+              Called from the backend — so the address must be reachable from the container,
+              not from the browser.
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Target deck</span>
+            <input
+              type="text"
+              sumiInput
+              [ngModel]="value('anki_deck_name')"
+              (ngModelChange)="set('anki_deck_name', $event)"
+            />
+          </label>
+        </sumi-card>
+
+        <div class="actions">
+          <button
+            type="button"
+            sumiButton
+            variant="primary"
+            [disabled]="!dirty() || saveState() === 'saving'"
+            (click)="save()"
+          >
+            {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
+          </button>
+          @if (saveMessage(); as message) {
+            <span
+              class="save-message"
+              [class.ok]="saveState() === 'saved'"
+              [class.fail]="saveState() === 'error'"
+            >
+              {{ message }}
             </span>
           }
         </div>
       }
-    </section>
-
-    <section class="card">
-      <h2>Voice &amp; pace</h2>
-
-      <label class="field">
-        <span class="field-label">Default voice</span>
-        <select [ngModel]="value('realtime_voice')" (ngModelChange)="set('realtime_voice', $event)">
-          @for (voice of voices(); track voice.id) {
-            <option [value]="voice.id">{{ voice.label }} — {{ voice.description }}</option>
-          }
-        </select>
-        <span class="field-hint">
-          Preselected in setup; it can be changed and previewed per session there.
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field-label">
-          Default pace — {{ (+value('realtime_speed') || settings.realtime_speed).toFixed(2) }}×
-        </span>
-        <input
-          type="range"
-          [min]="settings.speed_min"
-          [max]="settings.speed_max"
-          step="0.05"
-          [ngModel]="+value('realtime_speed') || settings.realtime_speed"
-          (ngModelChange)="set('realtime_speed', +$event)"
-        />
-      </label>
-
-      <label class="field">
-        <span class="field-label">
-          Slowdown on "わからない" — {{ helpFactorLabel() }}
-        </span>
-        <input
-          type="range"
-          [min]="settings.help_speed_factor_min"
-          [max]="settings.help_speed_factor_max"
-          step="0.05"
-          [ngModel]="helpFactor()"
-          (ngModelChange)="set('realtime_help_speed_factor', +$event)"
-        />
-        <span class="field-hint">
-          Not a fixed pace, but a factor on the running session's pace: at
-          {{ helpBaseSpeed().toFixed(2) }}× the help comes at {{ helpSpeed().toFixed(2) }}×.
-          Change the pace mid-session and the help follows along. All the way to the right
-          turns the slowdown off.
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field-label">Patience while listening</span>
-        <select
-          [ngModel]="value('realtime_vad_eagerness')"
-          (ngModelChange)="set('realtime_vad_eagerness', $event)"
-        >
-          @for (option of eagernessOptions; track option.id) {
-            <option [value]="option.id">{{ option.label }} — {{ option.hint }}</option>
-          }
-        </select>
-        <span class="field-hint">
-          How long the tutor waits out a pause before answering. It can be changed any time
-          during a session — this only sets what each session starts with.
-        </span>
-      </label>
-    </section>
-
-    <section class="card">
-      <h2>Anki</h2>
-      <label class="field">
-        <span class="field-label">AnkiConnect address</span>
-        <input
-          type="text"
-          spellcheck="false"
-          [ngModel]="value('ankiconnect_url')"
-          (ngModelChange)="set('ankiconnect_url', $event)"
-        />
-        <span class="field-hint">
-          Called from the backend — so the address must be reachable from the container,
-          not from the browser.
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="field-label">Target deck</span>
-        <input
-          type="text"
-          [ngModel]="value('anki_deck_name')"
-          (ngModelChange)="set('anki_deck_name', $event)"
-        />
-      </label>
-    </section>
-
-    <div class="actions">
-      <button
-        type="button"
-        class="btn btn-primary"
-        [disabled]="!dirty() || saveState() === 'saving'"
-        (click)="save()"
-      >
-        {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
-      </button>
-      @if (saveMessage(); as message) {
-        <span
-          class="save-message"
-          [class.ok]="saveState() === 'saved'"
-          [class.fail]="saveState() === 'error'"
-        >
-          {{ message }}
-        </span>
-      }
     </div>
   }
-  </div>
 </sumi-page>

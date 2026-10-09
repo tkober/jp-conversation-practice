@@ -1,5 +1,12 @@
 <div class="setup">
-  @if (step() === 'gate') {
+  @if (backendUnreachable()) {
+    <sumi-error-state title="Can't reach the server" companion="kitsune">
+      Is <code>uvicorn</code> running on port 8000? Your scenarios and history are safe either way.
+      <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="retryLoad()">
+        Try again
+      </button>
+    </sumi-error-state>
+  } @else if (step() === 'gate') {
     <sumi-session-gate
       title="Who do you want to talk to?"
       text="Pick a scenario to practise, or write your own on the next step."
@@ -8,11 +15,7 @@
       [actionDisabled]="gateBlocked()"
       (start)="goToDetails()"
     >
-      @if (backendUnreachable()) {
-        <sumi-banner tone="error">
-          Backend unreachable. Is <code>uvicorn</code> running on port 8000?
-        </sumi-banner>
-      } @else if (health() && !health()!.openai_configured) {
+      @if (health() && !health()!.openai_configured) {
         <sumi-banner tone="error">
           No <code>OPENAI_API_KEY</code> is set on the server. Add it in
           <code>backend/.env</code> and restart the backend.
@@ -53,67 +56,60 @@
     }
 
     @if (customPicked()) {
-      <section class="card">
-        <h2>Your scenario</h2>
+      <sumi-card>
+        <h2 sumiCardHeader>Your scenario</h2>
         <label class="field">
           <span class="field-label">Describe your own scenario</span>
           <textarea
+            sumiTextarea
             rows="3"
             placeholder="e.g. Book a room at a ryokan and ask about dinner"
             [ngModel]="customScenario()"
             (ngModelChange)="customScenario.set($event)"
           ></textarea>
         </label>
-      </section>
+      </sumi-card>
     }
 
-    <section class="card">
-      <h2>Material</h2>
+    <sumi-card>
+      <h2 sumiCardHeader>Material</h2>
       <app-material-picker
         [scenarioId]="customPicked() ? null : selectedScenarioId()"
         [(selected)]="pickedMaterial"
         [(fromStart)]="startingIds"
         (materialChange)="material.set($event)"
       />
-    </section>
+    </sumi-card>
 
-    <section class="card">
-      <h2>Your level</h2>
-      <div class="levels">
-        @for (item of levels; track item.level) {
-          <button
-            type="button"
-            class="level"
-            [class.active]="jlptLevel() === item.level"
-            (click)="jlptLevel.set(item.level)"
-          >
-            <span class="level-badge">{{ item.level }}</span>
-            <span class="level-label">{{ item.label }}</span>
-          </button>
-        }
-      </div>
-    </section>
+    <sumi-card>
+      <h2 sumiCardHeader>Your level</h2>
+      <sumi-segmented-control [options]="levelOptions" [(value)]="jlptLevel" />
+      <p class="hint">{{ selectedLevelDescription() }}</p>
+    </sumi-card>
 
-    <section class="card">
-      <h2>Voice</h2>
-      <div class="voices">
-        @for (voice of voices(); track voice.id) {
-          <div class="voice" [class.active]="selectedVoice() === voice.id">
-            <button type="button" class="voice-pick" (click)="selectedVoice.set(voice.id)">
-              <span class="voice-label">{{ voice.label }}</span>
-              <span class="voice-description">{{ voice.description }}</span>
-            </button>
-            <button
-              type="button"
-              class="voice-play"
-              [disabled]="samplePlaying() === voice.id"
-              [title]="'Preview for ' + voice.label"
-              (click)="playSample(voice)"
-            >
-              {{ samplePlaying() === voice.id ? '♪' : '▶' }}
-            </button>
-          </div>
-        }
+    <sumi-card>
+      <h2 sumiCardHeader>Voice</h2>
+      <div class="voice-row">
+        <select
+          class="voice-select"
+          sumiSelect
+          [ngModel]="selectedVoice()"
+          (ngModelChange)="selectedVoice.set($event)"
+        >
+          @for (voice of voices(); track voice.id) {
+            <option [value]="voice.id">{{ voice.label }} — {{ voice.description }}</option>
+          }
+        </select>
+        <button
+          type="button"
+          sumiButton
+          variant="ghost"
+          [disabled]="samplePlaying() === selectedVoice()"
+          [title]="'Preview for ' + (selectedVoiceOption()?.label ?? '')"
+          (click)="playSample(selectedVoiceOption()!)"
+        >
+          {{ samplePlaying() === selectedVoice() ? '♪' : '▶' }}
+        </button>
       </div>
 
       @if (sampleError(); as error) {
@@ -132,6 +128,7 @@
         </span>
         <input
           type="range"
+          sumiSlider
           [min]="speedMin()"
           [max]="speedMax()"
           step="0.05"
@@ -139,15 +136,14 @@
           (input)="speed.set(+$any($event.target).value)"
         />
       </label>
-    </section>
-
+    </sumi-card>
 
     <div class="actions">
       <button
         type="button"
         sumiButton
         variant="primary"
-        class="btn-start"
+        size="lg"
         [disabled]="!canStart()"
         (click)="onStart()"
       >

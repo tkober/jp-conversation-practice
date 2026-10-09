@@ -1,6 +1,8 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { SumiPage } from 'sumi-ui/layout';
+import { RouterLink } from '@angular/router';
+import { SumiButtonDirective } from 'sumi-ui/forms';
+import { SumiBadge, SumiBanner, SumiCard, SumiEmptyState, SumiErrorState, SumiPage } from 'sumi-ui/layout';
 import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
@@ -14,11 +16,26 @@ import {
   toFuriganaSegments,
   withoutFurigana,
 } from '../core/models';
+import { isBackendUnreachable } from '../core/unreachable';
 import { TranscriptMarker } from '../shared/transcript-marker';
 
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, DecimalPipe, SumiFuriganaText, SumiFuriganaToggle, SumiPage, TranscriptMarker],
+  imports: [
+    DatePipe,
+    DecimalPipe,
+    RouterLink,
+    SumiBadge,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiEmptyState,
+    SumiErrorState,
+    SumiFuriganaText,
+    SumiFuriganaToggle,
+    SumiPage,
+    TranscriptMarker,
+  ],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })
@@ -33,6 +50,8 @@ export class History {
   readonly sessions = signal<SessionSummary[]>([]);
   readonly stats = signal<SessionStats | null>(null);
   readonly error = signal<string | null>(null);
+  /** The session list itself could not be loaded at all — T6, not a banner. */
+  readonly failed = signal(false);
 
   /** Detail of the expanded row, loaded on demand. */
   readonly openId = signal<number | null>(null);
@@ -48,8 +67,17 @@ export class History {
 
   reload(): void {
     this.api.sessions().subscribe({
-      next: (sessions) => this.sessions.set(sessions),
-      error: (error: unknown) => this.error.set(this.describe(error)),
+      next: (sessions) => {
+        this.failed.set(false);
+        this.sessions.set(sessions);
+      },
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.failed.set(true);
+        } else {
+          this.error.set(this.describe(error));
+        }
+      },
     });
     this.api.sessionStats().subscribe({
       next: (stats) => this.stats.set(stats),

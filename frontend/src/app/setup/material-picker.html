@@ -7,7 +7,7 @@
   </p>
 
   @if (error(); as message) {
-    <div class="banner banner-error"><span>{{ message }}</span></div>
+    <sumi-banner tone="error">{{ message }}</sumi-banner>
   }
 
   <div class="material-list">
@@ -17,6 +17,7 @@
           <label class="material-pick">
             <input
               type="checkbox"
+              sumiCheckbox
               [checked]="isSelected(item.id)"
               (change)="toggleSelected(item.id)"
             />
@@ -30,27 +31,15 @@
 
           <div class="material-info">
             <span class="material-title">{{ item.title || 'Untitled' }}</span>
-
-            @if (isSelected(item.id)) {
-              <label class="material-toggle">
-                <input
-                  type="checkbox"
-                  [checked]="startsInPrompt(item.id)"
-                  (change)="toggleFromStart(item.id)"
-                />
-                From the start — otherwise you hand it over during the conversation
-              </label>
-            } @else if (!item.description.trim()) {
-              <span class="material-warning">
-                Not evaluated yet — the tutor would not learn anything from it.
-              </span>
-            }
           </div>
 
           <div class="material-actions">
             @if (scenarioId() !== null) {
               <button
                 type="button"
+                sumiButton
+                variant="ghost"
+                size="sm"
                 class="pin"
                 [class.on]="item.default_for_scenario"
                 [title]="
@@ -65,7 +54,9 @@
             }
             <button
               type="button"
-              class="btn btn-ghost"
+              sumiButton
+              variant="ghost"
+              size="sm"
               [title]="expandedId() === item.id ? 'Collapse' : 'View description'"
               (click)="toggleExpanded(item)"
             >
@@ -74,6 +65,22 @@
           </div>
         </div>
 
+        @if (isSelected(item.id)) {
+          <label class="material-from-start">
+            <input
+              type="checkbox"
+              sumiCheckbox
+              [checked]="startsInPrompt(item.id)"
+              (change)="toggleFromStart(item.id)"
+            />
+            From the start — otherwise you hand it over during the conversation
+          </label>
+        } @else if (!item.description.trim()) {
+          <span class="material-warning">
+            Not evaluated yet — the tutor would not learn anything from it.
+          </span>
+        }
+
         @if (expandedId() === item.id) {
           <div class="material-detail">
             <label class="field">
@@ -81,6 +88,7 @@
                 Description for the tutor <em>(English — this is what the model reads)</em>
               </span>
               <textarea
+                sumiTextarea
                 rows="8"
                 spellcheck="false"
                 [ngModel]="editingDescription()"
@@ -88,18 +96,20 @@
               ></textarea>
             </label>
             <div class="material-actions">
-              <button type="button" class="btn btn-primary" (click)="saveDescription(item)">
+              <button type="button" sumiButton variant="primary" size="sm" (click)="saveDescription(item)">
                 Save description
               </button>
               <button
                 type="button"
-                class="btn btn-secondary"
+                sumiButton
+                variant="secondary"
+                size="sm"
                 [disabled]="busy()"
                 (click)="evaluate(item)"
               >
                 Re-evaluate
               </button>
-              <button type="button" class="btn btn-ghost danger" (click)="remove(item)">
+              <button type="button" sumiButton variant="danger" size="sm" (click)="remove(item)">
                 Remove
               </button>
             </div>
@@ -107,6 +117,9 @@
         }
       </article>
     } @empty {
+      <!-- A full sumi-empty-state tile would outweigh the upload controls
+           right below it in this compact, embedded section (not a page of
+           its own) — a muted line says the same thing without the ink. -->
       <p class="material-empty">No material yet.</p>
     }
   </div>
@@ -115,6 +128,7 @@
     <span class="field-label">Hint for the evaluation <em>(optional)</em></span>
     <input
       type="text"
+      sumiInput
       placeholder='e.g. "Only the left column is relevant"'
       [ngModel]="hint()"
       (ngModelChange)="hint.set($event)"
@@ -122,19 +136,21 @@
   </label>
 
   <div class="material-add">
-    <label class="btn btn-secondary" [class.disabled]="busy()">
+    <button type="button" sumiButton variant="secondary" [disabled]="busy()" (click)="fileInput.click()">
       Upload image
-      <input
-        type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
-        hidden
-        [disabled]="busy()"
-        (change)="onFilePicked($event)"
-      />
-    </label>
+    </button>
+    <input
+      #fileInput
+      type="file"
+      accept="image/png,image/jpeg,image/webp,image/gif"
+      hidden
+      [disabled]="busy()"
+      (change)="onFilePicked($event)"
+    />
     <button
       type="button"
-      class="btn btn-secondary"
+      sumiButton
+      variant="secondary"
       [disabled]="busy()"
       (click)="showTextForm.set(!showTextForm())"
     >
@@ -148,6 +164,7 @@
   @if (showTextForm()) {
     <div class="material-text-form">
       <textarea
+        sumiTextarea
         rows="5"
         placeholder="Paste text — e.g. the menu typed out"
         [ngModel]="textDraft()"
@@ -155,7 +172,8 @@
       ></textarea>
       <button
         type="button"
-        class="btn btn-primary"
+        sumiButton
+        variant="primary"
         [disabled]="busy() || !textDraft().trim()"
         (click)="addText()"
       >

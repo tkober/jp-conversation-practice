@@ -5,7 +5,7 @@
 }
 
 h2 {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
@@ -43,36 +43,6 @@ h2 {
   line-height: 1.5;
 }
 
-input[type='text'],
-input[type='password'],
-select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: var(--sumi-radius-sm);
-  border: 1px solid var(--sumi-line);
-  background: var(--sumi-sunken);
-  font-size: 14px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--sumi-accent-ink);
-  }
-
-  &::placeholder {
-    color: var(--sumi-muted);
-  }
-}
-
-input[type='range'] {
-  width: 100%;
-  accent-color: var(--sumi-accent);
-  cursor: pointer;
-}
-
-select {
-  cursor: pointer;
-}
-
 /* The free-text escape hatch, shown under its dropdown. */
 .custom-model {
   margin-top: 8px;
@@ -92,13 +62,6 @@ select {
   .field {
     margin-bottom: 0;
   }
-}
-
-.link {
-  color: var(--info);
-  text-decoration: underline;
-  font-size: 12.5px;
-  padding: 0;
 }
 
 .actions {

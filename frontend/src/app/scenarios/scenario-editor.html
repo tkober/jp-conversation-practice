@@ -1,140 +1,172 @@
-<sumi-page [title]="pageTitle()">
-  <div class="editor">
-    <header>
-      <a class="back" routerLink="/scenarios">← All scenarios</a>
-      @if (scenario(); as current) {
-        @if (current.is_builtin) {
-          <span class="tag" [class.edited]="current.is_customized">
-            {{ current.is_customized ? 'customized' : 'built-in' }}
-          </span>
+<sumi-page [title]="failed() ? undefined : pageTitle()" [inkEnd]="!failed()">
+  @if (failed()) {
+    <sumi-error-state title="Can't reach the server" companion="kitsune">
+      Your draft here is safe either way.
+      <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="retry()">
+        Try again
+      </button>
+    </sumi-error-state>
+  } @else {
+    <div class="editor">
+      <header>
+        <a class="back" routerLink="/scenarios">← All scenarios</a>
+        @if (scenario(); as current) {
+          @if (current.is_builtin) {
+            <sumi-badge [tone]="current.is_customized ? 'retry' : 'neutral'">
+              {{ current.is_customized ? 'customized' : 'built-in' }}
+            </sumi-badge>
+          }
         }
+      </header>
+
+      @if (loadError(); as error) {
+        <sumi-banner tone="error">{{ error }}</sumi-banner>
       }
-    </header>
 
-    @if (loadError(); as error) {
-      <div class="banner banner-error"><span>{{ error }}</span></div>
-    }
+      @if (scenario()) {
+        <div class="columns">
+          <sumi-card class="form">
+            <label class="field">
+              <span class="field-label">Title</span>
+              <input
+                type="text"
+                sumiInput
+                [ngModel]="title()"
+                (ngModelChange)="title.set($event)"
+              />
+            </label>
 
-    @if (scenario()) {
-    <div class="columns">
-      <section class="form card">
-        <label class="field">
-          <span class="field-label">Title</span>
-          <input type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" />
-        </label>
+            <label class="field">
+              <span class="field-label">Short description <em>(shown in the picker)</em></span>
+              <input
+                type="text"
+                sumiInput
+                [ngModel]="summary()"
+                (ngModelChange)="summary.set($event)"
+              />
+            </label>
 
-        <label class="field">
-          <span class="field-label">Short description <em>(shown in the picker)</em></span>
-          <input type="text" [ngModel]="summary()" (ngModelChange)="summary.set($event)" />
-        </label>
+            <label class="field">
+              <span class="field-label">
+                Prompt <em>(English — this is what the model reads)</em>
+              </span>
+              <textarea
+                sumiTextarea
+                spellcheck="false"
+                [ngModel]="prompt()"
+                (ngModelChange)="prompt.set($event)"
+              ></textarea>
+              <span class="field-hint">
+                Describe <strong>who</strong> the model is and <strong>where</strong> it
+                is — not what it should ask step by step. A checklist gets worked
+                through literally, no matter what you say.
+              </span>
+            </label>
 
-        <label class="field grow">
-          <span class="field-label">
-            Prompt <em>(English — this is what the model reads)</em>
-          </span>
-          <textarea
-            spellcheck="false"
-            [ngModel]="prompt()"
-            (ngModelChange)="prompt.set($event)"
-          ></textarea>
-          <span class="field-hint">
-            Describe <strong>who</strong> the model is and <strong>where</strong> it
-            is — not what it should ask step by step. A checklist gets worked
-            through literally, no matter what you say.
-          </span>
-        </label>
+            <div class="actions">
+              <button
+                type="button"
+                sumiButton
+                variant="primary"
+                [disabled]="!dirty() || saveState() === 'saving'"
+                (click)="save()"
+              >
+                {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
+              </button>
 
-        <div class="actions">
-          <button
-            type="button"
-            class="btn btn-primary"
-            [disabled]="!dirty() || saveState() === 'saving'"
-            (click)="save()"
-          >
-            {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
-          </button>
+              @if (canReset()) {
+                <button type="button" sumiButton variant="secondary" (click)="resetToFile()">
+                  Reset to original
+                </button>
+              }
 
-          @if (canReset()) {
-            <button type="button" class="btn btn-secondary" (click)="resetToFile()">
-              Reset to original
-            </button>
-          }
-
-          @if (saveMessage(); as message) {
-            <span
-              class="save-message"
-              [class.ok]="saveState() === 'saved'"
-              [class.fail]="saveState() === 'error'"
-              >{{ message }}</span
-            >
-          }
-        </div>
-      </section>
-
-      <section class="assistant card">
-        <div class="assistant-head">
-          <h2>Assistant</h2>
-          @if (chat().length > 0) {
-            <button type="button" class="btn btn-ghost" (click)="clearChat()">Start over</button>
-          }
-        </div>
-
-        <div class="chat">
-          @for (entry of chat(); track $index) {
-            <div class="bubble" [class.from-user]="entry.role === 'user'">
-              <p class="bubble-text">{{ entry.content }}</p>
-              @if (entry.suggestion) {
-                <div class="suggestion">
-                  <pre>{{ entry.suggestion }}</pre>
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    (click)="applySuggestion(entry.suggestion!)"
-                  >
-                    Apply to editor
-                  </button>
-                </div>
+              @if (saveMessage(); as message) {
+                <span
+                  class="save-message"
+                  [class.ok]="saveState() === 'saved'"
+                  [class.fail]="saveState() === 'error'"
+                  >{{ message }}</span
+                >
               }
             </div>
-          } @empty {
-            <div class="chat-empty">
-              <p>Ask the assistant for feedback on the prompt, for example:</p>
-              <ul>
-                <li>"Is this too much of a checklist?"</li>
-                <li>"Make the scenario a bit more challenging."</li>
-                <li>"Write me a variant for a visit to a bakery."</li>
-              </ul>
+          </sumi-card>
+
+          <sumi-card class="assistant">
+            <div class="assistant-head" sumiCardHeader>
+              <h2>Assistant</h2>
+              @if (chat().length > 0) {
+                <button type="button" sumiButton variant="ghost" size="sm" (click)="clearChat()">
+                  Start over
+                </button>
+              }
             </div>
-          }
 
-          @if (chatBusy()) {
-            <div class="bubble thinking"><span class="dots">thinking…</span></div>
-          }
+            <div class="chat">
+              @for (entry of chat(); track $index) {
+                <div class="bubble" [class.from-user]="entry.role === 'user'">
+                  <p class="bubble-text">{{ entry.content }}</p>
+                  @if (entry.suggestion) {
+                    <div class="suggestion">
+                      <pre>{{ entry.suggestion }}</pre>
+                      <button
+                        type="button"
+                        sumiButton
+                        variant="secondary"
+                        size="sm"
+                        (click)="applySuggestion(entry.suggestion!)"
+                      >
+                        Apply to editor
+                      </button>
+                    </div>
+                  }
+                </div>
+              } @empty {
+                <div class="chat-empty">
+                  <p>Ask the assistant for feedback on the prompt, for example:</p>
+                  <ul>
+                    <li>"Is this too much of a checklist?"</li>
+                    <li>"Make the scenario a bit more challenging."</li>
+                    <li>"Write me a variant for a visit to a bakery."</li>
+                  </ul>
+                </div>
+              }
+
+              @if (chatBusy()) {
+                <div class="bubble thinking"><span class="dots">thinking…</span></div>
+              }
+            </div>
+
+            @if (chatError(); as error) {
+              <sumi-banner tone="error">{{ error }}</sumi-banner>
+            }
+
+            <div class="composer">
+              <textarea
+                sumiTextarea
+                sumiSubmitOnEnter
+                rows="2"
+                placeholder="Question or request…"
+                [ngModel]="chatInput()"
+                (ngModelChange)="chatInput.set($event)"
+                (sumiSubmitOnEnter)="ask()"
+              ></textarea>
+              <button
+                type="button"
+                sumiButton
+                variant="primary"
+                [disabled]="chatBusy() || !chatInput().trim()"
+                (click)="ask()"
+              >
+                Send
+              </button>
+            </div>
+            <p class="composer-hint">
+              <kbd sumiKbd>Enter</kbd> sends, <kbd sumiKbd>Shift</kbd>+<kbd sumiKbd>Enter</kbd>
+              for a new line.
+            </p>
+          </sumi-card>
         </div>
-
-        @if (chatError(); as error) {
-          <div class="banner banner-error"><span>{{ error }}</span></div>
-        }
-
-        <div class="composer">
-          <textarea
-            rows="2"
-            placeholder="Question or request… (Enter sends, Shift+Enter for a new line)"
-            [ngModel]="chatInput()"
-            (ngModelChange)="chatInput.set($event)"
-            (keydown)="onChatKeydown($event)"
-          ></textarea>
-          <button
-            type="button"
-            class="btn btn-primary"
-            [disabled]="chatBusy() || !chatInput().trim()"
-            (click)="ask()"
-          >
-            Send
-          </button>
-        </div>
-      </section>
+      }
     </div>
-    }
-  </div>
+  }
 </sumi-page>

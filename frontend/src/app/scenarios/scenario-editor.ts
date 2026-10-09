@@ -1,10 +1,18 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { SumiPage } from 'sumi-ui/layout';
+import {
+  SumiButtonDirective,
+  SumiInputDirective,
+  SumiKbdDirective,
+  SumiSubmitOnEnterDirective,
+  SumiTextareaDirective,
+} from 'sumi-ui/forms';
+import { SumiBadge, SumiBanner, SumiCard, SumiErrorState, SumiPage } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { AssistantMessage, Scenario } from '../core/models';
+import { isBackendUnreachable } from '../core/unreachable';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -15,7 +23,20 @@ interface ChatEntry extends AssistantMessage {
 
 @Component({
   selector: 'app-scenario-editor',
-  imports: [FormsModule, RouterLink, SumiPage],
+  imports: [
+    FormsModule,
+    RouterLink,
+    SumiBadge,
+    SumiBanner,
+    SumiButtonDirective,
+    SumiCard,
+    SumiErrorState,
+    SumiInputDirective,
+    SumiKbdDirective,
+    SumiPage,
+    SumiSubmitOnEnterDirective,
+    SumiTextareaDirective,
+  ],
   templateUrl: './scenario-editor.html',
   styleUrl: './scenario-editor.scss',
 })
@@ -28,6 +49,8 @@ export class ScenarioEditor {
 
   readonly scenario = signal<Scenario | null>(null);
   readonly loadError = signal<string | null>(null);
+  /** The scenario list itself could not be loaded at all — T6, not a banner. */
+  readonly failed = signal(false);
 
   readonly title = signal('');
   readonly summary = signal('');
@@ -68,17 +91,35 @@ export class ScenarioEditor {
     });
   }
 
+  /** T6's "Try again" re-runs exactly this load. */
+  retry(): void {
+    this.failed.set(false);
+    const id = Number(this.id());
+    if (Number.isFinite(id)) {
+      this.load(id);
+    }
+  }
+
   private load(id: number): void {
     this.api.scenarios().subscribe({
       next: (scenarios) => {
+        this.failed.set(false);
         const found = scenarios.find((row) => row.id === id) ?? null;
         if (!found) {
+          // Not an outage — the backend answered fine, the row just isn't in
+          // it (any more). Stays a banner, never T6.
           this.loadError.set('This scenario does not exist (any more).');
           return;
         }
         this.apply(found);
       },
-      error: (error: unknown) => this.loadError.set(this.describe(error)),
+      error: (error: unknown) => {
+        if (isBackendUnreachable(error)) {
+          this.failed.set(true);
+        } else {
+          this.loadError.set(this.describe(error));
+        }
+      },
     });
   }
 
@@ -185,14 +226,6 @@ export class ScenarioEditor {
   clearChat(): void {
     this.chat.set([]);
     this.chatError.set(null);
-  }
-
-  onChatKeydown(event: KeyboardEvent): void {
-    // Enter sends, Shift+Enter makes a new line — the usual chat convention.
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      this.ask();
-    }
   }
 
   private describe(error: unknown): string {

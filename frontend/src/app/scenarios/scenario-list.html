@@ -1,51 +1,82 @@
 <sumi-page
+  [inkEnd]="!failed()"
   title="Scenarios"
   subtitle="A scenario describes a role and a situation — not a sequence of questions. That's the difference between a conversation and a form."
 >
-  <button
-    type="button"
-    sumiPageActions
-    class="btn btn-primary"
-    [disabled]="busy()"
-    (click)="createScenario()"
-  >
-    New scenario
-  </button>
-
-  @if (error(); as message) {
-    <div class="banner banner-error"><span>{{ message }}</span></div>
+  @if (!failed()) {
+    <button
+      type="button"
+      sumiPageActions
+      sumiButton
+      variant="primary"
+      [disabled]="busy()"
+      (click)="createScenario()"
+    >
+      New scenario
+    </button>
   }
 
-  <ul class="scenarios">
-    @for (scenario of scenarios(); track scenario.id) {
-      <li class="scenario">
-        <a class="body" [routerLink]="['/scenarios', scenario.id]">
-          <div class="head">
-            <span class="title">{{ scenario.title }}</span>
-            @if (scenario.is_builtin) {
-              <span class="tag" [class.edited]="scenario.is_customized">
-                {{ scenario.is_customized ? 'customized' : 'built-in' }}
-              </span>
-            }
-          </div>
-          <p class="summary">{{ scenario.summary || scenario.prompt }}</p>
-        </a>
+  @if (error(); as message) {
+    <sumi-banner tone="error">{{ message }}</sumi-banner>
+  }
 
-        <div class="tools">
-          @if (confirmingDelete() === scenario.id) {
-            <span class="confirm">Really delete?</span>
-            <button type="button" class="btn btn-ghost danger" (click)="confirmDelete(scenario)">
-              Yes, delete
-            </button>
-            <button type="button" class="btn btn-ghost" (click)="cancelDelete()">Cancel</button>
-          } @else {
-            <a class="btn btn-ghost" [routerLink]="['/scenarios', scenario.id]">Edit</a>
-            <button type="button" class="btn btn-ghost" (click)="askDelete(scenario)">Delete</button>
-          }
-        </div>
-      </li>
-    } @empty {
-      <li class="empty">No scenarios yet.</li>
-    }
-  </ul>
+  @if (failed()) {
+    <sumi-error-state title="Can't reach the server" companion="kitsune" pattern="none">
+      Your scenarios are safe either way.
+      <button sumiErrorAction type="button" sumiButton variant="secondary" (click)="reload()">
+        Try again
+      </button>
+    </sumi-error-state>
+  } @else if (scenarios().length === 0) {
+    <sumi-empty-state title="No scenarios yet" companion="kitsune">
+      A scenario describes a role and a situation for the tutor to play.
+      <button
+        sumiEmptyAction
+        type="button"
+        sumiButton
+        variant="primary"
+        [disabled]="busy()"
+        (click)="createScenario()"
+      >
+        New scenario
+      </button>
+    </sumi-empty-state>
+  } @else {
+    <ul class="scenarios">
+      @for (scenario of scenarios(); track scenario.id) {
+        <li>
+          <sumi-card class="scenario">
+            <a class="body" [routerLink]="['/scenarios', scenario.id]">
+              <div class="head">
+                <span class="title">{{ scenario.title }}</span>
+                @if (scenario.is_builtin) {
+                  <sumi-badge [tone]="scenario.is_customized ? 'retry' : 'neutral'">
+                    {{ scenario.is_customized ? 'customized' : 'built-in' }}
+                  </sumi-badge>
+                }
+              </div>
+              <p class="summary">{{ scenario.summary || scenario.prompt }}</p>
+            </a>
+
+            <div class="tools">
+              @if (confirmingDelete() === scenario.id) {
+                <span class="confirm">Really delete?</span>
+                <button type="button" sumiButton variant="danger" size="sm" (click)="confirmDelete(scenario)">
+                  Yes, delete
+                </button>
+                <button type="button" sumiButton variant="ghost" size="sm" (click)="cancelDelete()">
+                  Cancel
+                </button>
+              } @else {
+                <a sumiButton variant="ghost" size="sm" [routerLink]="['/scenarios', scenario.id]">Edit</a>
+                <button type="button" sumiButton variant="ghost" size="sm" (click)="askDelete(scenario)">
+                  Delete
+                </button>
+              }
+            </div>
+          </sumi-card>
+        </li>
+      }
+    </ul>
+  }
 </sumi-page>

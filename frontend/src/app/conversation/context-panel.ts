@@ -1,4 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { SumiButtonDirective } from 'sumi-ui/forms';
+import { SumiCard } from 'sumi-ui/layout';
 
 import { ApiService } from '../core/api.service';
 import { Attachment } from '../core/models';
@@ -17,43 +19,47 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
  */
 @Component({
   selector: 'app-context-panel',
-  imports: [],
+  imports: [SumiButtonDirective, SumiCard],
   template: `@if (ready() && (visible().length || pending().length)) {
-    <section class="material">
-      @if (visible().length) {
-        <div class="shown">
-          @for (item of visible(); track item.id) {
-            <figure class="item" [class.text]="item.kind === 'text'">
-              @if (item.kind === 'image') {
-                <button type="button" class="thumb" (click)="enlarge(item)">
-                  <img [src]="fileUrl(item.id)" [alt]="item.title" />
-                </button>
-              } @else {
-                <pre class="body" lang="ja">{{ item.body }}</pre>
-              }
-              <figcaption>{{ item.title || 'Material' }}</figcaption>
-            </figure>
-          }
-        </div>
-      }
+    <sumi-card>
+      <div class="material">
+        @if (visible().length) {
+          <div class="shown">
+            @for (item of visible(); track item.id) {
+              <figure class="item" [class.text]="item.kind === 'text'">
+                @if (item.kind === 'image') {
+                  <button type="button" class="thumb" (click)="enlarge(item)">
+                    <img [src]="fileUrl(item.id)" [alt]="item.title" />
+                  </button>
+                } @else {
+                  <pre class="body" lang="ja">{{ item.body }}</pre>
+                }
+                <figcaption>{{ item.title || 'Material' }}</figcaption>
+              </figure>
+            }
+          </div>
+        }
 
-      @if (pending().length) {
-        <div class="pending">
-          <span class="pending-label">Not shown yet:</span>
-          @for (item of pending(); track item.id) {
-            <button
-              type="button"
-              class="btn btn-secondary"
-              [disabled]="!canHandOver()"
-              [title]="'Show the tutor: ' + (item.title || 'Material')"
-              (click)="handOver(item)"
-            >
-              + {{ item.title || 'Material' }}
-            </button>
-          }
-        </div>
-      }
-    </section>
+        @if (pending().length) {
+          <div class="pending">
+            <span class="pending-label">Not shown yet:</span>
+            @for (item of pending(); track item.id) {
+              <button
+                type="button"
+                sumiButton
+                variant="secondary"
+                size="sm"
+                [disabled]="!canHandOver()"
+                [title]="'Show the tutor: ' + (item.title || 'Material')"
+                (click)="handOver(item)"
+              >
+                + {{ item.title || 'Material' }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </sumi-card>
   }
 
   @if (zoomed(); as item) {
@@ -67,10 +73,6 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 12px 16px;
-      background: var(--sumi-surface);
-      border: 1px solid var(--sumi-line);
-      border-radius: var(--sumi-radius);
     }
 
     .shown {
@@ -100,6 +102,7 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
     }
 
     .thumb {
+      font: inherit;
       padding: 0;
       border: 1px solid var(--sumi-line);
       border-radius: 6px;

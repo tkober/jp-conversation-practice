@@ -1,43 +1,36 @@
 <div class="review">
-  <div class="summary-bar">
-    <div>
-      <span class="bar-label">Session cost</span>
-      <span class="bar-value cost">{{ formattedCost() }} <small>USD</small></span>
-    </div>
-    <div>
-      <span class="bar-label">Duration</span>
-      <span class="bar-value">{{ formattedTime() }}</span>
-    </div>
-    <div>
-      <span class="bar-label">Turns</span>
-      <span class="bar-value">{{ speechCount() }}</span>
-    </div>
-  </div>
+  <sumi-stat-grid class="summary-bar">
+    <sumi-stat-tile [value]="formattedCost()" label="Session cost" />
+    <sumi-stat-tile [value]="formattedTime()" label="Duration" />
+    <sumi-stat-tile [value]="speechCount()" label="Turns" />
+  </sumi-stat-grid>
 
   @if (loading()) {
-    <div class="card loading">
-      <span class="spinner"></span>
-      <p>Analysing the session — building feedback, grammar notes and vocabulary…</p>
-    </div>
+    <sumi-card>
+      <div class="loading">
+        <span class="spinner"></span>
+        <p>Analysing the session — building feedback, grammar notes and vocabulary…</p>
+      </div>
+    </sumi-card>
   } @else if (analysisError(); as error) {
-    <div class="banner banner-error"><span>{{ error }}</span></div>
+    <sumi-banner tone="error">{{ error }}</sumi-banner>
     <div class="footer-actions">
-      <button type="button" class="btn btn-secondary" (click)="retryAnalysis.emit()">
+      <button type="button" sumiButton variant="secondary" (click)="retryAnalysis.emit()">
         Retry analysis
       </button>
-      <button type="button" class="btn btn-primary" (click)="restart.emit()">
+      <button type="button" sumiButton variant="primary" (click)="restart.emit()">
         New session
       </button>
     </div>
   } @else if (analysis(); as result) {
-    <section class="card">
-      <h2>Feedback</h2>
+    <sumi-card>
+      <h2 sumiCardHeader>Feedback</h2>
       <p class="summary-text">{{ result.summary }}</p>
-    </section>
+    </sumi-card>
 
     @if (result.grammar_notes.length > 0) {
-      <section class="card">
-        <h2>Grammar notes</h2>
+      <sumi-card>
+        <h2 sumiCardHeader>Grammar notes</h2>
         <ul class="notes">
           @for (note of result.grammar_notes; track $index) {
             <li class="note">
@@ -53,29 +46,30 @@
             </li>
           }
         </ul>
-      </section>
+      </sumi-card>
     }
 
-    <section class="card">
-      <div class="section-head">
+    <sumi-card>
+      <div class="section-head" sumiCardHeader>
         <h2>Anki cards</h2>
-        <span class="counter">{{ selectedCards().length }} / {{ result.anki_cards.length }} selected</span>
+        <sumi-badge>{{ selectedCards().length }} / {{ result.anki_cards.length }} selected</sumi-badge>
       </div>
 
       @if (result.wanikani_status === 'ok' && result.filtered_out.length > 0) {
-        <div class="banner banner-info">
-          <span>
-            {{ result.filtered_out.length }} word(s) filtered via WaniKani (Guru or higher):
-            <span lang="ja">{{ result.filtered_out.join('、') }}</span>
-          </span>
-        </div>
+        <sumi-banner tone="info">
+          {{ result.filtered_out.length }} word(s) filtered via WaniKani (Guru or higher):
+          <span lang="ja">{{ result.filtered_out.join('、') }}</span>
+        </sumi-banner>
       } @else if (result.wanikani_status === 'error') {
-        <div class="banner banner-warning">
-          <span>WaniKani filter unavailable: {{ result.wanikani_message }}</span>
-        </div>
+        <sumi-banner tone="notice">
+          WaniKani filter unavailable: {{ result.wanikani_message }}
+        </sumi-banner>
       }
 
       @if (result.anki_cards.length === 0) {
+        <!-- T3 rule: an empty state must not sit next to learning content —
+             this note sits directly beside the feedback/grammar cards above,
+             so it stays a muted line rather than a full sumi-empty-state. -->
         <p class="muted">No new vocabulary found — either the conversation was very short,
           or you already know everything that came up.</p>
       } @else {
@@ -85,6 +79,7 @@
               <label class="vocab-check">
                 <input
                   type="checkbox"
+                  sumiCheckbox
                   [checked]="isSelected(card.expression)"
                   (change)="toggleCard(card.expression)"
                 />
@@ -104,26 +99,26 @@
         <div class="export">
           <button
             type="button"
-            class="btn btn-primary"
+            sumiButton
+            variant="primary"
             [disabled]="selectedCards().length === 0 || exportState() === 'running'"
             (click)="exportToAnki()"
           >
             {{ exportState() === 'running' ? 'Exporting…' : 'Export to Anki' }}
           </button>
           @if (exportMessage(); as message) {
-            <span
-              class="export-message"
-              [class.ok]="exportState() === 'done'"
-              [class.fail]="exportState() === 'error'"
-              >{{ message }}</span
-            >
+            @if (exportState() === 'error') {
+              <sumi-banner tone="error">{{ message }}</sumi-banner>
+            } @else {
+              <sumi-banner tone="success">{{ message }}</sumi-banner>
+            }
           }
         </div>
       }
-    </section>
+    </sumi-card>
 
     <div class="session-tools">
-      <button type="button" class="btn btn-ghost" (click)="showTranscript.set(!showTranscript())">
+      <button type="button" sumiButton variant="ghost" (click)="showTranscript.set(!showTranscript())">
         {{ showTranscript() ? 'Hide transcript' : 'Show transcript' }}
       </button>
 
@@ -133,7 +128,8 @@
 
       <button
         type="button"
-        class="btn btn-ghost"
+        sumiButton
+        variant="ghost"
         title="Transcript, cost, analysis and the system prompt used, as JSON"
         (click)="copyJson()"
       >
@@ -144,30 +140,32 @@
         }
       </button>
 
-      <button type="button" class="btn btn-ghost" (click)="downloadJson()">
+      <button type="button" sumiButton variant="ghost" (click)="downloadJson()">
         Download JSON
       </button>
     </div>
 
     @if (showTranscript()) {
-      <section class="card transcript">
-        @for (event of transcript(); track $index) {
-          @if (asSpeech(event); as turn) {
-            <p class="line">
-              <span class="line-role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
-              <span lang="ja">
-                <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
-              </span>
-            </p>
-          } @else if (asMarker(event); as marker) {
-            <app-transcript-marker [event]="marker" />
+      <sumi-card>
+        <div class="transcript">
+          @for (event of transcript(); track $index) {
+            @if (asSpeech(event); as turn) {
+              <p class="line">
+                <span class="line-role">{{ turn.role === 'user' ? 'You' : '先生' }}</span>
+                <span lang="ja">
+                  <sumi-furigana [segments]="toFuriganaSegments(turn.text, turn.ruby)" />
+                </span>
+              </p>
+            } @else if (asMarker(event); as marker) {
+              <app-transcript-marker [event]="marker" />
+            }
           }
-        }
-      </section>
+        </div>
+      </sumi-card>
     }
 
     <div class="footer-actions">
-      <button type="button" class="btn btn-primary" (click)="restart.emit()">New session</button>
+      <button type="button" sumiButton variant="primary" (click)="restart.emit()">New session</button>
     </div>
   }
 </div>
