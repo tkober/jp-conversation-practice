@@ -1,4 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
+import { SUMI_KEYS, detectPlatform, formatKeys, injectHotkey } from 'sumi-ui/core';
+import { SumiButtonDirective, SumiKbdDirective } from 'sumi-ui/forms';
 
 import { RealtimeSessionService } from '../core/realtime-session.service';
 
@@ -10,20 +12,31 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
  * exactly what a stuck learner cannot do. Each press without saying anything
  * in between escalates the help one step — the backend owns the escalation,
  * this only shows where it stands.
+ *
+ * The button is a plain `secondary` `sumiButton`, like `Alt+H` in the other
+ * apps: Sumi UI keeps colour for feedback, so the old amber fill is gone.
+ * The step dots below carry `--sumi-retry`, the library's token for "not
+ * there yet".
  */
 @Component({
   selector: 'app-wakaranai-button',
-  imports: [],
+  imports: [SumiButtonDirective, SumiKbdDirective],
   template: `<div class="help">
     <button
       type="button"
-      class="btn"
+      sumiButton
+      variant="secondary"
       lang="ja"
       (click)="session.requestHelp()"
       [disabled]="!canRequest()"
       title="Tell the tutor you're stuck right now"
     >
       わからない
+      <span class="keys" aria-hidden="true">
+        @for (key of keyParts; track $index) {
+          <kbd sumiKbd>{{ key }}</kbd>
+        }
+      </span>
     </button>
     <div class="text">
       <span>{{ hint() }}</span>
@@ -45,17 +58,10 @@ import { RealtimeSessionService } from '../core/realtime-session.service';
       border-radius: var(--sumi-radius);
     }
 
-    .btn {
-      flex-shrink: 0;
-      font-size: 17px;
-      background: var(--sumi-retry-soft);
-      border: 1px solid color-mix(in oklab, var(--sumi-retry) 40%, transparent);
-      color: var(--sumi-retry);
-
-      &:hover:not(:disabled) {
-        background: color-mix(in oklab, var(--sumi-retry) 20%, var(--sumi-retry-soft));
-        border-color: var(--sumi-retry);
-      }
+    .keys {
+      display: inline-flex;
+      gap: 3px;
+      margin-left: 8px;
     }
 
     .text {
@@ -95,6 +101,10 @@ export class WakaranaiButton {
   protected readonly stage = this.session.helpStage;
   protected readonly max = this.session.maxHelpStage;
 
+  /** `['Alt', 'H']` or `['⌥', 'H']` — rendered as one `sumi-kbd` per part,
+   *  the same split `sumi-hotkey-help` itself uses. */
+  protected readonly keyParts = formatKeys(SUMI_KEYS.iDontKnow, detectPlatform());
+
   /** One marker per escalation step, so the button shows where it stands. */
   protected readonly steps = computed(() =>
     Array.from({ length: this.max() }, (_, index) => index + 1),
@@ -132,4 +142,14 @@ export class WakaranaiButton {
     }
     return `Stage ${stage} of ${max} — that's the limit, the tutor now explains in English.`;
   });
+
+  constructor() {
+    injectHotkey({
+      keys: SUMI_KEYS.iDontKnow,
+      label: 'わからない — ask for help',
+      scope: 'practice',
+      enabled: () => this.canRequest(),
+      handler: () => this.session.requestHelp(),
+    });
+  }
 }

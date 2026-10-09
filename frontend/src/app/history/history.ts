@@ -1,6 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { SumiPage } from 'sumi-ui/layout';
+import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
 import {
@@ -10,15 +11,14 @@ import {
   SessionSummary,
   asMarker,
   asSpeech,
+  toFuriganaSegments,
   withoutFurigana,
 } from '../core/models';
-import { FuriganaText } from '../shared/furigana-text';
-import { FuriganaToggle } from '../shared/furigana-toggle';
 import { TranscriptMarker } from '../shared/transcript-marker';
 
 @Component({
   selector: 'app-history',
-  imports: [DatePipe, DecimalPipe, FuriganaText, FuriganaToggle, SumiPage, TranscriptMarker],
+  imports: [DatePipe, DecimalPipe, SumiFuriganaText, SumiFuriganaToggle, SumiPage, TranscriptMarker],
   templateUrl: './history.html',
   styleUrl: './history.scss',
 })
@@ -28,6 +28,7 @@ export class History {
   // Template narrowing for the transcript's event union; see models.ts.
   protected readonly asSpeech = asSpeech;
   protected readonly asMarker = asMarker;
+  protected readonly toFuriganaSegments = toFuriganaSegments;
 
   readonly sessions = signal<SessionSummary[]>([]);
   readonly stats = signal<SessionStats | null>(null);

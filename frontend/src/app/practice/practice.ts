@@ -1,5 +1,6 @@
-import { Component, computed, inject, signal } from '@angular/core';
-import { SumiPage } from 'sumi-ui/layout';
+import { Component, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { SumiHanko, SumiPage } from 'sumi-ui/layout';
+import { SumiSessionGate, SumiSessionSummary, SumiSummaryTile } from 'sumi-ui/practice';
 
 import { Conversation } from '../conversation/conversation';
 import { ApiService } from '../core/api.service';
@@ -10,17 +11,38 @@ import { SessionSetup, Setup } from '../setup/setup';
 
 @Component({
   selector: 'app-practice',
-  imports: [Setup, Conversation, Review, SumiPage],
+  imports: [
+    Conversation,
+    Review,
+    Setup,
+    SumiHanko,
+    SumiPage,
+    SumiSessionGate,
+    SumiSessionSummary,
+    SumiSummaryTile,
+  ],
   templateUrl: './practice.html',
 })
 export class Practice {
   private readonly api = inject(ApiService);
   protected readonly session = inject(RealtimeSessionService);
 
+  private readonly setupRef = viewChild(Setup);
+
   protected readonly phase = this.session.phase;
   protected readonly analysis = signal<AnalysisResponse | null>(null);
   protected readonly analysisError = signal<string | null>(null);
   protected readonly finalElapsed = signal(0);
+
+  /**
+   * Whether the T2 gate's "Show review"/Enter has already been used once
+   * for this session's end. Stays `false` across the whole analysing phase
+   * so the gate shows; once the user opens the review, further analysis
+   * retries (phase flipping back to 'analysing') must *not* pull them back
+   * to the gate — `app-review` keeps its own `[loading]` state for that,
+   * exactly as it did before this screen existed (see practice.html).
+   */
+  protected readonly reviewOpened = signal(false);
 
   private scenario = '';
   private scenarioId: number | null = null;
@@ -29,9 +51,19 @@ export class Practice {
   /** Row id of the stored session, so the analysis can be attached to it. */
   private storedSessionId: number | null = null;
 
-  protected readonly isReviewing = computed(
-    () => this.phase() === 'analysing' || this.phase() === 'review',
+  /** T1/details step from the live `Setup` instance — see `Setup.step`. */
+  protected readonly setupStep = computed(() => this.setupRef()?.step() ?? 'gate');
+  protected readonly setupPageTitle = computed(() => this.setupRef()?.pageTitle());
+
+  /** The T2 gate is ready once the analysis has either landed or failed. */
+  protected readonly reviewReady = computed(
+    () => this.analysis() !== null || this.analysisError() !== null,
   );
+
+  protected readonly finalTurns = computed(
+    () => this.session.transcript().filter(isSpeech).length,
+  );
+  protected readonly finalCost = computed(() => `$${this.session.usage().cost_usd.toFixed(4)}`);
 
   protected async onStart(setup: SessionSetup): Promise<void> {
     this.scenario = setup.scenario;
@@ -52,9 +84,31 @@ export class Practice {
     });
   }
 
+  constructor() {
+    // The relay can end a conversation on its own: when the socket closes
+    // while live, the service stops and jumps straight to 'review'. Route
+    // that through the same ending as "End session", so it also gets stored,
+    // analysed and the T2 gate, instead of an empty review.
+    effect(() => {
+      if (this.phase() === 'review' && !this.reviewOpened()) {
+        untracked(() => this.endConversation());
+      }
+    });
+  }
+
   protected async onFinish(): Promise<void> {
+    // Leave 'live' before stopping: closing the socket fires its onclose, and
+    // in 'live' that would count as the relay ending the session (above).
+    this.session.phase.set('analysing');
+    this.reviewOpened.set(false);
     this.finalElapsed.set(this.session.elapsedSeconds());
     await this.session.stop();
+    this.storeSession();
+    this.runAnalysis();
+  }
+
+  private endConversation(): void {
+    this.finalElapsed.set(this.session.elapsedSeconds());
     this.storeSession();
     this.runAnalysis();
   }
@@ -117,21 +171,28 @@ export class Practice {
     });
   }
 
+  /**
+   * Runs (or retries) the analysis. Always lands on the `'analysing'` phase
+   * first — the T2 gate shows while this is in flight the first time (see
+   * `reviewOpened`); a retry triggered from the review screen itself just
+   * flips `app-review`'s own `[loading]` instead, since `reviewOpened` is
+   * already `true` by then.
+   */
   protected runAnalysis(): void {
     const transcript = this.session.transcript();
+    this.session.phase.set('analysing');
+
     // Speech, not events: a session of nothing but わからない presses is worth
     // storing (see storeSession) but there is nothing in it to give feedback
-    // on.
+    // on. No delay here, so the T2 gate's action is enabled immediately.
     if (!transcript.some(isSpeech)) {
       this.analysisError.set(
         'Nothing was recorded. An analysis needs at least one turn of speech.',
       );
-      this.session.phase.set('review');
       return;
     }
 
     this.analysisError.set(null);
-    this.session.phase.set('analysing');
 
     this.api
       .analyse({
@@ -146,19 +207,24 @@ export class Practice {
         next: (result) => {
           this.analysis.set(result);
           this.attachAnalysis(result);
-          this.session.phase.set('review');
         },
         error: (error: unknown) => {
           this.analysisError.set(this.describeError(error));
-          this.session.phase.set('review');
         },
       });
+  }
+
+  /** T2 gate's `(start)`/summary's `(restart)` — both open the review. */
+  protected openReview(): void {
+    this.reviewOpened.set(true);
+    this.session.phase.set('review');
   }
 
   protected onRestart(): void {
     this.analysis.set(null);
     this.analysisError.set(null);
     this.finalElapsed.set(0);
+    this.reviewOpened.set(false);
     this.session.reset();
     this.session.phase.set('setup');
   }

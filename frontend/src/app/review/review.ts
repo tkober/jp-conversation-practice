@@ -1,4 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
+import { SumiFuriganaText, SumiFuriganaToggle } from 'sumi-ui/practice';
 
 import { ApiService } from '../core/api.service';
 import {
@@ -10,17 +11,16 @@ import {
   asMarker,
   asSpeech,
   isSpeech,
+  toFuriganaSegments,
   withoutFurigana,
 } from '../core/models';
-import { FuriganaText } from '../shared/furigana-text';
-import { FuriganaToggle } from '../shared/furigana-toggle';
 import { TranscriptMarker } from '../shared/transcript-marker';
 
 type ExportState = 'idle' | 'running' | 'done' | 'error';
 
 @Component({
   selector: 'app-review',
-  imports: [FuriganaText, FuriganaToggle, TranscriptMarker],
+  imports: [SumiFuriganaText, SumiFuriganaToggle, TranscriptMarker],
   templateUrl: './review.html',
   styleUrl: './review.scss',
 })
@@ -44,6 +44,7 @@ export class Review {
   // Template narrowing for the transcript's event union; see models.ts.
   protected readonly asSpeech = asSpeech;
   protected readonly asMarker = asMarker;
+  protected readonly toFuriganaSegments = toFuriganaSegments;
 
   /** A press is not a turn of speech, so the header counts what was said. */
   readonly speechCount = computed(() => this.transcript().filter(isSpeech).length);

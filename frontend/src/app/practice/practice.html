@@ -1,8 +1,8 @@
 @switch (phase()) {
   @case ('setup') {
     <sumi-page
-      title="Practice"
-      subtitle="Talk with an AI tutor in real time, track the exact API cost live, and generate Anki cards afterwards for anything you don't know yet."
+      [title]="setupStep() === 'details' ? setupPageTitle() : undefined"
+      [inkEnd]="setupStep() === 'details'"
     >
       <app-setup (start)="onStart($event)" />
     </sumi-page>
@@ -18,18 +18,43 @@
     </sumi-page>
   }
   @default {
-    <sumi-page title="Review">
-      <app-review
-        [analysis]="analysis()"
-        [analysisError]="analysisError()"
-        [loading]="phase() === 'analysing'"
-        [usage]="session.usage()"
-        [transcript]="session.transcript()"
-        [elapsedSeconds]="finalElapsed()"
-        [sessionInfo]="session.sessionInfo()"
-        (restart)="onRestart()"
-        (retryAnalysis)="runAnalysis()"
-      />
-    </sumi-page>
+    @if (phase() === 'analysing' && !reviewOpened()) {
+      <!-- T2: the conversation's own end-of-session gate, not the review
+           yet — "Show review" (or Enter once ready) is what opens it. -->
+      <sumi-page [inkEnd]="false">
+        <sumi-session-gate
+          [showAction]="false"
+          companion="kitsune"
+          [actionDisabled]="!reviewReady()"
+          (start)="openReview()"
+        >
+          <sumi-session-summary
+            [durationMs]="finalElapsed() * 1000"
+            headline="Conversation complete"
+            [actionLabel]="reviewReady() ? 'Show review' : 'Analysing…'"
+            [actionDisabled]="!reviewReady()"
+            (restart)="openReview()"
+          >
+            <sumi-hanko sumiSummaryArt characters="完了" label="Conversation complete" />
+            <div sumiSummaryTile label="Turns">{{ finalTurns() }}</div>
+            <div sumiSummaryTile label="Cost">{{ finalCost() }}</div>
+          </sumi-session-summary>
+        </sumi-session-gate>
+      </sumi-page>
+    } @else {
+      <sumi-page title="Review">
+        <app-review
+          [analysis]="analysis()"
+          [analysisError]="analysisError()"
+          [loading]="!reviewReady()"
+          [usage]="session.usage()"
+          [transcript]="session.transcript()"
+          [elapsedSeconds]="finalElapsed()"
+          [sessionInfo]="session.sessionInfo()"
+          (restart)="onRestart()"
+          (retryAnalysis)="runAnalysis()"
+        />
+      </sumi-page>
+    }
   }
 }

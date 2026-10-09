@@ -1,3 +1,5 @@
+import type { SumiFuriganaSegment } from 'sumi-ui/practice';
+
 /** Shared types mirroring the backend's JSON contracts. */
 
 export type JlptLevel = 'N5' | 'N4' | 'N3' | 'N2';
@@ -254,6 +256,23 @@ export interface ContextEvent {
 }
 
 export type SessionEvent = SpeechEvent | HelpEvent | ContextEvent;
+
+/**
+ * Adapts this app's `RubySegment` (`{ text, reading }`) to the `{ base,
+ * reading }` shape `sumi-furigana` expects (sumi-ui's furigana components
+ * replace `shared/furigana-text.ts` as of #17) — plain text (no ruby at
+ * all) becomes one reading-less segment, which the library renders as a
+ * bare `<span>`, same as the app's own fallback used to.
+ */
+export function toFuriganaSegments(
+  text: string,
+  ruby: RubySegment[] | null | undefined,
+): SumiFuriganaSegment[] {
+  if (!ruby) {
+    return [{ base: text }];
+  }
+  return ruby.map((segment) => ({ base: segment.text, reading: segment.reading ?? undefined }));
+}
 
 export function isSpeech(event: SessionEvent): event is SpeechEvent {
   return event.type === 'speech';
