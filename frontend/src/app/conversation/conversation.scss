@@ -186,6 +186,7 @@
 
 .speed {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 14px;
   padding: 10px 16px;
@@ -194,7 +195,6 @@
   border-radius: var(--sumi-radius);
 
   label {
-    flex-shrink: 0;
     font-size: 13px;
     color: var(--sumi-text-2);
   }
@@ -206,7 +206,7 @@
   }
 
   input[type='range'] {
-    flex: 1;
+    flex: 1 1 160px;
     accent-color: var(--sumi-accent);
     cursor: pointer;
   }
