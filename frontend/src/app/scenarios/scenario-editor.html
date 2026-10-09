@@ -50,7 +50,7 @@
             [disabled]="!dirty() || saveState() === 'saving'"
             (click)="save()"
           >
-            {{ saveState() === 'saving' ? 'Saving …' : 'Save' }}
+            {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
           </button>
 
           @if (canReset()) {
@@ -107,7 +107,7 @@
           }
 
           @if (chatBusy()) {
-            <div class="bubble thinking"><span class="dots">thinking …</span></div>
+            <div class="bubble thinking"><span class="dots">thinking…</span></div>
           }
         </div>
 
@@ -118,7 +118,7 @@
         <div class="composer">
           <textarea
             rows="2"
-            placeholder="Question or request … (Enter sends, Shift+Enter for a new line)"
+            placeholder="Question or request… (Enter sends, Shift+Enter for a new line)"
             [ngModel]="chatInput()"
             (ngModelChange)="chatInput.set($event)"
             (keydown)="onChatKeydown($event)"

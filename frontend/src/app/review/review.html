@@ -17,7 +17,7 @@
   @if (loading()) {
     <div class="card loading">
       <span class="spinner"></span>
-      <p>Analysing the session — building feedback, grammar notes and vocabulary …</p>
+      <p>Analysing the session — building feedback, grammar notes and vocabulary…</p>
     </div>
   } @else if (analysisError(); as error) {
     <div class="banner banner-error"><span>{{ error }}</span></div>
@@ -108,7 +108,7 @@
             [disabled]="selectedCards().length === 0 || exportState() === 'running'"
             (click)="exportToAnki()"
           >
-            {{ exportState() === 'running' ? 'Exporting …' : 'Export to Anki' }}
+            {{ exportState() === 'running' ? 'Exporting…' : 'Export to Anki' }}
           </button>
           @if (exportMessage(); as message) {
             <span

@@ -313,7 +313,7 @@ under `.voice-samples/<tts_model>/`, so the settings PUT validates the shape of
 every model field against `MODEL_ID_PATTERN`, for the same reason `voices.py`
 validates voice ids.
 
-The dropdown keeps a free-text escape hatch ("Other model …") because trying
+The dropdown keeps a free-text escape hatch ("Other model…") because trying
 a model the day it ships is the point of a PoC. It is also where a configured
 model that has since left the list resurfaces: a `<select>` renders an unknown
 value as blank, so the component falls back to the text box instead of
@@ -406,7 +406,7 @@ nobody can point at. So the session screen renders every attachment
 explicitly that the learner is looking at it and must not have it read out.
 
 **The material is evaluated once, not sent to the realtime model.** The ticket
-asked for it "aufgearbeitet" and that is the right way round here for three
+asked for it to be worked up in advance, and that is the right way round here for three
 reasons: the default `gpt-realtime-2.1-mini` is already the weakest link in
 coherence and reading a photographed menu mid-conversation is exactly the load
 it fails under; a description written once is identical in every session, is

@@ -119,7 +119,7 @@ export class WakaranaiButton {
 
   protected readonly hint = computed(() => {
     if (this.session.helpPending()) {
-      return 'The tutor is responding to that …';
+      return 'The tutor is responding to that…';
     }
     const stage = this.stage();
     const max = this.max();

@@ -1,7 +1,7 @@
 ---
 slug: vacation
 summary: Telling a friend about your last vacation.
-title: Talking about the vacation
+title: Talking about your vacation
 ---
 
 You are a Japanese friend of the learner, meeting them at a cafe. You are

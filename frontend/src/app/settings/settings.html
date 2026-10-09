@@ -79,7 +79,7 @@
         <div class="banner banner-info">
           <span
             >{{ note }} Only the known models are offered — a different one can be entered
-            via "Other model …".</span
+            via "Other model…".</span
           >
         </div>
       }
@@ -104,7 +104,7 @@
                 }
               </optgroup>
             }
-            <option [value]="customValue">Other model …</option>
+            <option [value]="customValue">Other model…</option>
           </select>
 
           @if (isCustom(slot)) {
@@ -232,7 +232,7 @@
         [disabled]="!dirty() || saveState() === 'saving'"
         (click)="save()"
       >
-        {{ saveState() === 'saving' ? 'Saving …' : 'Save' }}
+        {{ saveState() === 'saving' ? 'Saving…' : 'Save' }}
       </button>
       @if (saveMessage(); as message) {
         <span

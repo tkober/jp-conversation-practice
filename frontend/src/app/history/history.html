@@ -18,7 +18,7 @@
     @for (session of sessions(); track session.id) {
       <li class="session" [class.open]="openId() === session.id">
         <button type="button" class="row" (click)="toggle(session)">
-          <span class="when">{{ session.started_at | date: 'MM/dd/yy, HH:mm' }}</span>
+          <span class="when">{{ session.started_at | date: 'd MMM y, HH:mm' }}</span>
           <span class="title">{{ session.scenario_title }}</span>
           <span class="level">{{ session.jlpt_level }}</span>
           <span class="turns">{{ session.turn_count }} turns</span>
@@ -39,7 +39,7 @@
         @if (openId() === session.id) {
           <div class="detail">
             @if (detailLoading()) {
-              <p class="muted">Loading …</p>
+              <p class="muted">Loading…</p>
             } @else if (detail(); as full) {
               @if (full.analysis; as analysis) {
                 <p class="summary">{{ analysis.summary }}</p>

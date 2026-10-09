@@ -22,7 +22,7 @@ export const EAGERNESS_OPTIONS: { id: VadEagerness; label: string; hint: string 
   },
   {
     id: 'high',
-    label: 'Little — answers promptly',
+    label: 'Low — answers quickly',
     hint: 'Answers quickly — more natural, but more likely to interrupt you mid-sentence.',
   },
   {

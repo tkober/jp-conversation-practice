@@ -80,7 +80,7 @@ export class Conversation {
 
   readonly statusLabel = computed(() => {
     if (this.phase() === 'connecting') {
-      return 'Connecting …';
+      return 'Connecting…';
     }
     if (this.muted()) {
       return 'Microphone muted';
@@ -91,7 +91,7 @@ export class Conversation {
     if (this.userSpeaking()) {
       return 'You are speaking';
     }
-    return 'Listening …';
+    return 'Listening…';
   });
 
   readonly micBarWidth = computed(() => `${Math.round(this.micLevel() * 100)}%`);
