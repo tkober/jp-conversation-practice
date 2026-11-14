@@ -1,5 +1,7 @@
 # --- Build the Angular bundle ---------------------------------------------
-FROM node:22-alpine AS build
+# Only produces static files, so it runs natively on the CI runner instead of
+# under QEMU; just the nginx stage below is built per platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
 WORKDIR /app
 
